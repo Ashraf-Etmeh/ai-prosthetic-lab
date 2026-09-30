@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Case Review — AI Prosthetic Lab</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    h1 { font-size: 1.3rem; }
+    h2 { font-size: 1.05rem; margin-top: 1.6rem; }
+    .banner { background: #fff8e1; border: 1px solid #e0c46c; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
+    .confirm { background: #e6f4ea; border: 1px solid #8ec99b; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #ddd; font-size: 0.9rem; vertical-align: top; }
+    th { background: #f5f5f5; }
+    .gap-field { font-family: ui-monospace, monospace; white-space: nowrap; }
+    .gap-source { color: #666; font-size: 0.8rem; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; font-size: 0.9rem; }
+    dt { font-weight: 600; }
+    dd { margin: 0; }
+    .decision-form { margin-top: 1.2rem; display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap; }
+    .decision-form textarea { flex: 1 1 260px; min-height: 2.2rem; padding: 0.4rem; }
+    button { padding: 0.5rem 1rem; cursor: pointer; }
+    button[value="approve"] { background: #e6f4ea; border: 1px solid #8ec99b; }
+    button[value="reject"] { background: #fbe6e6; border: 1px solid #d99; }
+  </style>
+</head>
+<body>
+  <h1>Case Review — {{ case.case_id }}</h1>
+  <div class="banner">
+    Information-gap analysis only. Not a diagnosis or a treatment/component
+    recommendation. Every item below requires specialist review.
+  </div>
+
+  {% if decision_recorded %}
+  <div class="confirm">Decision recorded: <strong>{{ decision_recorded }}</strong></div>
+  {% endif %}
+
+  <h2>Case</h2>
+  <dl>
+    <dt>Amputation level</dt><dd>{{ case.amputation_level.value }}</dd>
+    <dt>Side</dt><dd>{{ case.side.value }}</dd>
+    <dt>Age</dt><dd>{{ case.age_years if case.age_years is not none else "—" }}</dd>
+    <dt>Etiology</dt><dd>{{ case.etiology.value if case.etiology else "—" }}</dd>
+    <dt>Months since amputation</dt><dd>{{ case.months_since_amputation if case.months_since_amputation is not none else "—" }}</dd>
+  </dl>
+
+  <h2>Information gaps</h2>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Why needed</th><th>Source</th></tr>
+    </thead>
+    <tbody>
+      {% for gap in gaps %}
+      <tr>
+        <td class="gap-field">{{ gap.field }}</td>
+        <td>{{ gap.why_needed }}</td>
+        <td class="gap-source">{{ gap.source_protocol_reference }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">No gaps identified.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Reviewer decision</h2>
+  <form class="decision-form" method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
+    <textarea name="note" placeholder="Optional note"></textarea>
+    <button type="submit" name="decision" value="approve">Approve</button>
+    <button type="submit" name="decision" value="edit">Edit</button>
+    <button type="submit" name="decision" value="reject">Reject</button>
+  </form>
+</body>
+</html>
