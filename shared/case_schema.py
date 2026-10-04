@@ -16,6 +16,7 @@ Conventions:
 
 from __future__ import annotations
 
+import math
 import uuid
 from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
@@ -108,12 +109,19 @@ class ResidualLimb:
     sensation: Optional[str] = None  # e.g. intact, reduced, neuropathic
     notes: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        self.wound_status = _to_enum(WoundStatus, self.wound_status)
+        self.volume_stability = _to_enum(VolumeStability, self.volume_stability)
+
 
 @dataclass
 class ActivityProfile:
     k_level: Optional[ActivityLevel] = None  # lower limb only
     description: Optional[str] = None  # current daily activity in the patient's terms
     functional_goals: Optional[str] = None  # what the patient wants to be able to do
+
+    def __post_init__(self) -> None:
+        self.k_level = _to_enum(ActivityLevel, self.k_level)
 
 
 @dataclass
@@ -157,6 +165,18 @@ class Case:
 
     intake_notes: Optional[str] = None
 
+    # ---- Validation ----------------------------------------------------
+
+    def __post_init__(self) -> None:
+        # Accept enum members or their string values; reject anything else.
+        self.amputation_level = AmputationLevel(self.amputation_level)
+        self.side = Side(self.side)
+        self.etiology = _to_enum(Etiology, self.etiology)
+
+        _check_number("age_years", self.age_years)
+        _check_number("body_weight_kg", self.body_weight_kg, positive=True)
+        _check_number("months_since_amputation", self.months_since_amputation)
+
     # ---- Serialization -------------------------------------------------
 
     def to_dict(self) -> dict[str, Any]:
@@ -164,27 +184,15 @@ class Case:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Case":
+        # Enum strings are converted by each class's __post_init__, so only
+        # the nested objects need rebuilding here.
         data = dict(data)
-        data["amputation_level"] = AmputationLevel(data["amputation_level"])
-        data["side"] = Side(data["side"])
-        if data.get("etiology") is not None:
-            data["etiology"] = Etiology(data["etiology"])
-
-        limb = dict(data.get("residual_limb") or {})
-        if limb.get("wound_status") is not None:
-            limb["wound_status"] = WoundStatus(limb["wound_status"])
-        if limb.get("volume_stability") is not None:
-            limb["volume_stability"] = VolumeStability(limb["volume_stability"])
-        data["residual_limb"] = ResidualLimb(**limb)
-
-        activity = dict(data.get("activity") or {})
-        if activity.get("k_level") is not None:
-            activity["k_level"] = ActivityLevel(activity["k_level"])
-        data["activity"] = ActivityProfile(**activity)
-
+        data["residual_limb"] = ResidualLimb(**(data.get("residual_limb") or {}))
+        data["activity"] = ActivityProfile(**(data.get("activity") or {}))
         if data.get("prior_devices") is not None:
             data["prior_devices"] = [PriorDevice(**d) for d in data["prior_devices"]]
-
+        if data.get("comorbidities") is not None:
+            data["comorbidities"] = list(data["comorbidities"])
         return cls(**data)
 
     # ---- Helpers for the reasoning layer -------------------------------
@@ -216,6 +224,18 @@ class Case:
             elif value is None and f.name not in skip:
                 missing.append(f.name)
         return missing
+
+
+def _to_enum(enum_cls: type[Enum], value: Any) -> Any:
+    return None if value is None else enum_cls(value)
+
+
+def _check_number(name: str, value: Optional[float], positive: bool = False) -> None:
+    if value is None:
+        return
+    if not math.isfinite(value) or value < 0 or (positive and value == 0):
+        rule = "greater than 0" if positive else "0 or greater"
+        raise ValueError(f"{name} must be {rule}, got {value!r}")
 
 
 def _enums_to_values(obj: Any) -> Any:

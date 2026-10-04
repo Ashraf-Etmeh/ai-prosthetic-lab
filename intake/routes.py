@@ -7,8 +7,8 @@ POST /intake         -> build a Case from the form, run it through
 
 v1 thin-slice status: form covers the required fields (amputation level,
 side) plus the most commonly-filled optional fields. It does not yet expose
-every Case field (e.g. prior_devices is a free-text list, not a repeating
-sub-form) — see FUTURE_WORK.md.
+every Case field (e.g. prior_devices has no form input yet) — see
+FUTURE_WORK.md.
 """
 
 from flask import Blueprint, redirect, render_template, request, url_for
@@ -49,6 +49,16 @@ def _optional_int(raw: str | None) -> int | None:
     return int(raw)
 
 
+def _optional_list(raw: str | None) -> list[str] | None:
+    # One item per line. Blank -> None (not recorded); "none" -> [] (asked, none reported).
+    items = [line.strip() for line in (raw or "").splitlines() if line.strip()]
+    if not items:
+        return None
+    if len(items) == 1 and items[0].lower() == "none":
+        return []
+    return items
+
+
 def _case_from_form(form) -> Case:
     return Case(
         amputation_level=AmputationLevel(form["amputation_level"]),
@@ -72,16 +82,17 @@ def _case_from_form(form) -> Case:
             description=form.get("activity_description") or None,
             functional_goals=form.get("functional_goals") or None,
         ),
+        comorbidities=_optional_list(form.get("comorbidities")),
         contralateral_limb_status=form.get("contralateral_limb_status") or None,
         cognitive_status=form.get("cognitive_status") or None,
         intake_notes=form.get("intake_notes") or None,
     )
 
 
-@bp.route("/intake", methods=["GET"])
-def show_form():
+def _render_form(error: str | None = None):
     return render_template(
         "intake_form.html",
+        error=error,
         amputation_levels=list(AmputationLevel),
         sides=list(Side),
         etiologies=list(Etiology),
@@ -91,9 +102,17 @@ def show_form():
     )
 
 
+@bp.route("/intake", methods=["GET"])
+def show_form():
+    return _render_form()
+
+
 @bp.route("/intake", methods=["POST"])
 def submit_form():
-    case = _case_from_form(request.form)
+    try:
+        case = _case_from_form(request.form)
+    except ValueError as e:  # bad number or enum value
+        return _render_form(error=str(e)), 400
     chunks = retrieve_relevant_chunks(case)
     gaps = analyze_gaps(case, chunks)
     store.save(CaseRecord(case=case, retrieved_chunks=chunks, gaps=gaps))
