@@ -1,2 +1,11 @@
 ﻿__pycache__/
 *.pyc
+
+# Source documents stay local (publisher copyright).
+# data/sources/catalog.json lists where to download each one.
+data/sources/**/*.pdf
+data/sources/**/*.txt
+
+# Generated from the source documents by ingestion
+data/vector_store/
+data/extracted/

@@ -3,7 +3,7 @@
 v1 thin-slice status: STUBBED. This always returns one hardcoded fake chunk
 so intake -> knowledge -> reasoning -> review can run end to end before the
 real ingestion pipeline exists. Step 3 replaces this with a real similarity
-search over documents ingested from data/protocols/ (see knowledge/ingest.py,
+search over documents ingested from data/sources/ (see knowledge/ingest.py,
 added in that step). See FUTURE_WORK.md.
 """
 
