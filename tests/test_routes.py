@@ -5,9 +5,28 @@ from unittest.mock import patch
 
 from app import create_app
 from intake.routes import _optional_list
+from knowledge.models import ProtocolChunk
+from knowledge.retrieval import KnowledgeBaseMissing
 from shared.store import store
 
 BASE_FORM = {"amputation_level": "transtibial", "side": "left"}
+
+VOLUME_PASSAGE = ProtocolChunk(
+    chunk_id="test_guideline_2024-0007",
+    text="Residual limb volume should be stable before the definitive socket is cast.",
+    source="01_guidelines/test.pdf",
+    title="Test Guideline",
+    year=2024,
+    page=14,
+    end_page=14,
+    language="en",
+    score=0.71,
+)
+
+
+def fake_retrieval(case):
+    """Stands in for the real search, so tests never load the 2.3 GB model."""
+    return {"residual_limb.volume_stability": [VOLUME_PASSAGE]}
 
 
 class OptionalListTests(unittest.TestCase):
@@ -31,6 +50,9 @@ class RouteTestCase(unittest.TestCase):
         app = create_app()
         app.testing = True
         self.client = app.test_client()
+        retrieval = patch("intake.routes.retrieve_relevant_chunks", side_effect=fake_retrieval)
+        retrieval.start()
+        self.addCleanup(retrieval.stop)
 
     def post_intake(self, **fields):
         return self.client.post("/intake", data={**BASE_FORM, **fields})
@@ -81,6 +103,23 @@ class IntakeRouteTests(RouteTestCase):
 class ReviewRouteTests(RouteTestCase):
     def test_unknown_case_is_404(self):
         self.assertEqual(self.client.get("/review/does-not-exist").status_code, 404)
+
+    def test_gaps_show_the_quoted_source(self):
+        page = self.client.get(self.post_intake().headers["Location"]).get_data(as_text=True)
+        self.assertIn("Residual limb volume stability", page)
+        self.assertIn("Residual limb volume should be stable before the definitive socket is cast.", page)
+        self.assertIn("Test Guideline (2024), p. 14", page)
+        self.assertIn("test_guideline_2024-0007", page)
+        self.assertIn("The list may be incomplete", page)
+        self.assertIn("No source cited.", page)  # the other gaps have no passage here
+
+    def test_missing_source_library_is_shown(self):
+        with patch("intake.routes.retrieve_relevant_chunks",
+                   side_effect=KnowledgeBaseMissing("No vector store.")):
+            resp = self.post_intake()
+        page = self.client.get(resp.headers["Location"]).get_data(as_text=True)
+        self.assertIn("The source library was not searched: No vector store.", page)
+        self.assertIn("Residual limb wound status", page)  # gaps are still listed
 
     @patch("review.routes.record_decision")
     def test_decision_is_recorded_and_confirmed(self, record_decision):

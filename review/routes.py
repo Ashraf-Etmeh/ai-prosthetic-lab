@@ -13,6 +13,7 @@ FUTURE_WORK.md.
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from review.decision_log import record_decision
+from shared.config import DISCLAIMER
 from shared.store import store
 
 bp = Blueprint("review", __name__, template_folder="templates")
@@ -28,6 +29,8 @@ def show_case(case_id: str):
         case=record.case,
         gaps=record.gaps,
         chunks=record.retrieved_chunks,
+        knowledge_warning=record.knowledge_warning,
+        disclaimer=DISCLAIMER,
         decision_recorded=request.args.get("decision"),
     )
 

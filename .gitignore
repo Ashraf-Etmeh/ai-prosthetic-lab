@@ -1,10 +1,16 @@
 ﻿__pycache__/
 *.pyc
 
-# Source documents stay local (publisher copyright).
-# data/sources/catalog.json lists where to download each one.
-data/sources/**/*.pdf
-data/sources/**/*.txt
+# Knowledge sources stay local: publisher copyright, and the datasets are
+# many GB. Only the catalog, the registry and the READMEs go into git; the
+# manifest lists where to download everything else.
+data/sources/**
+!data/sources/**/
+!data/sources/README.md
+!data/sources/catalog.json
+!data/sources/00_registry/sources_manifest.csv
+!data/sources/00_registry/fetch_figshare_data.py
+!data/sources/00_registry/*.md
 
 # Generated from the source documents by ingestion
 data/vector_store/

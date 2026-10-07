@@ -23,6 +23,7 @@ SOURCE_TYPES = frozenset({
 })
 DOMAINS = frozenset({"prosthetics", "orthotics", "gait", "rehabilitation"})
 LANGUAGES = frozenset({"en", "ar", "de"})
+LIMBS = frozenset({"lower", "upper"})
 FILE_TYPES = frozenset({".pdf", ".txt"})
 
 
@@ -40,8 +41,13 @@ class SourceDocument:
     doi: Optional[str] = None
     url: Optional[str] = None
     notes: Optional[str] = None
+    # Which amputations the document is about: "lower", "upper" or both.
+    # None: not limb-specific (e.g. orthotics, or service standards).
+    limbs: Optional[list[str]] = None
 
     def __post_init__(self) -> None:
+        if self.limbs is not None and (not self.limbs or not set(self.limbs) <= LIMBS):
+            raise ValueError(f"{self.id}: limbs must be from {sorted(LIMBS)}, got {self.limbs!r}")
         if self.source_type not in SOURCE_TYPES:
             raise ValueError(f"{self.id}: unknown source_type {self.source_type!r}")
         if not self.domains or not set(self.domains) <= DOMAINS:
@@ -76,12 +82,21 @@ def load_catalog(catalog_path: Path = CATALOG_PATH) -> list[SourceDocument]:
     return documents
 
 
-def find_unlisted_files(documents: list[SourceDocument], sources_dir: Path) -> list[Path]:
-    """.pdf and .txt files under sources_dir that the catalog doesn't list."""
+def find_unlisted_files(
+    documents: list[SourceDocument], sources_dir: Path, skip_folders: tuple[str, ...] = ()
+) -> list[Path]:
+    """.pdf and .txt files under sources_dir that the catalog doesn't list.
+
+    Files inside the top-level folders named in skip_folders are ignored.
+    """
     listed = {doc.file for doc in documents}
-    return sorted(
-        path
-        for path in sources_dir.rglob("*")
-        if path.suffix.lower() in FILE_TYPES
-        and path.relative_to(sources_dir).as_posix() not in listed
-    )
+    unlisted = []
+    for path in sources_dir.rglob("*"):
+        relative = path.relative_to(sources_dir)
+        if (
+            path.suffix.lower() in FILE_TYPES
+            and relative.parts[0] not in skip_folders
+            and relative.as_posix() not in listed
+        ):
+            unlisted.append(path)
+    return sorted(unlisted)

@@ -13,7 +13,7 @@ FUTURE_WORK.md.
 
 from flask import Blueprint, redirect, render_template, request, url_for
 
-from knowledge.retrieval import retrieve_relevant_chunks
+from knowledge.retrieval import KnowledgeBaseMissing, retrieve_relevant_chunks
 from reasoning.gap_analysis import analyze_gaps
 from shared.case_schema import (
     ActivityLevel,
@@ -113,7 +113,12 @@ def submit_form():
         case = _case_from_form(request.form)
     except ValueError as e:  # bad number or enum value
         return _render_form(error=str(e)), 400
-    chunks = retrieve_relevant_chunks(case)
+    warning = None
+    try:
+        chunks = retrieve_relevant_chunks(case)
+    except KnowledgeBaseMissing as e:
+        # Still list the gaps, but say plainly that no sources were searched.
+        chunks, warning = {}, f"The source library was not searched: {e}"
     gaps = analyze_gaps(case, chunks)
-    store.save(CaseRecord(case=case, retrieved_chunks=chunks, gaps=gaps))
+    store.save(CaseRecord(case=case, retrieved_chunks=chunks, gaps=gaps, knowledge_warning=warning))
     return redirect(url_for("review.show_case", case_id=case.case_id))

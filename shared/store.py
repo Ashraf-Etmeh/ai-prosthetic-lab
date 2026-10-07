@@ -18,8 +18,11 @@ from shared.case_schema import Case
 @dataclass
 class CaseRecord:
     case: Case
-    retrieved_chunks: list[ProtocolChunk] = field(default_factory=list)
+    # Passages retrieved for each missing field, keyed by dotted field path.
+    retrieved_chunks: dict[str, list[ProtocolChunk]] = field(default_factory=dict)
     gaps: list[Gap] = field(default_factory=list)
+    # Set when the source library couldn't be searched, e.g. not built yet.
+    knowledge_warning: Optional[str] = None
 
 
 class CaseStore:

@@ -139,5 +139,25 @@ class UnrecordedFieldsTests(unittest.TestCase):
         self.assertNotIn("residual_limb.wound_status", missing)
 
 
+class UnknownFieldsTests(unittest.TestCase):
+    def test_unknown_answers_listed(self):
+        case = make_case(
+            etiology="unknown",
+            residual_limb=ResidualLimb(wound_status="unknown", volume_stability="stable"),
+            activity=ActivityProfile(k_level="unknown"),
+        )
+        self.assertEqual(
+            case.unknown_fields(), ["etiology", "residual_limb.wound_status", "activity.k_level"]
+        )
+
+    def test_not_applicable_unknown_skipped(self):
+        case = Case(amputation_level="transradial", side="left",
+                    activity=ActivityProfile(k_level="unknown"))
+        self.assertEqual(case.unknown_fields(), [])
+
+    def test_empty_is_not_unknown(self):
+        self.assertEqual(make_case().unknown_fields(), [])
+
+
 if __name__ == "__main__":
     unittest.main()

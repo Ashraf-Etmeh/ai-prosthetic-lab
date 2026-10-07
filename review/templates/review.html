@@ -9,11 +9,18 @@
     h2 { font-size: 1.05rem; margin-top: 1.6rem; }
     .banner { background: #fff8e1; border: 1px solid #e0c46c; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
     .confirm { background: #e6f4ea; border: 1px solid #8ec99b; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-    th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #ddd; font-size: 0.9rem; vertical-align: top; }
-    th { background: #f5f5f5; }
-    .gap-field { font-family: ui-monospace, monospace; white-space: nowrap; }
+    .warning { background: #fdecea; border: 1px solid #e3a19a; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
+    .gap { border: 1px solid #ddd; border-radius: 6px; padding: 0.7rem 0.9rem; margin-top: 0.7rem; font-size: 0.9rem; }
+    .gap-head { display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+    .gap-label { font-weight: 600; }
+    .gap-status { font-size: 0.75rem; background: #f0f0f0; border-radius: 4px; padding: 0.05rem 0.4rem; }
+    .gap-field { font-family: ui-monospace, monospace; font-size: 0.75rem; color: #777; }
+    .gap p { margin: 0.4rem 0; }
+    blockquote { margin: 0.4rem 0; padding: 0.3rem 0.7rem; border-left: 3px solid #9bb7d4; background: #f6f9fc; }
     .gap-source { color: #666; font-size: 0.8rem; }
+    .no-source { color: #8a6d00; }
+    details { margin-top: 0.3rem; font-size: 0.8rem; color: #444; }
+    details p, details li { font-size: 0.8rem; }
     dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; font-size: 0.9rem; }
     dt { font-weight: 600; }
     dd { margin: 0; }
@@ -26,10 +33,11 @@
 </head>
 <body>
   <h1>Case Review — {{ case.case_id }}</h1>
-  <div class="banner">
-    Information-gap analysis only. Not a diagnosis or a treatment/component
-    recommendation. Every item below requires specialist review.
-  </div>
+  <div class="banner">{{ disclaimer }}</div>
+
+  {% if knowledge_warning %}
+  <div class="warning">{{ knowledge_warning }}</div>
+  {% endif %}
 
   {% if decision_recorded %}
   <div class="confirm">Decision recorded: <strong>{{ decision_recorded }}</strong></div>
@@ -44,23 +52,43 @@
     <dt>Months since amputation</dt><dd>{{ case.months_since_amputation if case.months_since_amputation is not none else "—" }}</dd>
   </dl>
 
-  <h2>Information gaps</h2>
-  <table>
-    <thead>
-      <tr><th>Field</th><th>Why needed</th><th>Source</th></tr>
-    </thead>
-    <tbody>
-      {% for gap in gaps %}
-      <tr>
-        <td class="gap-field">{{ gap.field }}</td>
-        <td>{{ gap.why_needed }}</td>
-        <td class="gap-source">{{ gap.source_protocol_reference }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="3">No gaps identified.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <h2>Information gaps ({{ gaps | length }})</h2>
+  {% for gap in gaps %}
+  <div class="gap">
+    <div class="gap-head">
+      <span class="gap-label">{{ gap.label }}</span>
+      <span class="gap-status">{{ gap.status }}</span>
+      <span class="gap-field">{{ gap.field }}</span>
+    </div>
+    <p>{{ gap.why_needed }}</p>
+    {% if gap.evidence %}
+    <blockquote dir="auto" lang="{{ gap.evidence.language }}">{{ gap.excerpt }}</blockquote>
+    <div class="gap-source">
+      {{ gap.evidence.citation }} · {{ gap.evidence.language }} · similarity {{ "%.2f" | format(gap.evidence.score) }}
+      · <code>{{ gap.source_protocol_reference }}</code>
+    </div>
+    <details>
+      <summary>Full passage</summary>
+      <p dir="auto" lang="{{ gap.evidence.language }}">{{ gap.evidence.text }}</p>
+    </details>
+    {% else %}
+    <p class="gap-source no-source">No source cited.</p>
+    {% endif %}
+    {% set considered = chunks.get(gap.field, []) %}
+    {% if considered %}
+    <details>
+      <summary>Passages retrieved for this field ({{ considered | length }})</summary>
+      <ul>
+        {% for chunk in considered %}
+        <li>{{ chunk.citation }} · {{ chunk.language }} · similarity {{ "%.2f" | format(chunk.score) }}</li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+  </div>
+  {% else %}
+  <p>No gaps identified: every listed intake field is filled in.</p>
+  {% endfor %}
 
   <h2>Reviewer decision</h2>
   <form class="decision-form" method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">

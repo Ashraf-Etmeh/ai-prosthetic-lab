@@ -62,6 +62,8 @@ class LoadCatalogTests(unittest.TestCase):
             "unknown source type": make_entry(source_type="blog"),
             "unknown language": make_entry(language="fr"),
             "wrong file type": make_entry(file="01_guidelines/test_doc.docx"),
+            "unknown limb": make_entry(limbs=["arm"]),
+            "empty limbs": make_entry(limbs=[]),
             "misspelled field": {**make_entry(), "domian": ["prosthetics"]},
             "missing field": {k: v for k, v in make_entry().items() if k != "title"},
         }
@@ -82,3 +84,12 @@ class LoadCatalogTests(unittest.TestCase):
         (folder / "notes.docx").write_bytes(b"")  # not a source file type
         documents = load_catalog(self.write_catalog(make_entry()))
         self.assertEqual(find_unlisted_files(documents, self.sources), [folder / "forgotten.txt"])
+
+    def test_skipped_folders_not_reported(self):
+        datasets = self.sources / "05_datasets" / "gait"
+        datasets.mkdir(parents=True)
+        (datasets / "paper.pdf").write_bytes(b"")
+        (datasets / "README.txt").write_text("x", encoding="utf-8")
+        documents = load_catalog(self.write_catalog(make_entry()))
+        self.assertEqual(len(find_unlisted_files(documents, self.sources)), 2)
+        self.assertEqual(find_unlisted_files(documents, self.sources, ("05_datasets",)), [])
