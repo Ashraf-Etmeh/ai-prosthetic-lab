@@ -1,5 +1,6 @@
 """Tests for the intake and review pages, through Flask's test client."""
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,11 @@ from knowledge.models import ProtocolChunk
 from knowledge.retrieval import KnowledgeBaseMissing
 from review.decision_log import read_decisions
 from shared.store import store
+
+
+def visible_text(page: str) -> str:
+    """The page without its HTML tags and bidi isolate marks: roughly what a reader sees."""
+    return re.sub(r"<[^>]+>|[\u2068\u2069]", "", page)
 
 BASE_FORM = {"amputation_level": "transtibial", "side": "left"}
 
@@ -54,6 +60,8 @@ class OptionalListTests(unittest.TestCase):
     def test_none_means_asked_none_reported(self):
         self.assertEqual(_optional_list("none"), [])
         self.assertEqual(_optional_list("\n None \n"), [])
+        self.assertEqual(_optional_list("لا يوجد"), [])  # what the Arabic form says to type
+        self.assertEqual(_optional_list(" لا شيء "), [])
 
     def test_one_item_per_line(self):
         self.assertEqual(
@@ -96,7 +104,8 @@ class IntakeRouteTests(RouteTestCase):
         self.assertEqual(store.all()[-1].gaps, [])
         page = self.client.get(resp.headers["Location"]).get_data(as_text=True)
         self.assertIn("No gaps identified", page)
-        self.assertIn("PTB socket, SACH foot · 2.0 years · no longer used · issues: loose fit", page)
+        self.assertIn("PTB socket, SACH foot · 2.0 years · no longer used · issues: loose fit",
+                      visible_text(page))
 
     def test_prior_devices_from_rows(self):
         self.post_intake(
@@ -224,6 +233,7 @@ class ReviewRouteTests(RouteTestCase):
 
         [entry] = read_decisions(case_id, path=self.log_path)
         self.assertEqual((entry["decision"], entry["note"]), ("approve", "looks complete"))
+        self.assertEqual(entry["ui_language"], "en")
         judgements = {g["field"]: g["reviewer_judgement"] for g in entry["gaps"]}
         self.assertEqual(judgements["residual_limb.volume_stability"], "needed")
         self.assertIsNone(judgements["residual_limb.wound_status"])  # left on "not marked"
@@ -261,6 +271,138 @@ class ReviewRouteTests(RouteTestCase):
 
     def test_decision_for_unknown_case_is_404(self):
         self.assertEqual(self.post_decision("does-not-exist", decision="approve").status_code, 404)
+
+
+class ArabicPageTests(RouteTestCase):
+    """The same pages with the language cookie set to Arabic."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.set_cookie("lang", "ar")
+
+    def review_page(self, **fields) -> str:
+        resp = self.post_intake(**fields)
+        return visible_text(self.client.get(resp.headers["Location"]).get_data(as_text=True))
+
+    def test_intake_form_is_arabic_right_to_left(self):
+        page = self.client.get("/intake").get_data(as_text=True)
+        self.assertIn('<html lang="ar" dir="rtl">', page)
+        self.assertIn("إدخال حالة جديدة", page)
+        self.assertIn("مستوى البتر", page)
+        # Shown in Arabic, but the value sent is still the stored code.
+        self.assertIn('<option value="transtibial">بتر تحت الركبة</option>', page)
+        self.assertIn('<option value="yes">نعم</option>', page)
+        self.assertIn('href="/language/en?next=/intake"', page)
+        self.assertNotIn("New Case Intake", page)
+
+    def test_review_page_is_arabic_with_sources_untranslated(self):
+        page = self.review_page()
+        self.assertIn("مراجعة الحالة", page)
+        self.assertIn("ثبات حجم الطرف المتبقي", page)  # gap label
+        self.assertIn("لم يُسجَّل البند «ثبات حجم الطرف المتبقي» عند إدخال الحالة.", page)
+        self.assertIn("يتناول المصدر المذكور أدناه هذا الموضوع (انظر الاقتباس)", page)
+        self.assertIn("لم يُستشهد بأي مصدر.", page)
+        self.assertIn("قد تكون القائمة غير مكتملة", page)  # the disclaimer
+        # The quote and citation stay in the source's own words.
+        self.assertIn("Residual limb volume should be stable before the definitive socket is cast.", page)
+        self.assertIn("Test Guideline (2024), p. 14", page)
+        self.assertIn("إنجليزي · التشابه 0.71", page)
+        self.assertNotIn("was not recorded at intake", page)
+        self.assertNotIn("The list may be incomplete", page)
+
+    def test_arabic_case_values(self):
+        page = self.review_page(etiology="trauma", device_1_description="PTB socket",
+                                device_1_years="2", device_1_current="yes")
+        self.assertIn("بتر تحت الركبة", page)
+        self.assertIn("أيسر", page)
+        self.assertIn("رضّي (إصابة)", page)
+        self.assertIn("PTB socket · سنوات الاستخدام: 2.0 · قيد الاستخدام", page)
+
+    def test_missing_source_library_is_explained_in_arabic(self):
+        with patch("intake.routes.retrieve_relevant_chunks",
+                   side_effect=KnowledgeBaseMissing("No vector store.")):
+            page = self.review_page()
+        self.assertIn("لم يُبحث في مكتبة المصادر. التفاصيل التقنية: "
+                      "The source library was not searched: No vector store.", page)
+
+    def test_intake_errors_in_arabic(self):
+        for fields, message in [
+            ({"device_2_years": "3"}, "الجهاز السابق 2: صِف الجهاز نفسه، لا تفاصيله فقط"),
+            ({"no_prior_devices": "1", "device_1_description": "socket"},
+             "خيار «لا يوجد طرف اصطناعي سابق» محدَّد، لكن وُصف جهاز"),
+            ({"device_1_description": "socket", "device_1_current": "maybe"},
+             "الجهاز السابق 1: القيمة المتوقعة «نعم» أو «لا»، والمُرسَلة «maybe»"),
+            ({"side": ""}, "الجانب مطلوب"),
+        ]:
+            with self.subTest(**fields):
+                resp = self.post_intake(**fields)
+                self.assertEqual(resp.status_code, 400)
+                page = visible_text(resp.get_data(as_text=True))
+                self.assertIn("لم تُحفظ الحالة: " + message, page)
+                self.assertNotIn("Case not saved", page)
+
+    def test_python_worded_error_still_shown(self):
+        # The browser's number input prevents this; if it happens, the
+        # message is Python's own English wording inside the Arabic page.
+        resp = self.post_intake(age_years="abc")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("لم تُحفظ الحالة: invalid literal for int()", visible_text(resp.get_data(as_text=True)))
+
+    def test_comorbidities_none_in_arabic(self):
+        self.post_intake(comorbidities="لا يوجد")
+        record = store.all()[-1]
+        self.assertEqual(record.case.comorbidities, [])
+        self.assertNotIn("comorbidities", [g.field for g in record.gaps])
+
+    def test_decision_logged_in_english_with_the_page_language(self):
+        self.post_intake()
+        case_id = store.all()[-1].case.case_id
+        resp = self.client.post(
+            f"/review/{case_id}/decision", follow_redirects=True,
+            data={"decision": "edit", "note": "يجب قياس حجم الطرف",
+                  "gap:residual_limb.volume_stability": "needed"},
+        )
+        page = visible_text(resp.get_data(as_text=True))
+        self.assertIn("حُفظ القرار في سجل المراجعة: تعديل (مطلوب: 1، بلا تحديد: 16)", page)
+        self.assertIn("القرارات المسجلة لهذه الحالة (1)", page)
+        [entry] = read_decisions(case_id, path=self.log_path)
+        self.assertEqual((entry["decision"], entry["ui_language"]), ("edit", "ar"))
+        volume = next(g for g in entry["gaps"] if g["field"] == "residual_limb.volume_stability")
+        self.assertEqual(volume["label"], "Residual limb volume stability")  # the log stays English
+        self.assertTrue(volume["why_needed"].startswith("Residual limb volume stability was not recorded"))
+
+    def test_decision_errors_in_arabic(self):
+        self.post_intake()
+        case_id = store.all()[-1].case.case_id
+        resp = self.client.post(f"/review/{case_id}/decision", data={"decision": "edit"})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("لم يُحفظ القرار: التعديل يحتاج إلى ملاحظة توضح ما الذي يجب تغييره.",
+                      visible_text(resp.get_data(as_text=True)))
+        self.assertEqual(read_decisions(path=self.log_path), [])
+
+
+class LanguageSwitchTests(RouteTestCase):
+    def test_switch_sets_cookie_and_returns_to_the_page(self):
+        resp = self.client.get("/language/ar?next=/review/abc123")
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.headers["Location"], "/review/abc123")
+        self.assertIn("lang=ar", resp.headers["Set-Cookie"])
+        self.assertIn('dir="rtl"', self.client.get("/intake").get_data(as_text=True))
+        self.client.get("/language/en?next=/intake")
+        self.assertIn('dir="ltr"', self.client.get("/intake").get_data(as_text=True))
+
+    def test_only_pages_of_this_app(self):
+        for target in ["//evil.example/x", "https://evil.example", "/\\evil.example", "evil", ""]:
+            with self.subTest(target=target):
+                resp = self.client.get("/language/ar", query_string={"next": target})
+                self.assertEqual(resp.headers["Location"], "/")
+
+    def test_unknown_language(self):
+        resp = self.client.get("/language/fr?next=/intake")
+        self.assertEqual(resp.status_code, 404)
+        self.assertNotIn("Set-Cookie", resp.headers)
+        self.client.set_cookie("lang", "fr")  # e.g. an old or edited cookie
+        self.assertIn('<html lang="en" dir="ltr">', self.client.get("/intake").get_data(as_text=True))
 
 
 if __name__ == "__main__":

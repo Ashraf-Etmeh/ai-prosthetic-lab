@@ -44,6 +44,18 @@ Then open http://127.0.0.1:5000. The first case you submit takes about
 second. Build the search index first (below), or the review page will
 warn that no sources were searched.
 
+## Languages
+
+The pages are in English (default) or Arabic, right to left. The link at
+the top of each page switches language; the browser remembers the choice
+(a cookie). Headings, labels, choices, buttons, messages, the disclaimer
+and each gap's explanation are translated. Quotes and citations stay in
+the source's own language, and what the user types is shown as typed.
+
+All translations are in `shared/i18n.py`, so one file can be checked by an
+Arabic-reading specialist. The tests fail if a text, a gap field or a
+drop-down choice has no Arabic version.
+
 ## Knowledge sources
 
 The source PDFs are not in git. `data/sources/catalog.json` lists each one
@@ -92,7 +104,8 @@ change) or rejects the list. Each decision is added as one line of JSON to
 the case. A line holds the decision, note, time (UTC), the case as entered,
 every gap with its quote, citation and full passage, and the search
 settings, so it can be checked later even after the source library is
-re-ingested. Lines are never changed or removed. The file stays on this
+re-ingested. Labels and explanations are logged in English whichever
+language the reviewer used; `ui_language` records which one it was. Lines are never changed or removed. The file stays on this
 machine (it is in `.gitignore`).
 
 ## Tests
@@ -105,7 +118,8 @@ python -m unittest
 
 ```
 app.py              Flask entry point; registers the intake and review pages
-shared/             Case schema, config (paths, settings, disclaimer), in-memory store
+shared/             Case schema, config (paths, settings, disclaimer), in-memory store,
+                    interface text in English and Arabic (i18n.py)
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
 knowledge/          Source catalog, text extraction, ingestion, search, evaluation
 reasoning/          Gap analysis: what information is missing, and which source says why

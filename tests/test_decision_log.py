@@ -41,8 +41,9 @@ class DecisionLogTests(unittest.TestCase):
         self.path = Path(tmp.name) / "logs" / "review_log.jsonl"  # folder made on first write
         self.record = make_record()
 
-    def log(self, decision="approve", note=None, judgements=None, record=None):
-        return record_decision(record or self.record, decision, note, judgements, path=self.path)
+    def log(self, decision="approve", note=None, judgements=None, record=None, ui_language="en"):
+        return record_decision(record or self.record, decision, note, judgements, path=self.path,
+                               ui_language=ui_language)
 
     def gap_entry(self, entry: dict, field: str) -> dict:
         return next(gap for gap in entry["gaps"] if gap["field"] == field)
@@ -80,6 +81,14 @@ class DecisionLogTests(unittest.TestCase):
         self.assertEqual(self.gap_entry(entry, WOUND)["reviewer_judgement"], "not_needed")
         others = [g["reviewer_judgement"] for g in entry["gaps"] if g["field"] not in (VOLUME, WOUND)]
         self.assertTrue(others and all(j is None for j in others))
+
+    def test_page_language_recorded_but_log_stays_english(self):
+        self.assertEqual(self.log()["ui_language"], "en")
+        entry = self.log(ui_language="ar")
+        self.assertEqual((entry["log_version"], entry["ui_language"]), (2, "ar"))
+        volume = self.gap_entry(entry, VOLUME)
+        self.assertEqual(volume["label"], "Residual limb volume stability")
+        self.assertTrue(volume["why_needed"].startswith("Residual limb volume stability was not recorded"))
 
     def test_settings_recorded(self):
         settings = self.log()["settings"]

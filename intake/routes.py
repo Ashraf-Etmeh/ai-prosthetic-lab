@@ -27,11 +27,15 @@ from shared.case_schema import (
     VolumeStability,
     WoundStatus,
 )
+from shared.i18n import TranslatableError, error_message, language_from_cookies
 from shared.store import CaseRecord, store
 
 bp = Blueprint("intake", __name__, template_folder="templates")
 
 MAX_PRIOR_DEVICES = 3  # device rows on the form
+# Typed alone in the comorbidities box: asked, none reported. The Arabic
+# form tells the user to type لا يوجد.
+NONE_ANSWERS = ("none", "لا يوجد", "لا شيء")
 
 
 def _required(form, name: str) -> str:
@@ -39,7 +43,7 @@ def _required(form, name: str) -> str:
     # crash page (500) instead of the form with a message.
     value = form.get(name)
     if not value:
-        raise ValueError(f"{name} is required")
+        raise TranslatableError(f"error.required.{name}")
     return value
 
 
@@ -66,7 +70,7 @@ def _optional_list(raw: str | None) -> list[str] | None:
     items = [line.strip() for line in (raw or "").splitlines() if line.strip()]
     if not items:
         return None
-    if len(items) == 1 and items[0].lower() == "none":
+    if len(items) == 1 and items[0].lower() in NONE_ANSWERS:
         return []
     return items
 
@@ -75,7 +79,7 @@ def _optional_bool(raw: str | None) -> bool | None:
     if not raw:
         return None
     if raw not in ("yes", "no"):
-        raise ValueError(f"expected yes or no, got {raw!r}")
+        raise TranslatableError("error.yes_no", value=raw)
     return raw == "yes"
 
 
@@ -92,7 +96,7 @@ def _prior_devices(form) -> list[PriorDevice] | None:
                for part in ("description", "years", "current", "issues")}
         if not raw["description"]:
             if any(raw.values()):
-                raise ValueError(f"prior device {n}: describe the device, not only its details")
+                raise TranslatableError("error.device_details_only", n=n)
             continue
         try:
             devices.append(PriorDevice(
@@ -102,10 +106,10 @@ def _prior_devices(form) -> list[PriorDevice] | None:
                 issues=raw["issues"] or None,
             ))
         except ValueError as e:
-            raise ValueError(f"prior device {n}: {e}") from e
+            raise TranslatableError("error.device_invalid", n=n, detail=e) from e
     if form.get("no_prior_devices"):
         if devices:
-            raise ValueError('"No prior prosthesis" is ticked, but a device is described')
+            raise TranslatableError("error.no_prior_but_device")
         return []
     return devices or None
 
@@ -152,6 +156,7 @@ def _render_form(error: str | None = None):
         volume_stabilities=list(VolumeStability),
         k_levels=list(ActivityLevel),
         max_prior_devices=MAX_PRIOR_DEVICES,
+        here=url_for("intake.show_form"),  # where the language link comes back to
     )
 
 
@@ -165,7 +170,7 @@ def submit_form():
     try:
         case = _case_from_form(request.form)
     except ValueError as e:  # bad number or enum value
-        return _render_form(error=str(e)), 400
+        return _render_form(error=error_message(e, language_from_cookies(request.cookies))), 400
     warning = None
     try:
         chunks = retrieve_relevant_chunks(case)

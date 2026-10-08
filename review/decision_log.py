@@ -9,6 +9,9 @@ object that can be read on its own, holding
   passage's quote, citation and full text. Chunk ids change when the library
   is re-ingested with other settings, so the id alone would not show later
   what the specialist saw,
+- the language of the review page ("ui_language", "en" or "ar"). Labels
+  and explanations are logged in English whichever language was shown;
+  the Arabic page shows the same items, translated (shared/i18n.py),
 - the settings that produced the gap list.
 
 Lines are only ever added. Editing or removing a logged decision is out of
@@ -31,18 +34,21 @@ from shared.config import (
     RETRIEVAL_TOP_K,
     REVIEW_LOG_PATH,
 )
+from shared.i18n import DEFAULT_LANGUAGE, TranslatableError
 from shared.store import CaseRecord
 
 DECISIONS = ("approve", "edit", "reject")
 GAP_JUDGEMENTS = ("needed", "not_needed")
-LOG_VERSION = 1  # raise when the shape of an entry changes
+# Raise when the shape of an entry changes. 2 (2026-10-08): adds "ui_language";
+# version 1 entries were all made on the English page.
+LOG_VERSION = 2
 
 # The development server answers requests in threads; one write at a time
 # keeps two decisions from mixing into one line.
 _write_lock = threading.Lock()
 
 
-class InvalidDecision(ValueError):
+class InvalidDecision(TranslatableError):
     """A submitted decision the log refuses, with a message for the reviewer."""
 
 
@@ -51,6 +57,7 @@ def build_entry(
     decision: str,
     note: Optional[str] = None,
     gap_judgements: Optional[dict[str, str]] = None,
+    ui_language: str = DEFAULT_LANGUAGE,
 ) -> dict:
     """The log entry for one decision. Raises InvalidDecision if it is not valid.
 
@@ -60,15 +67,15 @@ def build_entry(
     note = (note or "").strip() or None
     gap_judgements = gap_judgements or {}
     if decision not in DECISIONS:
-        raise InvalidDecision(f"Unknown decision {decision!r}: expected approve, edit or reject.")
+        raise InvalidDecision("error.unknown_decision", decision=decision)
     if decision == "edit" and note is None:
-        raise InvalidDecision("An edit needs a note saying what should change.")
+        raise InvalidDecision("error.edit_needs_note")
     gap_fields = {gap.field for gap in record.gaps}
     for field, judgement in gap_judgements.items():
         if field not in gap_fields:
-            raise InvalidDecision(f"{field!r} is not one of this case's gaps.")
+            raise InvalidDecision("error.not_a_gap", field=field)
         if judgement not in GAP_JUDGEMENTS:
-            raise InvalidDecision(f"Unknown judgement {judgement!r} for {field!r}.")
+            raise InvalidDecision("error.unknown_judgement", judgement=judgement, field=field)
 
     return {
         "log_version": LOG_VERSION,
@@ -76,6 +83,7 @@ def build_entry(
         "case_id": record.case.case_id,
         "decision": decision,
         "note": note,
+        "ui_language": ui_language,
         "gaps": [_gap_entry(gap, gap_judgements.get(gap.field)) for gap in record.gaps],
         "knowledge_warning": record.knowledge_warning,  # set if no sources were searched
         "settings": {
@@ -123,9 +131,10 @@ def record_decision(
     note: Optional[str] = None,
     gap_judgements: Optional[dict[str, str]] = None,
     path: Optional[Path] = None,
+    ui_language: str = DEFAULT_LANGUAGE,
 ) -> dict:
     """Validate the decision, append it to the log as one line, and return the entry."""
-    entry = build_entry(record, decision, note, gap_judgements)
+    entry = build_entry(record, decision, note, gap_judgements, ui_language)
     path = path or REVIEW_LOG_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(entry, ensure_ascii=False)  # Arabic stays readable in the file

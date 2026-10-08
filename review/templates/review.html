@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}" dir="{{ text_dir }}">
 <head>
   <meta charset="utf-8">
-  <title>Case Review — AI Prosthetic Lab</title>
+  <title>{{ t('review.page_title') }}</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #222; }
     h1 { font-size: 1.3rem; }
@@ -16,7 +16,7 @@
     .gap-status { font-size: 0.75rem; background: #f0f0f0; border-radius: 4px; padding: 0.05rem 0.4rem; }
     .gap-field { font-family: ui-monospace, monospace; font-size: 0.75rem; color: #777; }
     .gap p { margin: 0.4rem 0; }
-    blockquote { margin: 0.4rem 0; padding: 0.3rem 0.7rem; border-left: 3px solid #9bb7d4; background: #f6f9fc; }
+    blockquote { margin: 0.4rem 0; padding: 0.3rem 0.7rem; border-inline-start: 3px solid #9bb7d4; background: #f6f9fc; }
     .gap-source { color: #666; font-size: 0.8rem; }
     .no-source { color: #8a6d00; }
     details { margin-top: 0.3rem; font-size: 0.8rem; color: #444; }
@@ -30,75 +30,82 @@
     button[value="approve"] { background: #e6f4ea; border: 1px solid #8ec99b; }
     button[value="reject"] { background: #fbe6e6; border: 1px solid #d99; }
     .gap-judgement { margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; }
-    .logged { font-size: 0.85rem; padding-left: 1.2rem; }
+    .logged { font-size: 0.85rem; padding-inline-start: 1.2rem; }
+    .lang-switch { text-align: end; font-size: 0.85rem; }
   </style>
 </head>
 <body>
-  <h1>Case Review — {{ case.case_id }}</h1>
-  <div class="banner">{{ disclaimer }}</div>
+  <nav class="lang-switch">
+    <a href="{{ url_for('set_language', code=t('nav.other_code'), next=here) }}" lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</a>
+  </nav>
+  <h1>{{ t('review.heading', case_id=case.case_id) }}</h1>
+  <div class="banner">{{ t('disclaimer') }}</div>
 
   {% if knowledge_warning %}
-  <div class="warning">{{ knowledge_warning }}</div>
+  {# The warning itself is English (it names a command to run); other languages introduce it. #}
+  <div class="warning">{% if lang != "en" %}{{ t('review.not_searched') }} {% endif %}<span lang="en" dir="ltr">{{ knowledge_warning }}</span></div>
   {% endif %}
 
   {% if saved %}
   {% set last = logged[-1][0] %}
-  <div class="confirm">Decision saved to the review log: <strong>{{ last.decision }}</strong> ({{ logged[-1][1] }})</div>
+  <div class="confirm">{{ t('review.saved') }} <strong>{{ t('decision.' ~ last.decision) }}</strong> ({{ logged[-1][1] }})</div>
   {% endif %}
 
   {% if error %}
-  <div class="warning">Decision not saved: {{ error }}</div>
+  <div class="warning">{{ t('review.not_saved') }} <bdi>{{ error }}</bdi></div>
   {% endif %}
 
-  <h2>Case</h2>
+  <h2>{{ t('review.case') }}</h2>
   <dl>
-    <dt>Amputation level</dt><dd>{{ case.amputation_level.value }}</dd>
-    <dt>Side</dt><dd>{{ case.side.value }}</dd>
-    <dt>Age</dt><dd>{{ case.age_years if case.age_years is not none else "—" }}</dd>
-    <dt>Etiology</dt><dd>{{ case.etiology.value if case.etiology else "—" }}</dd>
-    <dt>Months since amputation</dt><dd>{{ case.months_since_amputation if case.months_since_amputation is not none else "—" }}</dd>
-    <dt>Prior prostheses</dt>
+    <dt>{{ t('intake.amputation_level') }}</dt><dd>{{ value_label(case.amputation_level) }}</dd>
+    <dt>{{ t('intake.side') }}</dt><dd>{{ value_label(case.side) }}</dd>
+    <dt>{{ t('review.age') }}</dt><dd>{{ case.age_years if case.age_years is not none else "—" }}</dd>
+    <dt>{{ t('intake.etiology') }}</dt><dd>{{ value_label(case.etiology) if case.etiology else "—" }}</dd>
+    <dt>{{ t('intake.months_since_amputation') }}</dt><dd>{{ case.months_since_amputation if case.months_since_amputation is not none else "—" }}</dd>
+    <dt>{{ t('intake.prior_prostheses') }}</dt>
     <dd>
       {% if case.prior_devices is none %}—
-      {% elif not case.prior_devices %}none used
+      {% elif not case.prior_devices %}{{ t('review.none_used') }}
       {% else %}
       {% for device in case.prior_devices %}
-      <div>{{ device.device_description }}{% if device.years_used is not none %} · {{ device.years_used }} years{% endif %}{% if device.currently_using is not none %} · {{ "in use" if device.currently_using else "no longer used" }}{% endif %}{% if device.issues %} · issues: {{ device.issues }}{% endif %}</div>
+      <div><bdi>{{ device.device_description }}</bdi>{% if device.years_used is not none %} · {{ t('review.years', years=device.years_used) }}{% endif %}{% if device.currently_using is not none %} · {{ t('review.in_use') if device.currently_using else t('review.no_longer_used') }}{% endif %}{% if device.issues %} · {{ t('review.issues') }} <bdi>{{ device.issues }}</bdi>{% endif %}</div>
       {% endfor %}
       {% endif %}
     </dd>
   </dl>
 
   <form method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
-  <h2>Information gaps ({{ gaps | length }})</h2>
+  <h2>{{ t('review.gaps_heading', n=gaps | length) }}</h2>
   {% for gap in gaps %}
   <div class="gap">
     <div class="gap-head">
-      <span class="gap-label">{{ gap.label }}</span>
-      <span class="gap-status">{{ gap.status }}</span>
-      <span class="gap-field">{{ gap.field }}</span>
+      <span class="gap-label">{{ field_label(gap.field) }}</span>
+      <span class="gap-status">{{ t('status.' ~ gap.status) }}</span>
+      <span class="gap-field" dir="ltr">{{ gap.field }}</span>
     </div>
-    <p>{{ gap.why_needed }}</p>
+    <p>{{ explain(gap) }}</p>
     {% if gap.evidence %}
     <blockquote dir="auto" lang="{{ gap.evidence.language }}">{{ gap.excerpt }}</blockquote>
     <div class="gap-source">
-      {{ gap.evidence.citation }} · {{ gap.evidence.language }} · similarity {{ "%.2f" | format(gap.evidence.score) }}
-      · <code>{{ gap.source_protocol_reference }}</code>
+      {# Own line, in the source's direction: a wrapped title stays readable on the Arabic page. #}
+      <div dir="auto" lang="{{ gap.evidence.language }}">{{ gap.evidence.citation }}</div>
+      {{ t('doclang.' ~ gap.evidence.language) }} · {{ t('review.similarity', score="%.2f" | format(gap.evidence.score)) }}
+      · <code dir="ltr">{{ gap.source_protocol_reference }}</code>
     </div>
     <details>
-      <summary>Full passage</summary>
+      <summary>{{ t('review.full_passage') }}</summary>
       <p dir="auto" lang="{{ gap.evidence.language }}">{{ gap.evidence.text }}</p>
     </details>
     {% else %}
-    <p class="gap-source no-source">No source cited.</p>
+    <p class="gap-source no-source">{{ t('review.no_source') }}</p>
     {% endif %}
     {% set considered = chunks.get(gap.field, []) %}
     {% if considered %}
     <details>
-      <summary>Passages retrieved for this field ({{ considered | length }})</summary>
+      <summary>{{ t('review.retrieved', n=considered | length) }}</summary>
       <ul>
         {% for chunk in considered %}
-        <li>{{ chunk.citation }} · {{ chunk.language }} · similarity {{ "%.2f" | format(chunk.score) }}</li>
+        <li><div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>{{ t('doclang.' ~ chunk.language) }} · {{ t('review.similarity', score="%.2f" | format(chunk.score)) }}</li>
         {% endfor %}
       </ul>
     </details>
@@ -106,30 +113,30 @@
     {% set name = gap_prefix ~ gap.field %}
     {% set chosen = form.get(name, "") %}
     <div class="gap-judgement">
-      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("needed", "not_needed") }}> Not marked</label>
-      <label><input type="radio" name="{{ name }}" value="needed" {{ "checked" if chosen == "needed" }}> Needed</label>
-      <label><input type="radio" name="{{ name }}" value="not_needed" {{ "checked" if chosen == "not_needed" }}> Not needed for this case</label>
+      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("needed", "not_needed") }}> {{ t('review.not_marked') }}</label>
+      <label><input type="radio" name="{{ name }}" value="needed" {{ "checked" if chosen == "needed" }}> {{ t('review.needed') }}</label>
+      <label><input type="radio" name="{{ name }}" value="not_needed" {{ "checked" if chosen == "not_needed" }}> {{ t('review.not_needed') }}</label>
     </div>
   </div>
   {% else %}
-  <p>No gaps identified: every listed intake field is filled in.</p>
+  <p>{{ t('review.no_gaps') }}</p>
   {% endfor %}
 
-  <h2>Reviewer decision</h2>
+  <h2>{{ t('review.decision_heading') }}</h2>
   <div class="decision-form">
-    <textarea name="note" placeholder="Note (required for Edit: what should change)">{{ form.get("note", "") }}</textarea>
-    <button type="submit" name="decision" value="approve">Approve</button>
-    <button type="submit" name="decision" value="edit">Edit</button>
-    <button type="submit" name="decision" value="reject">Reject</button>
+    <textarea name="note" dir="auto" placeholder="{{ t('review.note_placeholder') }}">{{ form.get("note", "") }}</textarea>
+    <button type="submit" name="decision" value="approve">{{ t('review.approve') }}</button>
+    <button type="submit" name="decision" value="edit">{{ t('review.edit') }}</button>
+    <button type="submit" name="decision" value="reject">{{ t('review.reject') }}</button>
   </div>
   </form>
 
   {% if logged %}
-  <h2>Logged decisions for this case ({{ logged | length }})</h2>
-  <p class="gap-source">Saved in <code>{{ log_name }}</code>, oldest first. Logged decisions are never changed.</p>
+  <h2>{{ t('review.logged_heading', n=logged | length) }}</h2>
+  <p class="gap-source">{{ t('review.log_saved_in') }} <code dir="ltr">{{ log_name }}</code>{{ t('review.log_order') }}</p>
   <ol class="logged">
     {% for entry, summary in logged %}
-    <li>{{ entry.logged_at }} · <strong>{{ entry.decision }}</strong> · {{ summary }}{% if entry.note %} · “<bdi>{{ entry.note }}</bdi>”{% endif %}</li>
+    <li><bdi>{{ entry.logged_at }}</bdi> · <strong>{{ t('decision.' ~ entry.decision) }}</strong> · {{ summary }}{% if entry.note %} · “<bdi>{{ entry.note }}</bdi>”{% endif %}</li>
     {% endfor %}
   </ol>
   {% endif %}

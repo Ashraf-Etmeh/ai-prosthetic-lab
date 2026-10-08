@@ -3,7 +3,7 @@
 import unittest
 
 from knowledge.models import ProtocolChunk
-from reasoning.gap_analysis import analyze_gaps, find_evidence, topic_excerpt
+from reasoning.gap_analysis import analyze_gaps, explain_gap, find_evidence, topic_excerpt
 from shared.case_schema import Case, ResidualLimb
 from shared.field_guide import FIELDS_BY_PATH, RECORDED_UNKNOWN, missing_fields
 
@@ -80,6 +80,23 @@ class EvidenceTests(unittest.TestCase):
             self.assertNotIn("recommend", gap.why_needed.lower())
         [gap] = [g for g in analyze_gaps(case, retrieved, 0.5) if g.source_protocol_reference]
         self.assertIn("Guideline (2024), p. 12", gap.why_needed)
+
+    def test_explanation_in_the_reviewers_language(self):
+        case = Case(amputation_level="transtibial", side="left",
+                    residual_limb=ResidualLimb(wound_status="unknown"))
+        retrieved = {"residual_limb.volume_stability": [chunk("v-0001", "Volume changes.", 0.7)]}
+        gaps = {g.field: g for g in analyze_gaps(case, retrieved, min_score=0.5)}
+        for gap in gaps.values():
+            self.assertEqual(explain_gap(gap, "en"), gap.why_needed)  # the logged text
+        self.assertEqual(
+            explain_gap(gaps["residual_limb.volume_stability"], "ar"),
+            "لم يُسجَّل البند «\u2068ثبات حجم الطرف المتبقي\u2069» عند إدخال الحالة. "
+            "يتناول المصدر المذكور أدناه هذا الموضوع (انظر الاقتباس)؛ "
+            "تحقَّق مما إذا كان ينطبق على هذه الحالة.",
+        )
+        self.assertTrue(explain_gap(gaps["residual_limb.wound_status"], "ar").startswith(
+            "سُجِّل البند «\u2068حالة جرح الطرف المتبقي\u2069» على أنه غير معروف. لم يُعثر"
+        ))
 
 
 class ExcerptTests(unittest.TestCase):

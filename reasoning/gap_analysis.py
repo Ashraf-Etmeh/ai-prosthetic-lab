@@ -18,7 +18,8 @@ unknown), in the field guide's order:
 
 IMPORTANT: this layer produces information-gap findings only. It must never
 phrase output as a diagnosis, a treatment choice, or a component
-recommendation. Every item is a suggestion for specialist review.
+recommendation, in any language. Every item is a suggestion for specialist
+review. The sentences themselves are in shared/i18n.py ("gap.*").
 """
 
 import re
@@ -29,6 +30,7 @@ from reasoning.models import Gap
 from shared.case_schema import Case
 from shared.config import MIN_RELEVANCE_SCORE
 from shared.field_guide import NOT_RECORDED, FieldInfo, MissingField, missing_fields
+from shared.i18n import field_label, t
 
 MAX_EXCERPT_SENTENCES = 2
 MAX_EXCERPT_CHARS = 400
@@ -109,35 +111,29 @@ def _around(sentence: str, span: tuple[int, int]) -> str:
     return before + sentence[start:end].strip() + after
 
 
+def explain_gap(gap: Gap, lang: str) -> str:
+    """Why the gap is listed, in the reviewer's language. Gap.why_needed is the English one."""
+    return _explanation(gap.field, gap.status, gap.evidence, lang)
+
+
+def _explanation(field: str, status: str, evidence: Optional[ProtocolChunk], lang: str) -> str:
+    key = "gap.not_recorded" if status == NOT_RECORDED else "gap.recorded_unknown"
+    opening = t(key, lang, label=field_label(field, lang))
+    if evidence is None:
+        return f"{opening} {t('gap.no_source', lang)}"
+    return f"{opening} {t('gap.cited', lang, citation=evidence.citation)}"
+
+
 def _make_gap(missing: MissingField, chunks: list[ProtocolChunk], min_score: float) -> Gap:
     info = missing.info
-    if missing.status == NOT_RECORDED:
-        opening = f"{info.label} was not recorded at intake."
-    else:
-        opening = f"{info.label} was recorded as unknown."
-
     found = find_evidence(info, chunks, min_score)
-    if found is None:
-        return Gap(
-            field=info.path,
-            label=info.label,
-            status=missing.status,
-            why_needed=(
-                f"{opening} No passage in the source library was found on this "
-                "topic, so whether it is needed is for the specialist to judge."
-            ),
-        )
-
-    evidence, excerpt = found
+    evidence, excerpt = found if found is not None else (None, None)
     return Gap(
         field=info.path,
         label=info.label,
         status=missing.status,
-        why_needed=(
-            f"{opening} {evidence.citation} discusses this topic (quoted below); "
-            "check whether it applies to this case."
-        ),
-        source_protocol_reference=evidence.chunk_id,
+        why_needed=_explanation(info.path, missing.status, evidence, "en"),
+        source_protocol_reference=evidence.chunk_id if evidence is not None else None,
         evidence=evidence,
         excerpt=excerpt,
     )

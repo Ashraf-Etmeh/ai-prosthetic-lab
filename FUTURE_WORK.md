@@ -303,18 +303,93 @@ items are resolved instead of re-deriving them from scratch.
   - The 14 run-check decisions carry the note "automated run check
     2026-10-08"; `data/review_log.jsonl` now has 17 test lines.
 
+## Arabic UI (done 2026-10-08)
+
+Chosen instead of Arabic citations, which need sources the library doesn't
+have (see Open decisions).
+
+- **`shared/i18n.py`** holds every interface text in English and Arabic:
+  headings, labels, drop-down choices, buttons, messages, the disclaimer,
+  the 17 gap field names and the gap explanations. English is the default
+  and its pages show the same text as before. `GET /language/<code>` sets a
+  `lang` cookie and goes back to the page (`next`, only a path of this app:
+  `//host`, `/\host` and full URLs go to `/`).
+- **Not translated:** quotes and citations (the source's own words), what
+  the user typed, the "source library was not searched" detail (it names a
+  command), and Python's own wording for impossible form values.
+- **Right to left:** `<html dir="rtl">`, CSS with start/end instead of
+  left/right, user text and English citations in `<bdi>` or their own
+  `dir="auto"` line, and values inside Arabic sentences wrapped in Unicode
+  isolates (U+2068/U+2069) so the browser doesn't reorder them.
+- **One explanation function:** `reasoning/gap_analysis.explain_gap(gap,
+  lang)`; `Gap.why_needed` is its English output, word for word as before.
+  The Arabic sentence leaves the citation out ("المصدر المذكور أدناه"): in
+  the first screenshot a 120-character English title wrapped inside the
+  Arabic sentence was hard to read, and the citation is on its own line
+  below the quote anyway.
+- **Review log version 2:** adds `ui_language`. Labels and explanations are
+  still logged in English, so entries compare across languages.
+- The comorbidities box also accepts لا يوجد / لا شيء for "none" (the
+  Arabic label says to type لا يوجد).
+- **Tests:** 162 (28 new). `tests/test_i18n.py` fails if any text, gap
+  field or choice lacks Arabic, if a translation uses a placeholder the
+  English doesn't, or if a key used in a template or the code is missing.
+  Checked by deleting one label, one text and breaking one placeholder: all
+  three caught, each naming the key.
+- **Run check** (`python app.py`, real model and index, 65 checks, run
+  twice): the four test cases in Arabic list 17/17/15/15 gaps with
+  15/15/12/12 sources, the same gaps the English pages cite; no English
+  text left on the Arabic pages; Arabic errors (device details only, side
+  missing, edit without a note) refused with 400; decisions logged with
+  `ui_language` "ar" and "en". Server log: 73 requests, no 500s. Screenshots
+  (headless Edge) checked by eye: right-to-left layout of both pages,
+  buttons and logged decisions.
+- **Needs checking by an Arabic-reading prosthetist:** the clinical terms
+  in `shared/i18n.py` (amputation levels, e.g. بتر تحت الركبة for
+  transtibial; K-level wording; الطرف المتبقي for residual limb). The WHO
+  Arabic editions use البدلات for prostheses; the interface follows the
+  brief's الأطراف الاصطناعية.
+- The four run-check decisions carry the note "automated run check
+  2026-10-08 (Arabic UI)"; `data/review_log.jsonl` now has 21 test lines.
+
 ## Open decisions
 
-- **Arabic UI.** The UI is English-only; Arabic quotes display
-  right-to-left, the rest of the page doesn't.
-- **Arabic sources are never cited in gap lists** (seen 2026-10-06, same
-  four test cases). The field queries are English, and the two Arabic
-  documents are the WHO P&O standards, whose English edition is also in
-  the library, so the English text always scores higher. Arabic search
-  itself works (6-7 of 8 evaluation queries). For an Arabic-reading
-  reviewer, options are Arabic field queries (`shared/field_guide.py`),
-  showing the Arabic twin of a cited WHO passage, or more Arabic-only
-  sources.
+- **Arabic sources are never cited in gap lists** (seen 2026-10-06).
+  Investigated 2026-10-08 with a throwaway probe (four test cases,
+  transtibial, transfemoral, transradial, transhumeral; 64 gaps; the
+  app's own citation rule). Code alone can't fix it:
+  - The cause is not that the English WHO edition wins: the English WHO
+    documents are never cited either. All 200 citations in the 17 logged
+    decisions come from five English documents (VA/DoD lower limb 94,
+    VA/DoD upper limb 58, ML walking ability 25, phantom pain 14, socket
+    shape capture 9).
+  - The two Arabic WHO documents are about running a P&O service, not
+    about assessing an amputee. With vowel marks removed they use
+    البدلات about 900 times, but الطرف المتبقي (residual limb), socket
+    and phantom 0 times, wound and edema 0-2 times.
+  - Arabic field queries on the Arabic documents pass the rule for 42 of
+    64 gaps, but read by hand the passages are false matches: الجلد is
+    leather in a list of materials, هدف is the service's goal, العمر is
+    "lifelong", حجم/شكل are measurements for a plaster cast, and the
+    passage cited for sensation, wound and cause is about diabetic feet
+    before amputation. Arabic queries instead of English ones also cut
+    citations from 54 to 47.
+  - Showing the Arabic twin of a cited WHO passage would add nothing,
+    since no WHO passage is cited.
+  - So the library needs Arabic text on assessing an amputee. Not found
+    online: an Arabic edition of WHO's *Package of interventions for
+    rehabilitation*, module 2 (2023, covers amputation;
+    https://www.who.int/publications/i/item/9789240071100), or of the
+    ICRC/WHO/AO limb-injury handbook (2016). Found: the MSD Manuals Arabic
+    consumer pages on rehabilitation after amputation and on prostheses
+    (peer-reviewed, updated 2026, use الطرف المتبقي and الطرف الاصطناعي;
+    but consumer level, web pages without page numbers, "all rights
+    reserved").
+  - Before any Arabic source is added, the Arabic `topic_terms` in
+    `shared/field_guide.py` need tightening for the double meanings
+    above, or a clinical Arabic text will get the same false matches.
+  - **Decided 2026-10-08:** build the Arabic UI instead (done, see above);
+    Arabic citations wait for an Arabic clinical source.
 
 ## Known v1 simplifications (acceptable for now, revisit later if scope grows)
 
@@ -349,6 +424,9 @@ items are resolved instead of re-deriving them from scratch.
   a valid AmputationLevel", "could not convert string to float"). The
   form's drop-downs and number inputs prevent most of them in a browser;
   friendlier wording per field would help if they show up in practice.
+  They are not translated: the Arabic page shows them in English.
+- Switching language reloads the page, so anything typed but not yet
+  submitted is lost (the intake form, the review note and marks).
 
 ## Path to the full system
 
