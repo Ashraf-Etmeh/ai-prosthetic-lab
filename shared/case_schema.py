@@ -131,6 +131,11 @@ class PriorDevice:
     currently_using: Optional[bool] = None
     issues: Optional[str] = None  # fit, comfort, skin, mechanical problems
 
+    def __post_init__(self) -> None:
+        if not self.device_description or not self.device_description.strip():
+            raise ValueError("device_description must not be empty")
+        _check_number("years_used", self.years_used)
+
 
 @dataclass
 class Case:

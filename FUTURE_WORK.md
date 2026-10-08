@@ -9,8 +9,16 @@ items are resolved instead of re-deriving them from scratch.
   accuracy. German costs nothing at the model level (every candidate
   multilingual model covers it). Measured 2026-10-06 (see Step 3
   progress): German search works (5/5 first place) and doesn't change
-  English (10/10), but costs 1 of 8 Arabic queries. Kept for now; the
-  decision is under Open decisions.
+  English (10/10), but costs 1 of 8 Arabic queries.
+  **Decided 2026-10-06: German is not searched** (`RETRIEVAL_LANGUAGES` =
+  `("en", "ar")`). On four test cases (transtibial, transfemoral,
+  transradial, transhumeral; only required fields, 64 gaps) the gap lists
+  cite 54 gaps with or without German, and also when German is searched
+  only if English/Arabic find nothing. German only swapped two English
+  quotes (functional goals, upper limb: AWMF p. 15 at 0.68 instead of
+  VA/DoD p. 8 at 0.66). The German documents stay in the catalog and the
+  index, and `knowledge.evaluate` still measures them, so adding `"de"`
+  back needs no re-ingest.
 - **Embedding model: `BAAI/bge-m3`** (~2.3 GB, 8192-token input, no
   query/passage prefixes, best cross-language results of the candidates).
   Replaces `all-MiniLM-L6-v2` (English-only). Fallback if too slow/heavy:
@@ -179,18 +187,16 @@ items are resolved instead of re-deriving them from scratch.
   - Approve: confirmation banner shown.
 
   Found:
-  1. A case with every form field filled still shows "Prior prosthesis
-     use", because the form has no prior-devices input (see Known v1
-     simplifications).
-  2. Decisions are not saved (step 5).
+  1. ~~A case with every form field filled still shows "Prior prosthesis
+     use", because the form has no prior-devices input.~~ Fixed
+     2026-10-06 (see Step 5).
+  2. ~~Decisions are not saved (step 5).~~ Fixed 2026-10-06 (see Step 5).
   3. For upper-limb cases, comorbidities and cause of amputation can
      quote a lower-limb sentence from the phantom-pain review, whose
      `limbs` covers both.
   4. Some quotes are table residue ("Weak for Reviewed, Amended…",
-     "AM-ULA + + N/A").
-
-  Next step (not yet chosen by the user): the prior-devices input, or
-  step 5.
+     "AM-ULA + + N/A") or start with footnote numbers ("3 Poor fit can
+     cause…").
 
 ## Step 4 (reasoning) decisions and progress
 
@@ -223,9 +229,9 @@ items are resolved instead of re-deriving them from scratch.
   - Table rows make poor quotes.
   - The topic check only proves a passage *mentions* the topic, not that
     it says the information is needed; the specialist judges that.
-  - Chunk ids change if extraction or chunk settings change, so step 5's
-    review log must store the quoted text and citation, not only the
-    chunk id.
+  - Chunk ids change if extraction or chunk settings change, so the
+    review log stores the quoted text, citation and full passage, not
+    only the chunk id (done in step 5).
   - Methods tables can be cited (e.g. "Timing KQ … Post-operative" for
     time since amputation), and the German guideline has some
     letter-spaced text ("d i e d a n n") from its PDF.
@@ -233,30 +239,82 @@ items are resolved instead of re-deriving them from scratch.
     never has a citation. Add one (e.g. a prosthetic history/intake
     guide) if it should.
 
+## Step 5 (documented outcome) and intake completion (done 2026-10-06)
+
+- **Review log: `review/decision_log.py`.** Every decision appends one
+  JSON line to `data/review_log.jsonl` (in `.gitignore`; written with
+  `ensure_ascii=False`, so Arabic stays readable). Each line stands on its
+  own: `log_version`, `logged_at` (UTC), `case_id`, `decision`, `note`,
+  every gap as shown (`field`, `label`, `status`, `why_needed`,
+  `reviewer_judgement`, and for a cited gap `source` with chunk id,
+  citation, title, year, pages, file, language, score, the quote and the
+  full passage), `knowledge_warning`, the search `settings` (model,
+  revision, threshold, languages, domains, top k), and the case
+  (`Case.to_dict()`). Lines are only ever added.
+- **Per-gap judgement:** the review page asks, for each gap, "Not marked",
+  "Needed" or "Not needed for this case". This is the specialist feedback
+  the brief's "specialist expertise" source can later learn from.
+- **Validation:** decision must be approve, edit or reject; "edit" needs a
+  note; judgements must be needed / not_needed for one of the case's own
+  gaps. A refused submission returns 400, logs nothing, and keeps the
+  reviewer's choices and note on the page.
+- The review page lists the decisions logged for the case, read back from
+  the file, and the banner shows the decision just saved.
+- **Prior-devices input:** the intake form has a "No prior prosthesis"
+  checkbox and three device rows (description, years used, currently
+  using, issues). Nothing filled -> `None` (a gap); box ticked -> `[]`
+  (no gap); rows -> `PriorDevice` list. Details without a description,
+  the box ticked together with a device, negative years, or an unknown
+  yes/no value are refused. `PriorDevice` itself now rejects an empty
+  description and negative or non-finite years. Every field the gap
+  analysis checks now has a form input.
+- **Run check** (`python app.py`, 16 HTTP requests, no errors):
+  - Below-knee case with age and wound status filled: 15 gaps, 13 with a
+    source, all English; the first case took 8.5 s (model load).
+  - Same level with every field filled: 0 gaps.
+  - Forearm case with "No prior prosthesis" ticked: 14 gaps, 12 with a
+    source, no prior-devices gap, no German quote.
+  - Device details without a description, or the box ticked together
+    with a device: refused with 400 and a message.
+  - Decisions: approve with 2 needed / 1 not needed, and an edit with an
+    Arabic note, logged; edit without a note and "maybe" refused with
+    400; decision for an unknown case: 404. The log had 3 lines; a
+    15-gap entry is about 26 KB (mostly the full passages).
+- **Full run check 2026-10-08** (unit tests, `knowledge.evaluate`, live
+  server, 59 HTTP requests, 1,039 automated checks):
+  - Evaluation unchanged; the app's setting (no German) gives English
+    10/10, Arabic 7/8, cross-language 3/3.
+  - All 12 amputation levels with only level and side: lower limb 17 gaps
+    (14-15 with a source), upper limb 15 gaps (12 with a source). First
+    case 10.9 s (model load), the rest about 0.1 s.
+  - Every field filled: 0 gaps. "No prior prosthesis": no prior-devices
+    gap. All "unknown" answers listed as "recorded as unknown".
+  - 14 decisions logged and audited from the log itself: 174 citations,
+    all at or above 0.50, all English (no Arabic: see Open decisions),
+    all from prosthetics documents for the right limb. All 196 quote
+    pieces appear word for word in their passage. Every saved case loads
+    back with `Case.from_dict`.
+  - **Bug found and fixed:** a form without `side` gave a 500 crash page
+    under `python app.py`. The route used `form["side"]`, and Flask's
+    debug mode turns the missing-key error into a crash instead of a 400
+    (the unit tests run without debug mode, so they passed). Required
+    fields are now checked by `intake/routes.py:_required()` ("side is
+    required", 400); the test covers both fields.
+  - The 14 run-check decisions carry the note "automated run check
+    2026-10-08"; `data/review_log.jsonl` now has 17 test lines.
+
 ## Open decisions
 
-- **Keep the German documents?** They give upper-limb cases German
-  citations (e.g. functional goals), and German search works. But they
-  cost 1 of 8 Arabic queries, and a German passage only helps a reviewer
-  who reads German. To drop them, remove "de" from
-  `shared/config.py:RETRIEVAL_LANGUAGES`; no re-ingest needed. More
-  Arabic queries would show whether the 1-of-8 loss is real or noise.
 - **Arabic UI.** The UI is English-only; Arabic quotes display
   right-to-left, the rest of the page doesn't.
-
-## Deferred implementation (stubbed in step 2, real in later steps)
-
-- `review/decision_log.py` — `record_decision()` only prints to the
-  console. Real JSON-lines persistence to
-  `shared/config.py:REVIEW_LOG_PATH` (`data/review_log.jsonl`) lands in
-  **step 5**. This is the brief's "documented outcome" step, so log enough
-  to audit later: a snapshot of the case (`Case.to_dict()`), the gaps shown,
-  the sources cited, and a timestamp. Consider recording a decision per gap,
-  not only per case: specialist accept/reject per item is the feedback the
-  knowledge layer's "specialist expertise" source can learn from. Also
-  validate `decision`: `review/routes.py` currently accepts any string.
-  Store each cited passage's quote and citation, not only its chunk id
-  (chunk ids change when the library is re-ingested with new settings).
+- **Arabic sources are never cited in gap lists** (seen 2026-10-06, same
+  four test cases). The field queries are English, and the two Arabic
+  documents are the WHO P&O standards, whose English edition is also in
+  the library, so the English text always scores higher. Arabic search
+  itself works (6-7 of 8 evaluation queries). For an Arabic-reading
+  reviewer, options are Arabic field queries (`shared/field_guide.py`),
+  showing the Arabic twin of a cited WHO passage, or more Arabic-only
+  sources.
 
 ## Known v1 simplifications (acceptable for now, revisit later if scope grows)
 
@@ -264,22 +322,33 @@ items are resolved instead of re-deriving them from scratch.
   across a server restart, no concurrency handling. Fine for a local
   single-user prototype; would need a real store if this ever becomes
   multi-user.
-- The intake form's "prior devices" field isn't wired up yet — `Case.
-  prior_devices` has no form input. Low priority since it's a list-of-objects
-  field; add a repeating sub-form or simple textarea-per-line parser if
-  needed before step 6's README claims full field coverage.
-- Review "edit" currently just records a free-text note with the decision;
-  it does not open an editable form for the case or the gap list itself.
-  Revisit if reviewers need to actually correct case data, not just
-  annotate a decision.
+- The intake form has three fixed prior-device rows (no JavaScript). A
+  patient with more devices needs the rest in the intake notes; an "add
+  device" button would need a little JavaScript.
+- Review "edit" records a decision with a required note; it does not open
+  an editable form for the case or the gap list itself. Revisit if
+  reviewers need to actually correct case data, not just annotate a
+  decision.
+- After a decision is saved, the page's per-gap choices reset to "Not
+  marked"; the logged-decisions list shows only counts ("2 needed, 1 not
+  needed, …"). The full marks are in the log.
+- The review log is read in full for each review page, and each 15-gap
+  entry is about 26 KB. Fine for a local prototype; a database (or one
+  file per case) would be needed for thousands of reviews.
 - Tests (`python -m unittest`) cover the case schema, catalog, extraction,
-  ingestion, retrieval, field guide, gap analysis and the pages. They use
+  ingestion, retrieval, field guide, gap analysis, the review log and the
+  pages; route tests write to a temporary log, never the real one. They use
   a tiny fake embedder (`tests/helpers.py`), so they never load the real
   model; the real model is checked by `python -m knowledge.evaluate`.
   Uses the standard library's `unittest`, so no extra dependency.
 - After a validation error, the intake form comes back empty; the user has
-  to retype everything. Fix by passing the submitted values back into the
-  template.
+  to retype everything, now including the device rows. Fix by passing the
+  submitted values back into the template, as the review page already
+  does for a refused decision.
+- Some intake error messages are Python's own wording ("'banana' is not
+  a valid AmputationLevel", "could not convert string to float"). The
+  form's drop-downs and number inputs prevent most of them in a browser;
+  friendlier wording per field would help if they show up in practice.
 
 ## Path to the full system
 

@@ -73,6 +73,17 @@ class NumberValidationTests(unittest.TestCase):
             with self.subTest(**kwargs), self.assertRaises(ValueError):
                 make_case(**kwargs)
 
+    def test_prior_device_checked(self):
+        self.assertEqual(PriorDevice("old socket", years_used=0).years_used, 0)
+        for kwargs in [
+            {"device_description": "old socket", "years_used": -1},
+            {"device_description": "old socket", "years_used": math.nan},
+            {"device_description": ""},
+            {"device_description": "   "},
+        ]:
+            with self.subTest(**kwargs), self.assertRaises(ValueError):
+                PriorDevice(**kwargs)
+
 
 class SerializationTests(unittest.TestCase):
     def setUp(self):

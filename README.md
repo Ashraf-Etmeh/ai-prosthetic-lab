@@ -19,12 +19,12 @@ record numbers) are collected.
 
 | Brief pathway step          | Module                              | Status in v1                       |
 |-----------------------------|-------------------------------------|------------------------------------|
-| 01 Case data                | `intake/`, `shared/case_schema.py`  | Working: form, schema, validation  |
-| 02 Information analysis     | `knowledge/`                        | Working: extraction, chunking, multilingual search (en/ar/de) |
+| 01 Case data                | `intake/`, `shared/case_schema.py`  | Working: form (incl. prior prostheses), schema, validation |
+| 02 Information analysis     | `knowledge/`                        | Working: extraction, chunking, multilingual search (en/ar; German ingested, not searched) |
 | 03 Specialised reasoning    | `reasoning/gap_analysis.py`         | Working: rule-based, every gap cites a checkable passage or says none was found |
 | 04 Assistive output         | `reasoning/models.py` (`Gap`)       | Working: gap list with quoted sources on the review page |
-| 05 Specialist review        | `review/`                           | Working: approve / edit / reject   |
-| 06 Documentation            | `review/decision_log.py`            | Stub: prints to console            |
+| 05 Specialist review        | `review/`                           | Working: approve / edit / reject, plus needed / not needed per gap |
+| 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/review_log.jsonl` |
 
 The rest of the brief (orthotics, gait analysis, rehabilitation, component
 selection support, follow-up) is planned but not started — see
@@ -83,6 +83,18 @@ python -m knowledge.evaluate
 4. The review page shows each gap with its quote, citation (title, year,
    page) and the other passages considered.
 
+## Review log
+
+The specialist marks each gap "Needed" or "Not needed for this case" (or
+leaves it unmarked) and approves, edits (with a note saying what should
+change) or rejects the list. Each decision is added as one line of JSON to
+`data/review_log.jsonl`, and the review page lists the decisions logged for
+the case. A line holds the decision, note, time (UTC), the case as entered,
+every gap with its quote, citation and full passage, and the search
+settings, so it can be checked later even after the source library is
+re-ingested. Lines are never changed or removed. The file stays on this
+machine (it is in `.gitignore`).
+
 ## Tests
 
 ```
@@ -97,7 +109,7 @@ shared/             Case schema, config (paths, settings, disclaimer), in-memory
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
 knowledge/          Source catalog, text extraction, ingestion, search, evaluation
 reasoning/          Gap analysis: what information is missing, and which source says why
-review/             Specialist review page and decision log
+review/             Specialist review page and decision log (writes data/review_log.jsonl)
 tests/              unittest suite (uses a tiny fake embedder, not the real model)
 data/sources/       Knowledge documents: catalog.json in git, the PDFs kept local
 data/extracted/     Cleaned text per document (generated, not in git)

@@ -25,10 +25,12 @@
     dt { font-weight: 600; }
     dd { margin: 0; }
     .decision-form { margin-top: 1.2rem; display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap; }
-    .decision-form textarea { flex: 1 1 260px; min-height: 2.2rem; padding: 0.4rem; }
+    .decision-form textarea { flex: 1 1 260px; min-height: 2.2rem; padding: 0.4rem; font: inherit; }
     button { padding: 0.5rem 1rem; cursor: pointer; }
     button[value="approve"] { background: #e6f4ea; border: 1px solid #8ec99b; }
     button[value="reject"] { background: #fbe6e6; border: 1px solid #d99; }
+    .gap-judgement { margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; }
+    .logged { font-size: 0.85rem; padding-left: 1.2rem; }
   </style>
 </head>
 <body>
@@ -39,8 +41,13 @@
   <div class="warning">{{ knowledge_warning }}</div>
   {% endif %}
 
-  {% if decision_recorded %}
-  <div class="confirm">Decision recorded: <strong>{{ decision_recorded }}</strong></div>
+  {% if saved %}
+  {% set last = logged[-1][0] %}
+  <div class="confirm">Decision saved to the review log: <strong>{{ last.decision }}</strong> ({{ logged[-1][1] }})</div>
+  {% endif %}
+
+  {% if error %}
+  <div class="warning">Decision not saved: {{ error }}</div>
   {% endif %}
 
   <h2>Case</h2>
@@ -50,8 +57,19 @@
     <dt>Age</dt><dd>{{ case.age_years if case.age_years is not none else "—" }}</dd>
     <dt>Etiology</dt><dd>{{ case.etiology.value if case.etiology else "—" }}</dd>
     <dt>Months since amputation</dt><dd>{{ case.months_since_amputation if case.months_since_amputation is not none else "—" }}</dd>
+    <dt>Prior prostheses</dt>
+    <dd>
+      {% if case.prior_devices is none %}—
+      {% elif not case.prior_devices %}none used
+      {% else %}
+      {% for device in case.prior_devices %}
+      <div>{{ device.device_description }}{% if device.years_used is not none %} · {{ device.years_used }} years{% endif %}{% if device.currently_using is not none %} · {{ "in use" if device.currently_using else "no longer used" }}{% endif %}{% if device.issues %} · issues: {{ device.issues }}{% endif %}</div>
+      {% endfor %}
+      {% endif %}
+    </dd>
   </dl>
 
+  <form method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
   <h2>Information gaps ({{ gaps | length }})</h2>
   {% for gap in gaps %}
   <div class="gap">
@@ -85,17 +103,35 @@
       </ul>
     </details>
     {% endif %}
+    {% set name = gap_prefix ~ gap.field %}
+    {% set chosen = form.get(name, "") %}
+    <div class="gap-judgement">
+      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("needed", "not_needed") }}> Not marked</label>
+      <label><input type="radio" name="{{ name }}" value="needed" {{ "checked" if chosen == "needed" }}> Needed</label>
+      <label><input type="radio" name="{{ name }}" value="not_needed" {{ "checked" if chosen == "not_needed" }}> Not needed for this case</label>
+    </div>
   </div>
   {% else %}
   <p>No gaps identified: every listed intake field is filled in.</p>
   {% endfor %}
 
   <h2>Reviewer decision</h2>
-  <form class="decision-form" method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
-    <textarea name="note" placeholder="Optional note"></textarea>
+  <div class="decision-form">
+    <textarea name="note" placeholder="Note (required for Edit: what should change)">{{ form.get("note", "") }}</textarea>
     <button type="submit" name="decision" value="approve">Approve</button>
     <button type="submit" name="decision" value="edit">Edit</button>
     <button type="submit" name="decision" value="reject">Reject</button>
+  </div>
   </form>
+
+  {% if logged %}
+  <h2>Logged decisions for this case ({{ logged | length }})</h2>
+  <p class="gap-source">Saved in <code>{{ log_name }}</code>, oldest first. Logged decisions are never changed.</p>
+  <ol class="logged">
+    {% for entry, summary in logged %}
+    <li>{{ entry.logged_at }} · <strong>{{ entry.decision }}</strong> · {{ summary }}{% if entry.note %} · “<bdi>{{ entry.note }}</bdi>”{% endif %}</li>
+    {% endfor %}
+  </ol>
+  {% endif %}
 </body>
 </html>

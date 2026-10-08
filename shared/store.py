@@ -3,8 +3,8 @@
 There is no database in v1. A case is created by intake, analyzed once, and
 held in memory so the review page can display it by case_id. This does not
 survive a server restart — that's fine for a local prototype. Only the
-review *decisions* (approve/edit/reject) are persisted to disk, via
-review/logging.py, once step 5 deepens the review layer.
+review *decisions* (approve/edit/reject) are saved to disk, by
+review/decision_log.py, each with its own copy of the case and gap list.
 """
 
 from dataclasses import dataclass, field

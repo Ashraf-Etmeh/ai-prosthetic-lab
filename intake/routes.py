@@ -5,10 +5,10 @@ POST /intake         -> build a Case from the form, run it through
                         knowledge -> reasoning, store the result, and
                         redirect to the review page for that case.
 
-v1 thin-slice status: form covers the required fields (amputation level,
-side) plus the most commonly-filled optional fields. It does not yet expose
-every Case field (e.g. prior_devices has no form input yet) — see
-FUTURE_WORK.md.
+v1 thin-slice status: the form has an input for every Case field the gap
+analysis checks. Prior devices get MAX_PRIOR_DEVICES fixed rows (no
+JavaScript), which is enough to tell "not asked" from "asked, none" from
+"has used a prosthesis".
 """
 
 from flask import Blueprint, redirect, render_template, request, url_for
@@ -21,6 +21,7 @@ from shared.case_schema import (
     AmputationLevel,
     Case,
     Etiology,
+    PriorDevice,
     ResidualLimb,
     Side,
     VolumeStability,
@@ -29,6 +30,17 @@ from shared.case_schema import (
 from shared.store import CaseRecord, store
 
 bp = Blueprint("intake", __name__, template_folder="templates")
+
+MAX_PRIOR_DEVICES = 3  # device rows on the form
+
+
+def _required(form, name: str) -> str:
+    # form[name] would raise KeyError, which Flask's debug mode shows as a
+    # crash page (500) instead of the form with a message.
+    value = form.get(name)
+    if not value:
+        raise ValueError(f"{name} is required")
+    return value
 
 
 def _optional_enum(enum_cls, raw: str | None):
@@ -59,10 +71,49 @@ def _optional_list(raw: str | None) -> list[str] | None:
     return items
 
 
+def _optional_bool(raw: str | None) -> bool | None:
+    if not raw:
+        return None
+    if raw not in ("yes", "no"):
+        raise ValueError(f"expected yes or no, got {raw!r}")
+    return raw == "yes"
+
+
+def _prior_devices(form) -> list[PriorDevice] | None:
+    """The device rows as a list.
+
+    Nothing filled in -> None (not recorded). "No prior prosthesis" ticked
+    -> [] (asked, none used). A row's details without its description, or
+    the box ticked together with a device, is refused.
+    """
+    devices = []
+    for n in range(1, MAX_PRIOR_DEVICES + 1):
+        raw = {part: (form.get(f"device_{n}_{part}") or "").strip()
+               for part in ("description", "years", "current", "issues")}
+        if not raw["description"]:
+            if any(raw.values()):
+                raise ValueError(f"prior device {n}: describe the device, not only its details")
+            continue
+        try:
+            devices.append(PriorDevice(
+                device_description=raw["description"],
+                years_used=_optional_float(raw["years"]),
+                currently_using=_optional_bool(raw["current"]),
+                issues=raw["issues"] or None,
+            ))
+        except ValueError as e:
+            raise ValueError(f"prior device {n}: {e}") from e
+    if form.get("no_prior_devices"):
+        if devices:
+            raise ValueError('"No prior prosthesis" is ticked, but a device is described')
+        return []
+    return devices or None
+
+
 def _case_from_form(form) -> Case:
     return Case(
-        amputation_level=AmputationLevel(form["amputation_level"]),
-        side=Side(form["side"]),
+        amputation_level=AmputationLevel(_required(form, "amputation_level")),
+        side=Side(_required(form, "side")),
         age_years=_optional_int(form.get("age_years")),
         body_weight_kg=_optional_float(form.get("body_weight_kg")),
         etiology=_optional_enum(Etiology, form.get("etiology")),
@@ -82,6 +133,7 @@ def _case_from_form(form) -> Case:
             description=form.get("activity_description") or None,
             functional_goals=form.get("functional_goals") or None,
         ),
+        prior_devices=_prior_devices(form),
         comorbidities=_optional_list(form.get("comorbidities")),
         contralateral_limb_status=form.get("contralateral_limb_status") or None,
         cognitive_status=form.get("cognitive_status") or None,
@@ -99,6 +151,7 @@ def _render_form(error: str | None = None):
         wound_statuses=list(WoundStatus),
         volume_stabilities=list(VolumeStability),
         k_levels=list(ActivityLevel),
+        max_prior_devices=MAX_PRIOR_DEVICES,
     )
 
 

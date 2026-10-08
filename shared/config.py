@@ -25,10 +25,12 @@ EMBEDDING_MAX_TOKENS = 512  # a chunk of 800 characters is well under this
 CHUNK_SIZE_CHARS = 800
 CHUNK_OVERLAP_CHARS = 150
 RETRIEVAL_TOP_K = 5  # passages retrieved per missing field
-# Languages of the documents searched for gaps. Drop "de" to leave out the
-# German documents without re-running ingestion (see FUTURE_WORK.md for
-# what German costs and gains in the evaluation).
-RETRIEVAL_LANGUAGES = ("en", "ar", "de")
+# Languages of the documents searched for gaps. German ("de") was left out
+# on 2026-10-06: on four test cases it added no citation English or Arabic
+# didn't already give, and it cost 1 of 8 Arabic evaluation queries (see
+# FUTURE_WORK.md). The German documents stay ingested, so adding "de" back
+# needs no re-ingest.
+RETRIEVAL_LANGUAGES = ("en", "ar")
 # A retrieved passage is cited for a gap only if its similarity score is at
 # least this AND it mentions the field's topic (shared/field_guide.py).
 # Set from `python -m knowledge.evaluate` with bge-m3 (2026-10-06): correct

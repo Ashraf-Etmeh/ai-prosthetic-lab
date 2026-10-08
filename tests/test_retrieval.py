@@ -120,6 +120,17 @@ class RetrieveRelevantChunksTests(unittest.TestCase):
             self.assertIn("both-0000", ids)
             self.assertIn("any-0000", ids)
 
+    def test_only_retrieval_languages_searched(self):
+        store = make_store(
+            chunk_record("en-0000", "wound healing of the residual limb"),
+            chunk_record("de-0000", "Wundheilung am Stumpf", language="de"),
+        )
+        case = Case(amputation_level="transtibial", side="left")
+        with patch("knowledge.retrieval.RETRIEVAL_LANGUAGES", ("en", "ar")):
+            retrieved = retrieve_relevant_chunks(case, top_k=10, store=store, embed=fake_embed)
+        ids = {c.chunk_id for chunks in retrieved.values() for c in chunks}
+        self.assertEqual(ids, {"en-0000"})
+
     def test_complete_case_needs_no_store(self):
         case = Case(
             amputation_level="transradial", side="right", age_years=40, body_weight_kg=70,

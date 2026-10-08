@@ -26,7 +26,12 @@ from knowledge.catalog import LANGUAGES
 from knowledge.embedding import embed_texts
 from knowledge.models import ProtocolChunk
 from knowledge.retrieval import VectorStore, get_store
-from shared.config import EVAL_QUERIES_PATH, MIN_RELEVANCE_SCORE, RETRIEVAL_DOMAINS
+from shared.config import (
+    EVAL_QUERIES_PATH,
+    MIN_RELEVANCE_SCORE,
+    RETRIEVAL_DOMAINS,
+    RETRIEVAL_LANGUAGES,
+)
 
 TOP_K = 5
 OFF_TOPIC = "Off-topic"
@@ -87,6 +92,8 @@ def report(with_german: list[QueryResult], without_german: list[QueryResult]) ->
     for group, (n, at1, at5) in hit_table(with_german).items():
         without = f"{other[group][2]}/{other[group][0]}" if group in other else "-"
         print(f"{group:16} {n:>7} {at1:>4}/{n:<2} {at5:>4}/{n:<2}   {without}")
+    print(f"(The app's gap search uses only: {', '.join(RETRIEVAL_LANGUAGES)}; "
+          "shared/config.py RETRIEVAL_LANGUAGES.)")
 
     print("\nQueries whose answer was not in the top 5:")
     for outcome in with_german:
