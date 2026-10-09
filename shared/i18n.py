@@ -43,10 +43,12 @@ TEXT: dict[str, dict[str, str]] = {
     "nav.other_code": {"en": "ar", "ar": "en"},
     "disclaimer": {
         "en": DISCLAIMER,
-        "ar": "هذا تحليل آلي للمعلومات الناقصة، وليس تقييماً سريرياً ولا تشخيصاً ولا توصيةً "
-        "بعلاج أو بمكوّنات. كل بند فيه اقتراح يحتاج إلى مراجعة مختص مؤهل في الأطراف "
-        "الاصطناعية. قد تكون القائمة غير مكتملة: البند غير المدرج فُحص من حيث تعبئته فقط، "
-        "لا من حيث كفاية محتواه.",
+        "ar": "هذه أداة آلية لدعم القرار، وليست تقييماً سريرياً ولا تشخيصاً ولا وصفةً. تعرض "
+        "المعلومات الناقصة في بيانات الحالة، وتقتبس ما تقوله الأدلة الإرشادية في مكتبة مصادرها "
+        "عن مكوّنات الطرف الاصطناعي لهذه الحالة، مع درجة التوصية التي يحددها كل دليل. لا تختار "
+        "المكوّنات ولا ترتّبها. كل بند يحتاج إلى مراجعة مختص مؤهل في الأطراف الاصطناعية، والقرار "
+        "له. قد تكون القوائم غير مكتملة: البند غير المدرج فُحص من حيث تعبئته فقط لا من حيث كفاية "
+        "محتواه، ولا يُعرض إلا ما في مكتبة المصادر من مكوّنات وبيانات.",
     },
     # Intake form
     "intake.page_title": {
@@ -55,10 +57,12 @@ TEXT: dict[str, dict[str, str]] = {
     },
     "intake.heading": {"en": "New Case Intake", "ar": "إدخال حالة جديدة"},
     "intake.banner": {
-        "en": "This tool identifies missing intake information only. It does not diagnose "
-        "or recommend treatment or components.",
-        "ar": "تحدّد هذه الأداة المعلومات الناقصة في بيانات الحالة فقط، ولا تشخّص ولا توصي "
-        "بعلاج أو بمكوّنات.",
+        "en": "This tool lists missing intake information and quotes what published guidelines "
+        "say about the case's prosthetic components. It does not diagnose, prescribe or choose "
+        "components: the specialist decides.",
+        "ar": "تعرض هذه الأداة المعلومات الناقصة في بيانات الحالة، وتقتبس ما تقوله الأدلة "
+        "الإرشادية المنشورة عن مكوّنات الطرف الاصطناعي للحالة. لا تشخّص ولا تصف ولا تختار "
+        "المكوّنات: القرار للمختص.",
     },
     "intake.not_saved": {"en": "Case not saved:", "ar": "لم تُحفظ الحالة:"},
     "intake.amputation": {"en": "Amputation", "ar": "البتر"},
@@ -167,6 +171,76 @@ TEXT: dict[str, dict[str, str]] = {
         "en": ", oldest first. Logged decisions are never changed.",
         "ar": "، الأقدم أولاً. لا تُغيَّر القرارات المسجلة أبداً.",
     },
+    # Functional level and goals (reasoning/component_support.py)
+    "functional.heading": {"en": "Functional level and goals", "ar": "المستوى الوظيفي والأهداف"},
+    "functional.k_level": {"en": "Recorded K-level:", "ar": "المستوى الوظيفي المسجَّل (K):"},
+    "functional.k_not_recorded": {"en": "not recorded", "ar": "لم يُسجَّل"},
+    "functional.description": {
+        "en": "How the source describes this level:",
+        "ar": "وصف المصدر لهذا المستوى:",
+    },
+    "functional.cautions": {
+        "en": "What the same source says about K-levels:",
+        "ar": "ما يقوله المصدر نفسه عن مستويات K:",
+    },
+    "functional.all_levels": {"en": "All K-level descriptions (K0–K4)", "ar": "أوصاف كل المستويات (K0–K4)"},
+    "functional.upper_limb": {
+        "en": "K-levels describe the intended use of a lower-limb prosthesis, so none is shown "
+        "for an upper-limb case.",
+        "ar": "مستويات K تصف الاستخدام المقصود للطرف الاصطناعي السفلي، لذا لا يُعرض أي منها "
+        "لحالة بتر في الطرف العلوي.",
+    },
+    "functional.activity": {"en": "Current activity (as recorded)", "ar": "النشاط الحالي (كما سُجِّل)"},
+    "functional.goals": {"en": "Functional goals (as recorded)", "ar": "الأهداف الوظيفية (كما سُجِّلت)"},
+    # Component statements
+    "components.heading": {
+        "en": "What the guidelines say about components ({n} statements)",
+        "ar": "ما تقوله الأدلة الإرشادية عن المكوّنات ({n} بيانات)",
+    },
+    "components.intro": {
+        "en": "Statements from the guidelines in the source library that apply to this case, "
+        "quoted word for word with each guideline's own grade. They are not ranked and are not "
+        "a prescription: the specialist decides.",
+        "ar": "بيانات من الأدلة الإرشادية في مكتبة المصادر تنطبق على هذه الحالة، مقتبسة حرفياً "
+        "مع درجة التوصية التي يحددها كل دليل. ليست مرتّبة وليست وصفة: القرار للمختص.",
+    },
+    "components.k_not_recorded": {
+        "en": "Functional level (K-level) is not recorded, so statements that apply only at a "
+        "specific K-level are not shown.",
+        "ar": "المستوى الوظيفي (K) لم يُسجَّل، لذا لا تُعرض البيانات الخاصة بمستوى K محدد.",
+    },
+    "components.k0": {
+        "en": "K0 is recorded, so statements about prosthetic or community ambulators are not "
+        "shown: the CMS document describes K0 as no ability or potential to ambulate or "
+        "transfer safely.",
+        "ar": "سُجِّل المستوى K0، لذا لا تُعرض البيانات الخاصة بمن يمشون بالطرف الاصطناعي: تصف "
+        "وثيقة CMS المستوى K0 بعدم القدرة أو الإمكانية على المشي أو الانتقال بأمان.",
+    },
+    "components.no_statement": {
+        "en": "No statement in the source library covers this component for this case.",
+        "ar": "لا يوجد في مكتبة المصادر بيان يتناول هذا المكوّن لهذه الحالة.",
+    },
+    "components.grade": {"en": "Guideline grade:", "ar": "درجة التوصية:"},
+    "components.same_source": {"en": "Same source, {pages}", "ar": "المصدر نفسه، {pages}"},
+    "grade.Weak for": {"en": "Weak for", "ar": "ضعيفة لصالح"},
+    "grade.Neither for nor against": {"en": "Neither for nor against", "ar": "لا لصالح ولا ضد"},
+    "grade.none": {"en": "none given (consensus statement)", "ar": "غير محددة (بيان توافقي)"},
+    "component.knee": {"en": "Knee unit", "ar": "وحدة الركبة"},
+    "component.foot_ankle": {"en": "Foot and ankle", "ar": "القدم والكاحل"},
+    "component.pylon": {"en": "Pylon", "ar": "الأنبوب الواصل (البايلون)"},
+    "component.socket": {"en": "Socket", "ar": "التجويف (السوكيت)"},
+    "component.interface": {
+        "en": "Interface (liner or socket insert)",
+        "ar": "الواجهة (البطانة أو الحشوة الداخلية)",
+    },
+    "component.suspension": {"en": "Suspension", "ar": "نظام التعليق"},
+    "component.prosthesis_type": {"en": "Type of prosthesis", "ar": "نوع الطرف الاصطناعي"},
+    "component.control_and_fit": {
+        "en": "Control strategy, socket, suspension and components",
+        "ar": "طريقة التحكم والتجويف والتعليق والمكوّنات",
+    },
+    "review.relevant": {"en": "Relevant", "ar": "ذو صلة"},
+    "review.not_relevant": {"en": "Not relevant for this case", "ar": "غير ذي صلة بهذه الحالة"},
     # A logged decision, as the log stores it
     "decision.approve": {"en": "approve", "ar": "اعتماد"},
     "decision.edit": {"en": "edit", "ar": "تعديل"},
@@ -177,6 +251,9 @@ TEXT: dict[str, dict[str, str]] = {
     "summary.not_marked": {"en": "{n} not marked", "ar": "بلا تحديد: {n}"},
     "summary.separator": {"en": ", ", "ar": "، "},
     "summary.no_gaps": {"en": "no gaps", "ar": "لا معلومات ناقصة"},
+    "summary.components": {"en": "; components: ", "ar": "؛ المكوّنات: "},
+    "summary.relevant": {"en": "{n} relevant", "ar": "ذو صلة: {n}"},
+    "summary.not_relevant": {"en": "{n} not relevant", "ar": "غير ذي صلة: {n}"},
     # Language of a source document
     "doclang.en": {"en": "en", "ar": "إنجليزي"},
     "doclang.ar": {"en": "ar", "ar": "عربي"},
@@ -239,6 +316,10 @@ TEXT: dict[str, dict[str, str]] = {
     "error.unknown_judgement": {
         "en": "Unknown judgement {judgement!r} for {field!r}.",
         "ar": "تقدير غير معروف «{judgement}» للبند «{field}».",
+    },
+    "error.not_a_statement": {
+        "en": "{statement!r} is not one of the component statements shown for this case.",
+        "ar": "البيان «{statement}» ليس من بيانات المكوّنات المعروضة لهذه الحالة.",
     },
 }
 

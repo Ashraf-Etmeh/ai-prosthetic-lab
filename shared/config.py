@@ -41,12 +41,18 @@ EVAL_QUERIES_PATH = DATA_DIR / "eval" / "retrieval_queries.json"
 # v1 is use case 01 (amputation), so orthotics-only documents are skipped.
 RETRIEVAL_DOMAINS = ("prosthetics",)
 
-# Shown with every gap list, and attached to each generated item.
-# The tool reports missing information only. It does not make clinical decisions.
+# Shown on every review page. The tool reports missing information and quotes
+# what its sources say about components; it does not make clinical decisions.
+# Revised 2026-10-08 when component statements were added (was: "missing
+# information only").
 DISCLAIMER = (
-    "This is an automated information-gap analysis, not a clinical assessment, "
-    "diagnosis, or treatment/component recommendation. Every item is a "
-    "suggestion that requires review by a qualified prosthetics specialist. "
-    "The list may be incomplete: a field that is not listed has not been "
-    "checked for adequacy, only for being filled in."
+    "This is automated decision support, not a clinical assessment, diagnosis "
+    "or prescription. It lists intake information that appears to be missing "
+    "and quotes what the guidelines in its source library say about this "
+    "case's prosthetic components, each with the guideline's own grade. It "
+    "does not choose or rank components. Every item requires review by a "
+    "qualified prosthetics specialist, who makes the decision. The lists may "
+    "be incomplete: a field that is not listed has not been checked for "
+    "adequacy, only for being filled in, and only components and statements "
+    "in the source library are shown."
 )

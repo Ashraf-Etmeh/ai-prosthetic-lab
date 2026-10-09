@@ -7,6 +7,8 @@
     body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #222; }
     h1 { font-size: 1.3rem; }
     h2 { font-size: 1.05rem; margin-top: 1.6rem; }
+    h3 { font-size: 0.95rem; margin: 1.1rem 0 0.2rem; }
+    blockquote.context { font-size: 0.8rem; color: #444; border-inline-start-color: #c9d6e3; }
     .banner { background: #fff8e1; border: 1px solid #e0c46c; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
     .confirm { background: #e6f4ea; border: 1px solid #8ec99b; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
     .warning { background: #fdecea; border: 1px solid #e3a19a; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
@@ -121,6 +123,72 @@
   {% else %}
   <p>{{ t('review.no_gaps') }}</p>
   {% endfor %}
+
+  {# A source's words with their citation, in the source's own language and direction. #}
+  {% macro quoted(cited, quote, extra_class="") %}
+  <blockquote class="{{ extra_class }}" dir="auto" lang="{{ cited.language }}">{{ quote.text }}</blockquote>
+  <div class="gap-source" dir="auto" lang="{{ cited.language }}">{{ cited.citation(quote) }}</div>
+  {% endmacro %}
+  {# More words from the same document as the statement above: only the page. #}
+  {% macro context_quote(cited, quote) %}
+  <blockquote class="context" dir="auto" lang="{{ cited.language }}">{{ quote.text }}</blockquote>
+  <div class="gap-source">{{ t('components.same_source', pages=quote.pages) }}</div>
+  {% endmacro %}
+
+  {% if components %}
+  {% set functional = components.functional %}
+  <h2>{{ t('functional.heading') }}</h2>
+  <div class="gap">
+    {% if functional.lower_limb %}
+    <p><strong>{{ t('functional.k_level') }}</strong> {{ functional.k_level or t('functional.k_not_recorded') }}</p>
+    {% if functional.description %}
+    <p class="gap-source">{{ t('functional.description') }}</p>
+    {{ quoted(functional.description, functional.description.statement.quote) }}
+    {% endif %}
+    <p class="gap-source">{{ t('functional.cautions') }}</p>
+    {% for cited in functional.cautions %}{{ quoted(cited, cited.statement.quote, "context") }}{% endfor %}
+    <details>
+      <summary>{{ t('functional.all_levels') }}</summary>
+      {% for cited in functional.all_levels %}{{ quoted(cited, cited.statement.quote, "context") }}{% endfor %}
+    </details>
+    {% else %}
+    <p class="gap-source">{{ t('functional.upper_limb') }}</p>
+    {% endif %}
+    <dl>
+      <dt>{{ t('functional.activity') }}</dt><dd><bdi>{{ functional.activity or "—" }}</bdi></dd>
+      <dt>{{ t('functional.goals') }}</dt><dd><bdi>{{ functional.goals or "—" }}</bdi></dd>
+    </dl>
+  </div>
+
+  <h2>{{ t('components.heading', n=components.statements | length) }}</h2>
+  <div class="banner">{{ t('components.intro') }}</div>
+  {% for note in components.notes %}
+  <p class="gap-source no-source">{{ t(note) }}</p>
+  {% endfor %}
+  {% for section in components.sections %}
+  <h3>{{ t('component.' ~ section.component) }}</h3>
+  {% for cited in section.statements %}
+  {% set statement = cited.statement %}
+  <div class="gap">
+    <div class="gap-head">
+      <span class="gap-status">{{ t('components.grade') }} {{ t('grade.' ~ (statement.grade or 'none')) }}</span>
+      <span class="gap-field" dir="ltr">{{ statement.id }}</span>
+    </div>
+    {{ quoted(cited, statement.quote) }}
+    {% for quote in statement.context %}{{ context_quote(cited, quote) }}{% endfor %}
+    {% set name = statement_prefix ~ statement.id %}
+    {% set chosen = form.get(name, "") %}
+    <div class="gap-judgement">
+      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("relevant", "not_relevant") }}> {{ t('review.not_marked') }}</label>
+      <label><input type="radio" name="{{ name }}" value="relevant" {{ "checked" if chosen == "relevant" }}> {{ t('review.relevant') }}</label>
+      <label><input type="radio" name="{{ name }}" value="not_relevant" {{ "checked" if chosen == "not_relevant" }}> {{ t('review.not_relevant') }}</label>
+    </div>
+  </div>
+  {% else %}
+  <p class="gap-source no-source">{{ t('components.no_statement') }}</p>
+  {% endfor %}
+  {% endfor %}
+  {% endif %}
 
   <h2>{{ t('review.decision_heading') }}</h2>
   <div class="decision-form">

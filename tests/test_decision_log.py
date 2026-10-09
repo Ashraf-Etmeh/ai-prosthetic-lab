@@ -6,9 +6,11 @@ import unittest
 from pathlib import Path
 
 from knowledge.models import ProtocolChunk
+from reasoning.component_support import component_support
 from reasoning.gap_analysis import analyze_gaps
 from review.decision_log import InvalidDecision, read_decisions, record_decision
-from shared.case_schema import Case
+from review.routes import judgement_summary
+from shared.case_schema import ActivityProfile, Case
 from shared.config import RETRIEVAL_LANGUAGES
 from shared.store import CaseRecord
 
@@ -85,7 +87,7 @@ class DecisionLogTests(unittest.TestCase):
     def test_page_language_recorded_but_log_stays_english(self):
         self.assertEqual(self.log()["ui_language"], "en")
         entry = self.log(ui_language="ar")
-        self.assertEqual((entry["log_version"], entry["ui_language"]), (2, "ar"))
+        self.assertEqual((entry["log_version"], entry["ui_language"]), (3, "ar"))
         volume = self.gap_entry(entry, VOLUME)
         self.assertEqual(volume["label"], "Residual limb volume stability")
         self.assertTrue(volume["why_needed"].startswith("Residual limb volume stability was not recorded"))
@@ -114,12 +116,72 @@ class DecisionLogTests(unittest.TestCase):
         self.log("edit", note="يجب قياس حجم الطرف المتبقي")
         self.assertIn("يجب قياس حجم الطرف المتبقي", self.path.read_text(encoding="utf-8"))
 
+    def test_record_without_components(self):
+        self.assertIsNone(self.log()["components"])
+        with self.assertRaises(InvalidDecision):
+            record_decision(self.record, "approve", path=self.path,
+                            statement_judgements={"cms_elevated_vacuum": "relevant"})
+
     def test_read_decisions_by_case(self):
         self.assertEqual(read_decisions(path=self.path), [])  # no file yet
         self.log()
         self.log(record=make_record("case-b"))
         self.assertEqual([e["case_id"] for e in read_decisions("case-b", path=self.path)], ["case-b"])
         self.assertEqual(len(read_decisions(path=self.path)), 2)
+
+
+class ComponentLogTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.path = Path(tmp.name) / "review_log.jsonl"
+        case = Case(amputation_level="transfemoral", side="left", activity=ActivityProfile(k_level="K2"))
+        self.record = CaseRecord(case=case, gaps=analyze_gaps(case, {}), components=component_support(case))
+
+    def log(self, **judgements):
+        return record_decision(self.record, "approve", path=self.path, statement_judgements=judgements)
+
+    def statements(self, entry) -> dict[str, dict]:
+        return {s["id"]: s for section in entry["components"]["sections"] for s in section["statements"]}
+
+    def test_functional_level_logged(self):
+        functional = self.log()["components"]["functional_level"]
+        self.assertEqual((functional["lower_limb"], functional["k_level"]), (True, "K2"))
+        self.assertEqual(functional["description"]["id"], "cms_k2_description")
+        self.assertEqual(functional["description"]["citation"],
+                         "Lower Limb Prosthetic Workgroup Consensus Document (2017), p. 5")
+        self.assertEqual(len(functional["cautions"]), 2)
+
+    def test_every_statement_shown_is_logged_with_its_words(self):
+        entry = self.log(va_dod_ll_17_microprocessor_knee="relevant", cms_elevated_vacuum="not_relevant")
+        logged = self.statements(entry)
+        self.assertEqual(list(logged), [c.statement.id for c in self.record.components.statements])
+        knee = logged["va_dod_ll_17_microprocessor_knee"]
+        self.assertEqual((knee["component"], knee["grade"], knee["reviewer_judgement"]),
+                         ("knee", "Weak for", "relevant"))
+        self.assertTrue(knee["quote"].startswith("For prosthetic ambulators, we suggest prescribing"))
+        self.assertTrue(knee["citation"].endswith("(2024), p. 56"))
+        self.assertEqual(len(knee["context"]), 2)
+        self.assertEqual(logged["cms_elevated_vacuum"]["reviewer_judgement"], "not_relevant")
+        self.assertIsNone(logged["cms_k2_microprocessor_knee"]["grade"])
+        self.assertIsNone(logged["cms_k2_microprocessor_knee"]["reviewer_judgement"])
+
+    def test_statement_judgements_checked(self):
+        for judgements in [{"made_up": "relevant"},
+                           {"va_dod_ul_7_body_or_externally_powered": "relevant"},  # not shown here
+                           {"cms_elevated_vacuum": "needed"}]:  # a gap's value, not a statement's
+            with self.subTest(**judgements):
+                with self.assertRaises(InvalidDecision):
+                    self.log(**judgements)
+        self.assertFalse(self.path.exists())
+
+    def test_summary(self):
+        entry = self.log(cms_elevated_vacuum="relevant")
+        # 16 gaps: K-level is recorded here
+        self.assertEqual(judgement_summary(entry),
+                         f"16 not marked; components: 1 relevant, {len(self.statements(entry)) - 1} not marked")
+        del entry["components"]  # as in entries logged before version 3
+        self.assertEqual(judgement_summary(entry), "16 not marked")
 
 
 if __name__ == "__main__":

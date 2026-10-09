@@ -1,5 +1,6 @@
 """Tests for the intake and review pages, through Flask's test client."""
 
+import html
 import re
 import tempfile
 import unittest
@@ -15,8 +16,8 @@ from shared.store import store
 
 
 def visible_text(page: str) -> str:
-    """The page without its HTML tags and bidi isolate marks: roughly what a reader sees."""
-    return re.sub(r"<[^>]+>|[\u2068\u2069]", "", page)
+    """The page without its HTML tags, entities and bidi isolate marks: roughly what a reader sees."""
+    return html.unescape(re.sub(r"<[^>]+>|[\u2068\u2069]", "", page))
 
 BASE_FORM = {"amputation_level": "transtibial", "side": "left"}
 
@@ -194,7 +195,8 @@ class ReviewRouteTests(RouteTestCase):
         self.assertIn("Residual limb volume should be stable before the definitive socket is cast.", page)
         self.assertIn("Test Guideline (2024), p. 14", page)
         self.assertIn("test_guideline_2024-0007", page)
-        self.assertIn("The list may be incomplete", page)
+        self.assertIn("The lists may be incomplete", page)
+        self.assertIn("It does not choose or rank components.", page)
         self.assertIn("No source cited.", page)  # the other gaps have no passage here
 
     def test_missing_source_library_is_shown(self):
@@ -273,6 +275,93 @@ class ReviewRouteTests(RouteTestCase):
         self.assertEqual(self.post_decision("does-not-exist", decision="approve").status_code, 404)
 
 
+class ComponentRouteTests(RouteTestCase):
+    """The functional-level and component sections of the review page."""
+
+    def review(self, **fields) -> str:
+        resp = self.post_intake(**fields)
+        return visible_text(self.client.get(resp.headers["Location"]).get_data(as_text=True))
+
+    def test_transfemoral_k2(self):
+        page = self.review(amputation_level="transfemoral", k_level="K2", functional_goals="walk to church")
+        components = store.all()[-1].components
+        self.assertIn("Recorded K-level: K2", page)
+        self.assertIn("Level 2: Has the ability or potential for ambulation", page)
+        self.assertIn("Lower Limb Prosthetic Workgroup Consensus Document (2017), p. 5", page)
+        self.assertIn("instead it is a description of the intended use of the prosthesis.", page)  # caution
+        self.assertIn("walk to church", page)
+        self.assertIn(f"What the guidelines say about components ({len(components.statements)} statements)",
+                      page)
+        self.assertIn("It does not choose or rank components.", page)
+        self.assertIn("Knee unit", page)
+        self.assertIn("For prosthetic ambulators, we suggest prescribing microprocessor knee units", page)
+        self.assertIn("Guideline grade: Weak for", page)
+        self.assertIn("(2024), p. 56", page)
+        # A context quote shows only its page: it is from the same document.
+        self.assertRegex(page, r"the quality of the evidence was very low\.\s+Same source, p\. 56")
+        self.assertIn("may benefit from MPK technology", page)  # CMS, K2 only
+        self.assertIn("Guideline grade: none given (consensus statement)", page)
+        self.assertIn("Pylon", page)
+        raw = self.client.get(f"/review/{store.all()[-1].case.case_id}").get_data(as_text=True)
+        self.assertIn('name="opt:va_dod_ll_17_microprocessor_knee" value="relevant"', raw)
+
+    def test_transtibial_without_k_level(self):
+        page = self.review()
+        self.assertIn("Recorded K-level: not recorded", page)
+        self.assertIn("Functional level (K-level) is not recorded, so statements that apply only", page)
+        self.assertIn("No statement in the source library covers this component for this case.", page)
+        self.assertNotIn("Knee unit", page)
+
+    def test_upper_limb(self):
+        page = self.review(amputation_level="transradial")
+        self.assertIn("K-levels describe the intended use of a lower-limb prosthesis", page)
+        self.assertIn("Type of prosthesis", page)
+        self.assertIn("we suggest use of a body-powered or externally powered prosthesis", page)
+        self.assertNotIn("Recorded K-level", page)
+
+    def test_statement_judgements_logged(self):
+        self.post_intake(amputation_level="transfemoral", k_level="K3")
+        case_id = store.all()[-1].case.case_id
+        resp = self.client.post(f"/review/{case_id}/decision", follow_redirects=True, data={
+            "decision": "approve",
+            "opt:va_dod_ll_17_microprocessor_knee": "relevant",
+            "opt:cms_elevated_vacuum": "not_relevant",
+            "opt:cms_interface_material": "",  # left on "not marked"
+        })
+        self.assertEqual(resp.status_code, 200)
+        [entry] = read_decisions(case_id, path=self.log_path)
+        marks = {s["id"]: s["reviewer_judgement"]
+                 for section in entry["components"]["sections"] for s in section["statements"]}
+        self.assertEqual(marks["va_dod_ll_17_microprocessor_knee"], "relevant")
+        self.assertEqual(marks["cms_elevated_vacuum"], "not_relevant")
+        self.assertIsNone(marks["cms_interface_material"])
+        self.assertIn(f"; components: 1 relevant, 1 not relevant, {len(marks) - 2} not marked",
+                      visible_text(resp.get_data(as_text=True)))
+
+    def test_bad_statement_judgements_refused(self):
+        self.post_intake(amputation_level="transfemoral", k_level="K3")
+        case_id = store.all()[-1].case.case_id
+        for data, message in [
+            ({"opt:made_up_statement": "relevant"}, "is not one of the component statements shown"),
+            ({"opt:cms_k2_microprocessor_knee": "relevant"}, "is not one of the component statements"),  # K2 only
+            ({"opt:cms_elevated_vacuum": "maybe"}, "Unknown judgement 'maybe'"),
+        ]:
+            with self.subTest(**data):
+                resp = self.client.post(f"/review/{case_id}/decision", data={"decision": "approve", **data})
+                self.assertEqual(resp.status_code, 400)
+                self.assertIn(message, visible_text(resp.get_data(as_text=True)))
+        self.assertEqual(read_decisions(path=self.log_path), [])
+
+    def test_refused_form_keeps_statement_choices(self):
+        self.post_intake(amputation_level="transfemoral", k_level="K3")
+        case_id = store.all()[-1].case.case_id
+        resp = self.client.post(f"/review/{case_id}/decision",
+                                data={"decision": "edit", "opt:cms_elevated_vacuum": "not_relevant"})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('name="opt:cms_elevated_vacuum" value="not_relevant" checked',
+                      resp.get_data(as_text=True))
+
+
 class ArabicPageTests(RouteTestCase):
     """The same pages with the language cookie set to Arabic."""
 
@@ -302,13 +391,24 @@ class ArabicPageTests(RouteTestCase):
         self.assertIn("لم يُسجَّل البند «ثبات حجم الطرف المتبقي» عند إدخال الحالة.", page)
         self.assertIn("يتناول المصدر المذكور أدناه هذا الموضوع (انظر الاقتباس)", page)
         self.assertIn("لم يُستشهد بأي مصدر.", page)
-        self.assertIn("قد تكون القائمة غير مكتملة", page)  # the disclaimer
+        self.assertIn("قد تكون القوائم غير مكتملة", page)  # the disclaimer
         # The quote and citation stay in the source's own words.
         self.assertIn("Residual limb volume should be stable before the definitive socket is cast.", page)
         self.assertIn("Test Guideline (2024), p. 14", page)
         self.assertIn("إنجليزي · التشابه 0.71", page)
         self.assertNotIn("was not recorded at intake", page)
-        self.assertNotIn("The list may be incomplete", page)
+        self.assertNotIn("The lists may be incomplete", page)
+
+    def test_component_sections_in_arabic_with_quotes_in_english(self):
+        page = self.review_page(amputation_level="transfemoral", k_level="K3")
+        self.assertIn("المستوى الوظيفي والأهداف", page)
+        self.assertIn("المستوى الوظيفي المسجَّل (K): K3", page)
+        self.assertIn("ما تقوله الأدلة الإرشادية عن المكوّنات", page)
+        self.assertIn("وحدة الركبة", page)
+        self.assertIn("درجة التوصية: ضعيفة لصالح", page)
+        self.assertIn("For prosthetic ambulators, we suggest prescribing microprocessor knee units", page)
+        self.assertNotIn("Knee unit", page)
+        self.assertNotIn("Guideline grade", page)
 
     def test_arabic_case_values(self):
         page = self.review_page(etiology="trauma", device_1_description="PTB socket",
@@ -363,7 +463,8 @@ class ArabicPageTests(RouteTestCase):
                   "gap:residual_limb.volume_stability": "needed"},
         )
         page = visible_text(resp.get_data(as_text=True))
-        self.assertIn("حُفظ القرار في سجل المراجعة: تعديل (مطلوب: 1، بلا تحديد: 16)", page)
+        self.assertIn("حُفظ القرار في سجل المراجعة: تعديل (مطلوب: 1، بلا تحديد: 16؛ المكوّنات: بلا تحديد: 6)",
+                      page)
         self.assertIn("القرارات المسجلة لهذه الحالة (1)", page)
         [entry] = read_decisions(case_id, path=self.log_path)
         self.assertEqual((entry["decision"], entry["ui_language"]), ("edit", "ar"))

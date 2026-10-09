@@ -3,14 +3,19 @@
 First prototype of **AI Prosthetic Lab**, a specialised AI system for
 prosthetics, orthotics and rehabilitation (see the visual brief, 09/2026).
 
-This prototype covers one slice of the full system:
+This prototype covers the start of the brief's prosthetics domain:
 
 > **Use case 01 — analyse an amputation case and identify the information
 > still needed before specialist evaluation.**
+>
+> **Use case 02 — support component selection based on the functional
+> data:** the functional level (K-level) and what the guidelines in the
+> source library say about each prosthetic component for the case.
 
-It is **decision support, not a replacement** for the specialist. It reports
-missing information only; it does not diagnose or recommend treatment or
-components. The final decision always stays with the specialist.
+It is **decision support, not a replacement** for the specialist. It lists
+missing information and quotes guideline statements word for word with
+their own grade of evidence; it does not diagnose, prescribe, or choose or
+rank components. The final decision always stays with the specialist.
 
 Fake/test data only. No patient identifiers (name, date of birth, address,
 record numbers) are collected.
@@ -21,14 +26,14 @@ record numbers) are collected.
 |-----------------------------|-------------------------------------|------------------------------------|
 | 01 Case data                | `intake/`, `shared/case_schema.py`  | Working: form (incl. prior prostheses), schema, validation |
 | 02 Information analysis     | `knowledge/`                        | Working: extraction, chunking, multilingual search (en/ar; German ingested, not searched) |
-| 03 Specialised reasoning    | `reasoning/gap_analysis.py`         | Working: rule-based, every gap cites a checkable passage or says none was found |
-| 04 Assistive output         | `reasoning/models.py` (`Gap`)       | Working: gap list with quoted sources on the review page |
-| 05 Specialist review        | `review/`                           | Working: approve / edit / reject, plus needed / not needed per gap |
+| 03 Specialised reasoning    | `reasoning/gap_analysis.py`, `reasoning/component_support.py` | Working: rule-based; every gap cites a checkable passage or says none was found; component statements come from `reasoning/component_guide.py` |
+| 04 Assistive output         | `reasoning/models.py`               | Working: gap list, functional level, and guideline statements per component, all quoted with their source |
+| 05 Specialist review        | `review/`                           | Working: approve / edit / reject, needed / not needed per gap, relevant / not relevant per component statement |
 | 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/review_log.jsonl` |
 
-The rest of the brief (orthotics, gait analysis, rehabilitation, component
-selection support, follow-up) is planned but not started — see
-[FUTURE_WORK.md](FUTURE_WORK.md#path-to-the-full-system).
+Next in the prosthetics domain is design and fitting support; the rest of
+the brief (orthotics, gait analysis, rehabilitation, follow-up) is planned
+but not started — see [FUTURE_WORK.md](FUTURE_WORK.md#path-to-the-full-system).
 
 ## Running it
 
@@ -95,14 +100,39 @@ python -m knowledge.evaluate
 4. The review page shows each gap with its quote, citation (title, year,
    page) and the other passages considered.
 
+## How component statements are chosen
+
+Not by search: `reasoning/component_guide.py` holds hand-written rules, each
+with one statement copied word for word from a guideline (VA/DoD 2024 and
+2022, CMS 2017), its page and the guideline's own grade ("Weak for",
+"Neither for nor against", or none for a consensus statement). A rule
+applies to a case only as far as the source's own wording says:
+amputation level, unilateral, a specific K-level, or "ambulators" (not
+shown for K0). Where sources differ, both are shown.
+
+The review page shows, for the case:
+1. **Functional level and goals:** the CMS description of the recorded
+   K-level, what the same source says K-levels are not, and the patient's
+   recorded activity and goals.
+2. **Per component** (knee, foot and ankle, socket, interface, suspension;
+   upper limb: type of prosthesis, control and fit): the statements that
+   apply, or "no statement in the source library". Nothing is ranked.
+
+`tests/test_component_guide.py` checks that every quote is on its page of
+the extracted text and that each VA/DoD grade is the one printed after the
+recommendation. To add a statement, copy it from `data/extracted/`, add a
+rule, and run the tests.
+
 ## Review log
 
-The specialist marks each gap "Needed" or "Not needed for this case" (or
-leaves it unmarked) and approves, edits (with a note saying what should
+The specialist marks each gap "Needed" or "Not needed for this case", and
+each component statement "Relevant" or "Not relevant for this case" (or
+leaves them unmarked), and approves, edits (with a note saying what should
 change) or rejects the list. Each decision is added as one line of JSON to
 `data/review_log.jsonl`, and the review page lists the decisions logged for
 the case. A line holds the decision, note, time (UTC), the case as entered,
-every gap with its quote, citation and full passage, and the search
+every gap with its quote, citation and full passage, the functional level
+and every component statement shown with its mark, and the search
 settings, so it can be checked later even after the source library is
 re-ingested. Labels and explanations are logged in English whichever
 language the reviewer used; `ui_language` records which one it was. Lines are never changed or removed. The file stays on this
@@ -122,7 +152,8 @@ shared/             Case schema, config (paths, settings, disclaimer), in-memory
                     interface text in English and Arabic (i18n.py)
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
 knowledge/          Source catalog, text extraction, ingestion, search, evaluation
-reasoning/          Gap analysis: what information is missing, and which source says why
+reasoning/          Gap analysis (what is missing, and which source says why) and
+                    component support (what the guidelines say per component)
 review/             Specialist review page and decision log (writes data/review_log.jsonl)
 tests/              unittest suite (uses a tiny fake embedder, not the real model)
 data/sources/       Knowledge documents: catalog.json in git, the PDFs kept local

@@ -352,6 +352,75 @@ have (see Open decisions).
 - The four run-check decisions carry the note "automated run check
   2026-10-08 (Arabic UI)"; `data/review_log.jsonl` now has 21 test lines.
 
+## Component selection support and functional level (done 2026-10-08)
+
+The brief's prosthetics domain: "evaluate the amputation, choose the
+components, design and fit". Chosen order (2026-10-08): component support
+with the functional level it depends on (use case 02, pathway step 04), then
+design and fitting. This ends v1's "missing information only" rule; the
+disclaimer, intake banner and out-of-scope list were revised.
+
+- **Statements, not advice:** `reasoning/component_guide.py` holds 13 rules,
+  each one statement copied word for word with its page and the source's
+  own grade, plus the CMS K0-K4 descriptions and two cautions: 20
+  statements, 31 quotes with their context. Sources:
+  VA/DoD lower limb 2024 recommendations 15-19 (pp. 55-58), VA/DoD upper
+  limb 2022 recommendations 7-8 (pp. 31-32), CMS Lower Limb Prosthetic
+  Workgroup 2017 (pp. 4-12). Hand-written, not searched: a wrong component
+  statement does more harm than a wrong gap, and each rule can be checked
+  on its page.
+- **Who a rule applies to** comes only from the source's wording: levels
+  (knee rules for knee disarticulation, transfemoral, hip
+  disarticulation; upper-limb rec 7 "through or proximal to the wrist"),
+  "unilateral", "at the K2 level" (shown only when K2 is recorded), and
+  "prosthetic/community ambulators" (not shown for K0, which CMS
+  describes as no ability or potential to ambulate). Where sources differ
+  (microprocessor knee at K2: VA/DoD "Weak for" vs CMS "may benefit"),
+  both are shown. Nothing is ranked.
+- **Shown with each statement:** the guideline's scope, confidence and
+  caveats from the same document, e.g. VA/DoD's "very low" confidence and
+  that household walkers are "rarely included in the evidence".
+- **Functional level (the brief's "functional requirements analysis"):**
+  the CMS description of the recorded K-level, the CMS cautions ("should
+  not be considered a functional classification", research "has failed to
+  connect" medical condition to K-level), all five descriptions for
+  reference, and the recorded activity and goals. Upper limb: no K-level
+  (CMS: K modifiers describe a lower-limb prosthesis).
+- **Review and log:** each statement can be marked Relevant / Not relevant
+  for this case; review log version 3 adds `components` (functional level,
+  notes, every statement shown with quote, context, citation, grade and
+  mark). A mark for a statement not shown is refused.
+- **Tests:** 194 (32 new). `tests/test_component_guide.py` checks every
+  quote is on its page of `data/extracted/` (skipped if not generated) and
+  that each VA/DoD grade is the one printed after the recommendation.
+  Checked by moving one quote to the wrong page, changing one word and
+  swapping one grade: all three caught.
+- **Run check** (`python app.py`, real model, 272 checks, run twice): 11
+  cases (transtibial K3: 6 statements; transfemoral K2: 11, K0: 3, no
+  K-level: 9; knee disarticulation K4: 7; hip disarticulation K1: 7;
+  partial foot unknown: 6; transradial: 2; partial hand: 1; bilateral
+  transradial: 1; transhumeral: 2). Every statement on the page word for
+  word with its citation; Arabic page in Arabic with quotes in English;
+  marks logged; unknown statement refused. Screenshots checked by eye;
+  context quotes now show "Same source, p. N" instead of repeating the
+  title (the first screenshot repeated a 120-character title three times).
+  The server's request log was lost when it was stopped, so no 500 check
+  from it this time; the check script verified every response's status.
+- **What the library can't support yet (needs sources):** transtibial
+  socket design (only transfemoral sockets are covered), alignment,
+  upper-limb terminal devices and partial-hand prostheses, and any Arabic
+  source. CMS 2017 is US Medicare policy ("coverage"); its statements are
+  shown as written, with the year.
+- **Review log:** 24 lines, all test cases: the 21 earlier, two "automated
+  run check 2026-10-08 (components)", and one at 11:29 UTC (approve, no
+  note) not made by a check script.
+- **Next (stage C): design and fitting.** Readiness before the definitive
+  socket and the design decisions (preparatory vs definitive, socket,
+  interface, suspension, alignment), each with what the sources say. CMS
+  p. 10 covers preparatory vs definitive (no evidence; "does not recommend
+  the use of non-alignable preparatory prosthetics"); alignment needs
+  sources.
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).
@@ -446,11 +515,10 @@ they're recorded so v1 choices don't block them.
   alone. Add a pseudonymous patient reference — still no real identifiers —
   and treat each visit as its own case.
 - **Assistive recommendations** (pathway step 04, use case 02 component
-  selection support) need a new output type next to `Gap`: an option with
-  its rationale and source. The disclaimer in `shared/config.py`, the page
-  banners, and the out-of-scope list below all say "missing information
-  only"; they must be revised per feature when that changes. The final
-  decision still stays with the specialist.
+  selection support): started 2026-10-08 as quoted guideline statements
+  per component (see "Component selection support" above), with the
+  disclaimer, banners and out-of-scope list revised. Design and fitting
+  support is next. The final decision still stays with the specialist.
 - **Gait and motion data** (use case 04) is measured data over time, not
   form fields. It will need its own upload/intake path. It is also a
   regulatory boundary: FDA CDS guidance (2026) Criterion 1 excludes
@@ -464,6 +532,8 @@ they're recorded so v1 choices don't block them.
 
 ## Explicitly out of scope for v1 (per original build spec — don't build)
 
-- Treatment or component recommendations of any kind.
+- Treatment recommendations, and the system choosing or ranking
+  components. (Revised 2026-10-08: component support may quote guideline
+  statements word for word with their grade; the specialist decides.)
 - Auth, multi-user accounts, deployment config, cloud services.
 - Editing/removing already-logged review decisions.

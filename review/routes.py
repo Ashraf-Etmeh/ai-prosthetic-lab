@@ -28,6 +28,8 @@ bp = Blueprint("review", __name__, template_folder="templates")
 
 # Form field name for a gap's judgement, e.g. "gap:residual_limb.wound_status"
 GAP_FIELD_PREFIX = "gap:"
+# ... and for a component statement's, e.g. "opt:va_dod_ll_17_microprocessor_knee"
+STATEMENT_FIELD_PREFIX = "opt:"
 
 
 def _get_record(case_id: str) -> CaseRecord:
@@ -38,17 +40,25 @@ def _get_record(case_id: str) -> CaseRecord:
 
 
 def judgement_summary(entry: dict, lang: str = DEFAULT_LANGUAGE) -> str:
-    """E.g. "2 needed, 1 not needed, 12 not marked" for one logged entry."""
-    judgements = [gap["reviewer_judgement"] for gap in entry["gaps"]]
-    parts = [
-        (judgements.count("needed"), "summary.needed"),
-        (judgements.count("not_needed"), "summary.not_needed"),
-        (judgements.count(None), "summary.not_marked"),
-    ]
+    """E.g. "2 needed, 12 not marked; components: 1 relevant, 6 not marked" for one logged entry."""
     separator = t("summary.separator", lang)
-    return separator.join(t(key, lang, n=count) for count, key in parts if count) or t(
-        "summary.no_gaps", lang
-    )
+
+    def counts(judgements: list, keys: list[tuple[str, str]]) -> str:
+        return separator.join(
+            t(key, lang, n=judgements.count(value)) for value, key in keys if judgements.count(value)
+        )
+
+    gaps = [gap["reviewer_judgement"] for gap in entry["gaps"]]
+    summary = counts(gaps, [("needed", "summary.needed"), ("not_needed", "summary.not_needed"),
+                            (None, "summary.not_marked")]) or t("summary.no_gaps", lang)
+    components = entry.get("components")  # not in entries logged before version 3
+    statements = [s["reviewer_judgement"] for section in (components or {}).get("sections", [])
+                  for s in section["statements"]]
+    if statements:
+        summary += t("summary.components", lang) + counts(
+            statements, [("relevant", "summary.relevant"), ("not_relevant", "summary.not_relevant"),
+                         (None, "summary.not_marked")])
+    return summary
 
 
 def _render_review(record: CaseRecord, error: Optional[str] = None, form=None):
@@ -65,8 +75,10 @@ def _render_review(record: CaseRecord, error: Optional[str] = None, form=None):
         log_name=decision_log.REVIEW_LOG_PATH.name,
         saved=request.args.get("saved") is not None and bool(logged),
         error=error,
+        components=record.components,
         form=form or {},  # what was submitted, so a refused form keeps its choices
         gap_prefix=GAP_FIELD_PREFIX,
+        statement_prefix=STATEMENT_FIELD_PREFIX,
         here=url_for("review.show_case", case_id=record.case.case_id),
     )
 
@@ -85,6 +97,12 @@ def submit_decision(case_id: str):
         for gap in record.gaps
         if request.form.get(GAP_FIELD_PREFIX + gap.field)
     }
+    # Every marked statement is passed on, so one that isn't on the page is refused.
+    statement_judgements = {
+        name[len(STATEMENT_FIELD_PREFIX):]: value
+        for name, value in request.form.items()
+        if name.startswith(STATEMENT_FIELD_PREFIX) and value
+    }
     lang = language_from_cookies(request.cookies)
     try:
         record_decision(
@@ -93,6 +111,7 @@ def submit_decision(case_id: str):
             note=request.form.get("note"),
             gap_judgements=judgements,
             ui_language=lang,
+            statement_judgements=statement_judgements,
         )
     except InvalidDecision as e:
         return _render_review(record, error=error_message(e, lang), form=request.form), 400

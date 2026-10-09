@@ -4,6 +4,8 @@ import re
 import unittest
 
 from knowledge.catalog import load_catalog
+from reasoning.component_guide import COMPONENT_KEYS, GRADES
+from reasoning.component_support import NOTE_K0, NOTE_K_NOT_RECORDED
 from review.decision_log import DECISIONS
 from shared import case_schema
 from shared.config import PROJECT_ROOT
@@ -84,6 +86,10 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"decision.{decision}" for decision in DECISIONS}
         expected |= {f"doclang.{doc.language}" for doc in load_catalog()}
         expected |= {"error.required.amputation_level", "error.required.side"}  # intake _required()
+        # Component sections: 'component.' ~ key, 'grade.' ~ (grade or 'none'), t(note)
+        expected |= {f"component.{key}" for key in COMPONENT_KEYS}
+        expected |= {f"grade.{grade}" for grade in (*GRADES, "none")}
+        expected |= {NOTE_K0, NOTE_K_NOT_RECORDED}
         self.assertEqual(expected - set(TEXT), set())
 
 
