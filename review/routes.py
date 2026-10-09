@@ -28,7 +28,7 @@ bp = Blueprint("review", __name__, template_folder="templates")
 
 # Form field name for a gap's judgement, e.g. "gap:residual_limb.wound_status"
 GAP_FIELD_PREFIX = "gap:"
-# ... and for a component statement's, e.g. "opt:va_dod_ll_17_microprocessor_knee"
+# ... and for a component or fitting statement's, e.g. "opt:va_dod_ll_17_microprocessor_knee"
 STATEMENT_FIELD_PREFIX = "opt:"
 
 
@@ -40,7 +40,8 @@ def _get_record(case_id: str) -> CaseRecord:
 
 
 def judgement_summary(entry: dict, lang: str = DEFAULT_LANGUAGE) -> str:
-    """E.g. "2 needed, 12 not marked; components: 1 relevant, 6 not marked" for one logged entry."""
+    """E.g. "2 needed, 12 not marked; components: 1 relevant, 6 not marked; design and
+    fitting: 20 not marked" for one logged entry."""
     separator = t("summary.separator", lang)
 
     def counts(judgements: list, keys: list[tuple[str, str]]) -> str:
@@ -51,13 +52,14 @@ def judgement_summary(entry: dict, lang: str = DEFAULT_LANGUAGE) -> str:
     gaps = [gap["reviewer_judgement"] for gap in entry["gaps"]]
     summary = counts(gaps, [("needed", "summary.needed"), ("not_needed", "summary.not_needed"),
                             (None, "summary.not_marked")]) or t("summary.no_gaps", lang)
-    components = entry.get("components")  # not in entries logged before version 3
-    statements = [s["reviewer_judgement"] for section in (components or {}).get("sections", [])
-                  for s in section["statements"]]
-    if statements:
-        summary += t("summary.components", lang) + counts(
-            statements, [("relevant", "summary.relevant"), ("not_relevant", "summary.not_relevant"),
-                         (None, "summary.not_marked")])
+    # "components" is not in entries logged before version 3, "fitting" not before version 4.
+    for part, heading in (("components", "summary.components"), ("fitting", "summary.fitting")):
+        statements = [s["reviewer_judgement"] for section in (entry.get(part) or {}).get("sections", [])
+                      for s in section["statements"]]
+        if statements:
+            summary += t(heading, lang) + counts(
+                statements, [("relevant", "summary.relevant"), ("not_relevant", "summary.not_relevant"),
+                             (None, "summary.not_marked")])
     return summary
 
 
@@ -76,6 +78,7 @@ def _render_review(record: CaseRecord, error: Optional[str] = None, form=None):
         saved=request.args.get("saved") is not None and bool(logged),
         error=error,
         components=record.components,
+        fitting=record.fitting,
         form=form or {},  # what was submitted, so a refused form keeps its choices
         gap_prefix=GAP_FIELD_PREFIX,
         statement_prefix=STATEMENT_FIELD_PREFIX,

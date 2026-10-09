@@ -56,6 +56,11 @@ class SearchTests(unittest.TestCase):
     def test_nothing_allowed_gives_empty_list(self):
         self.assertEqual(self.search("limb", languages=["de"]), [])
 
+    def test_excluded_document_never_returned(self):
+        results = self.search("residual limb volume edema", top_k=10, exclude=["a"])
+        self.assertNotIn("a-0000", [r.chunk_id for r in results])
+        self.assertIn("b-0000", [r.chunk_id for r in results])
+
     def test_result_carries_citation_details(self):
         result = self.search("phantom pain", top_k=1)[0]
         self.assertEqual(result.citation, "Title of b (2024), p. 1")
@@ -130,6 +135,17 @@ class RetrieveRelevantChunksTests(unittest.TestCase):
             retrieved = retrieve_relevant_chunks(case, top_k=10, store=store, embed=fake_embed)
         ids = {c.chunk_id for chunks in retrieved.values() for c in chunks}
         self.assertEqual(ids, {"en-0000"})
+
+    def test_excluded_documents_not_searched(self):
+        store = make_store(
+            chunk_record("guideline-0000", "wound healing of the residual limb"),
+            chunk_record("manual-0000", "wound healing before fitting"),
+        )
+        case = Case(amputation_level="transtibial", side="left")
+        with patch("knowledge.retrieval.RETRIEVAL_EXCLUDED_DOCUMENTS", ("manual",)):
+            retrieved = retrieve_relevant_chunks(case, top_k=10, store=store, embed=fake_embed)
+        ids = {c.chunk_id for chunks in retrieved.values() for c in chunks}
+        self.assertEqual(ids, {"guideline-0000"})
 
     def test_complete_case_needs_no_store(self):
         case = Case(

@@ -1,4 +1,4 @@
-"""Tests for reasoning/component_guide.py: every quote is word for word on its page.
+"""Tests for reasoning/component_guide.py and reasoning/fitting_guide.py: every quote is word for word on its page.
 
 The quote checks read data/extracted/<doc_id>.txt, which `python -m
 knowledge.ingest` (or `knowledge.extract`) generates and git doesn't keep;
@@ -10,18 +10,15 @@ import unittest
 from functools import lru_cache
 
 from knowledge.catalog import load_catalog
-from reasoning.component_guide import (
-    ALL_STATEMENTS,
-    COMPONENT_KEYS,
-    COMPONENTS,
-    GRADES,
-    K_LEVEL_DESCRIPTIONS,
-    RULES,
-)
+from reasoning import component_guide, fitting_guide
+from reasoning.component_guide import COMPONENT_KEYS, COMPONENTS, GRADES, K_LEVEL_DESCRIPTIONS
 from shared.case_schema import ActivityLevel
 from shared.config import EXTRACTED_DIR
 
 _PAGE_MARKER = re.compile(r"^--- page (\d+) ---$", re.MULTILINE)
+
+ALL_STATEMENTS = (*component_guide.ALL_STATEMENTS, *fitting_guide.ALL_STATEMENTS)
+RULES = (*component_guide.RULES, *fitting_guide.RULES)
 
 
 def flat(text: str) -> str:
@@ -46,16 +43,19 @@ def quotes_of(statement):
 
 
 class GuideShapeTests(unittest.TestCase):
-    def test_ids_unique(self):
+    def test_ids_unique_across_both_guides(self):
+        # The review form and the log name a statement by its id alone.
         ids = [s.id for s in ALL_STATEMENTS]
         self.assertEqual(len(ids), len(set(ids)))
 
-    def test_components_and_grades_known(self):
-        for rule in RULES:
-            with self.subTest(rule.statement.id):
-                self.assertIn(rule.statement.component, COMPONENT_KEYS)
-                self.assertIn(rule.statement.grade, (*GRADES, None))
-                self.assertTrue(rule.levels)
+    def test_sections_and_grades_known(self):
+        for guide, keys in ((component_guide, COMPONENT_KEYS), (fitting_guide, fitting_guide.SECTION_KEYS)):
+            for rule in guide.RULES:
+                with self.subTest(rule.statement.id):
+                    self.assertIn(rule.statement.component, keys)
+                    self.assertIn(rule.statement.grade, (*GRADES, None))
+                    self.assertTrue(rule.levels)
+                    self.assertFalse(rule.unilateral_only and rule.bilateral_only)
 
     def test_documents_are_catalogued_prosthetics_sources(self):
         catalog = {doc.id: doc for doc in load_catalog()}
@@ -73,11 +73,21 @@ class GuideShapeTests(unittest.TestCase):
             for quote in quotes_of(statement):
                 with self.subTest(statement.id, page=quote.page):
                     self.assertTrue(quote.text[0].isupper(), quote.text[:30])
-                    self.assertTrue(quote.text.endswith("."), quote.text[-30:])
+                    if quote.items:  # a heading or "…include:", then the list
+                        self.assertTrue(all(item.strip() for item in quote.items))
+                    else:  # a sentence may end inside quotation marks: “stubbies.”
+                        self.assertTrue(quote.text.rstrip("”’").endswith((".", "?")), quote.text[-30:])
 
-    def test_component_order_lower_limb_first(self):
+    def test_section_order(self):
         self.assertEqual(COMPONENT_KEYS[0], "knee")
         self.assertEqual(len(COMPONENTS), len(set(COMPONENT_KEYS)))
+        self.assertEqual(fitting_guide.SECTION_KEYS, ("readiness", "prosthesis_stage", "fitting", "alignment"))
+
+    def test_readiness_fields_are_intake_fields(self):
+        from shared.field_guide import FIELDS_BY_PATH
+        for path in fitting_guide.READINESS_FIELDS:
+            with self.subTest(path):
+                self.assertIn(path, FIELDS_BY_PATH)
 
 
 class QuoteTests(unittest.TestCase):
@@ -94,6 +104,21 @@ class QuoteTests(unittest.TestCase):
                     found_on = [n for n, body in pages(statement.doc_id).items() if text in body]
                     self.assertIn(text, page_text(statement.doc_id, quote),
                                   f"not on {quote.pages}; found on pages {found_on}")
+
+    def test_list_items_follow_their_heading_in_order(self):
+        for statement in ALL_STATEMENTS:
+            for quote in quotes_of(statement):
+                if not quote.items:
+                    continue
+                with self.subTest(statement.id, page=quote.page):
+                    body = page_text(statement.doc_id, quote)
+                    position = body.index(flat(quote.text)) + len(flat(quote.text))
+                    for item in quote.items:
+                        found = body.find(flat(item), position)
+                        self.assertNotEqual(found, -1, f"{item!r} not after the previous item")
+                        # Only a bullet ("y", "·", "–") or nothing between items
+                        self.assertLessEqual(len(body[position:found].strip()), 1, body[position:found])
+                        position = found + len(flat(item))
 
     def test_grade_is_the_one_printed_after_the_recommendation(self):
         # VA/DoD prints e.g. "(Weak for | Reviewed, New-added)" right after it.

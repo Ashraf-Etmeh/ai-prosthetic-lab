@@ -11,11 +11,16 @@ This prototype covers the start of the brief's prosthetics domain:
 > **Use case 02 — support component selection based on the functional
 > data:** the functional level (K-level) and what the guidelines in the
 > source library say about each prosthetic component for the case.
+>
+> **Design and fitting:** what the sources say about readiness for
+> fitting, a preparatory or definitive prosthesis, the fitting steps and
+> alignment, next to what the case recorded.
 
 It is **decision support, not a replacement** for the specialist. It lists
-missing information and quotes guideline statements word for word with
-their own grade of evidence; it does not diagnose, prescribe, or choose or
-rank components. The final decision always stays with the specialist.
+missing information and quotes guideline and manual statements word for
+word with their own grade of evidence, if they give one; it does not
+diagnose, prescribe, choose or rank components, or judge whether a patient
+is ready for fitting. The final decision always stays with the specialist.
 
 Fake/test data only. No patient identifiers (name, date of birth, address,
 record numbers) are collected.
@@ -26,14 +31,15 @@ record numbers) are collected.
 |-----------------------------|-------------------------------------|------------------------------------|
 | 01 Case data                | `intake/`, `shared/case_schema.py`  | Working: form (incl. prior prostheses), schema, validation |
 | 02 Information analysis     | `knowledge/`                        | Working: extraction, chunking, multilingual search (en/ar; German ingested, not searched) |
-| 03 Specialised reasoning    | `reasoning/gap_analysis.py`, `reasoning/component_support.py` | Working: rule-based; every gap cites a checkable passage or says none was found; component statements come from `reasoning/component_guide.py` |
-| 04 Assistive output         | `reasoning/models.py`               | Working: gap list, functional level, and guideline statements per component, all quoted with their source |
-| 05 Specialist review        | `review/`                           | Working: approve / edit / reject, needed / not needed per gap, relevant / not relevant per component statement |
+| 03 Specialised reasoning    | `reasoning/gap_analysis.py`, `reasoning/component_support.py`, `reasoning/fitting_support.py` | Working: rule-based; every gap cites a checkable passage or says none was found; component and fitting statements come from `reasoning/component_guide.py` and `reasoning/fitting_guide.py` |
+| 04 Assistive output         | `reasoning/models.py`               | Working: gap list, functional level, statements per component, and design and fitting statements, all quoted with their source |
+| 05 Specialist review        | `review/`                           | Working: approve / edit / reject, needed / not needed per gap, relevant / not relevant per component or fitting statement |
 | 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/review_log.jsonl` |
 
-Next in the prosthetics domain is design and fitting support; the rest of
-the brief (orthotics, gait analysis, rehabilitation, follow-up) is planned
-but not started — see [FUTURE_WORK.md](FUTURE_WORK.md#path-to-the-full-system).
+The prosthetics domain's three parts (evaluate, choose components, design
+and fit) now each have a first version; the rest of the brief (orthotics,
+gait analysis, rehabilitation, follow-up) is planned but not started — see
+[FUTURE_WORK.md](FUTURE_WORK.md#path-to-the-full-system).
 
 ## Running it
 
@@ -80,6 +86,11 @@ Hugging Face cache, outside this folder). The result goes to
 model changes. Without it the app still lists gaps, but warns that no
 sources were searched.
 
+A catalogued document can be left out of the gap search but still be
+quoted by the hand-written statements: `RETRIEVAL_EXCLUDED_DOCUMENTS` in
+`shared/config.py` (now the ICRC gait-analysis manual; the reason is in the
+comment there).
+
 To check how well the search finds the right page, in English, Arabic and
 German, with and without the German documents:
 
@@ -103,11 +114,13 @@ python -m knowledge.evaluate
 ## How component statements are chosen
 
 Not by search: `reasoning/component_guide.py` holds hand-written rules, each
-with one statement copied word for word from a guideline (VA/DoD 2024 and
-2022, CMS 2017), its page and the guideline's own grade ("Weak for",
-"Neither for nor against", or none for a consensus statement). A rule
-applies to a case only as far as the source's own wording says:
-amputation level, unilateral, a specific K-level, or "ambulators" (not
+with one statement copied word for word from a source (VA/DoD 2024 and
+2022, CMS 2017, the ICRC gait-analysis manual 2014), its page and the
+source's own grade ("Weak for", "Neither for nor against", or none given).
+Each statement also shows its kind of source, so a training manual is not
+mistaken for a guideline. A rule applies to a case only as far as the
+source's own wording says: amputation level ("TT"/"TF" in the ICRC
+manual), unilateral or bilateral, a specific K-level, or "ambulators" (not
 shown for K0). Where sources differ, both are shown.
 
 The review page shows, for the case:
@@ -118,23 +131,43 @@ The review page shows, for the case:
    upper limb: type of prosthesis, control and fit): the statements that
    apply, or "no statement in the source library". Nothing is ranked.
 
-`tests/test_component_guide.py` checks that every quote is on its page of
-the extracted text and that each VA/DoD grade is the one printed after the
-recommendation. To add a statement, copy it from `data/extracted/`, add a
-rule, and run the tests.
+## How design and fitting statements are chosen
+
+The same way, from `reasoning/fitting_guide.py` (sources: the ICRC manual,
+VA/DoD lower limb recommendation 5 and algorithm, VA/DoD upper limb phases
+of care and tables 5-6, CMS 2017, and the WHO prosthetics and orthotics
+implementation manual). The review page shows four sections:
+1. **Readiness for fitting**, with what the case recorded at intake
+   (wound, volume, skin, pain, sensation, comorbidities, cognition, time
+   since amputation) shown as entered, next to the sources' criteria. The
+   tool never says whether the patient is ready.
+2. **Preparatory or definitive prosthesis.**
+3. **Fitting, check-out and follow-up.**
+4. **Alignment**: what it is, its steps, and, for transtibial and
+   transfemoral prostheses, what the ICRC manual says an alignment error
+   may cause in gait.
+
+Socket, interface and suspension statements are listed with the components.
+
+`tests/test_component_guide.py` checks, for both guides, that every quote
+is on its page of the extracted text, that a quoted list's items follow
+their heading in order, and that each VA/DoD grade is the one printed
+after the recommendation. To add a statement, copy it from
+`data/extracted/`, add a rule, and run the tests.
 
 ## Review log
 
 The specialist marks each gap "Needed" or "Not needed for this case", and
-each component statement "Relevant" or "Not relevant for this case" (or
-leaves them unmarked), and approves, edits (with a note saying what should
-change) or rejects the list. Each decision is added as one line of JSON to
-`data/review_log.jsonl`, and the review page lists the decisions logged for
-the case. A line holds the decision, note, time (UTC), the case as entered,
-every gap with its quote, citation and full passage, the functional level
-and every component statement shown with its mark, and the search
-settings, so it can be checked later even after the source library is
-re-ingested. Labels and explanations are logged in English whichever
+each component or fitting statement "Relevant" or "Not relevant for this
+case" (or leaves them unmarked), and approves, edits (with a note saying
+what should change) or rejects the list. Each decision is added as one line
+of JSON to `data/review_log.jsonl`, and the review page lists the decisions
+logged for the case. A line holds the decision, note, time (UTC), the case
+as entered, every gap with its quote, citation and full passage, the
+functional level, every component and fitting statement shown with its
+mark, the intake values shown next to the readiness statements, and the
+search settings, so it can be checked later even after the source library
+is re-ingested. Labels and explanations are logged in English whichever
 language the reviewer used; `ui_language` records which one it was. Lines are never changed or removed. The file stays on this
 machine (it is in `.gitignore`).
 
@@ -152,8 +185,9 @@ shared/             Case schema, config (paths, settings, disclaimer), in-memory
                     interface text in English and Arabic (i18n.py)
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
 knowledge/          Source catalog, text extraction, ingestion, search, evaluation
-reasoning/          Gap analysis (what is missing, and which source says why) and
-                    component support (what the guidelines say per component)
+reasoning/          Gap analysis (what is missing, and which source says why),
+                    component support (what the sources say per component) and
+                    fitting support (readiness, preparatory/definitive, fitting, alignment)
 review/             Specialist review page and decision log (writes data/review_log.jsonl)
 tests/              unittest suite (uses a tiny fake embedder, not the real model)
 data/sources/       Knowledge documents: catalog.json in git, the PDFs kept local

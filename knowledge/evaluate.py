@@ -4,7 +4,8 @@ Run:  python -m knowledge.evaluate      (after python -m knowledge.ingest)
 
 Reads data/eval/retrieval_queries.json. Each query names the document and
 pages that answer it. The script searches the documents v1 searches
-(RETRIEVAL_DOMAINS) and reports, per group of queries:
+(RETRIEVAL_DOMAINS, without RETRIEVAL_EXCLUDED_DOCUMENTS) and reports, per
+group of queries:
 - hit@1: how often the first result is from the right pages,
 - hit@5: how often one of the top 5 is.
 It runs twice: with all documents, then without the German ones, so you can
@@ -30,6 +31,7 @@ from shared.config import (
     EVAL_QUERIES_PATH,
     MIN_RELEVANCE_SCORE,
     RETRIEVAL_DOMAINS,
+    RETRIEVAL_EXCLUDED_DOCUMENTS,
     RETRIEVAL_LANGUAGES,
 )
 
@@ -68,7 +70,8 @@ def run(
     outcomes = []
     for query, vector in zip(queries, vectors):
         languages = set(query.get("search_languages") or LANGUAGES) - leave_out_languages
-        results = store.search(vector, TOP_K, domains=RETRIEVAL_DOMAINS, languages=languages)
+        results = store.search(vector, TOP_K, domains=RETRIEVAL_DOMAINS, languages=languages,
+                               exclude=RETRIEVAL_EXCLUDED_DOCUMENTS)
         rank = next((i for i, c in enumerate(results, 1) if is_answer(c, query["expected"])), None)
         outcomes.append(QueryResult(query, results, rank))
     return outcomes
@@ -94,6 +97,9 @@ def report(with_german: list[QueryResult], without_german: list[QueryResult]) ->
         print(f"{group:16} {n:>7} {at1:>4}/{n:<2} {at5:>4}/{n:<2}   {without}")
     print(f"(The app's gap search uses only: {', '.join(RETRIEVAL_LANGUAGES)}; "
           "shared/config.py RETRIEVAL_LANGUAGES.)")
+    if RETRIEVAL_EXCLUDED_DOCUMENTS:
+        print(f"(Not searched: {', '.join(RETRIEVAL_EXCLUDED_DOCUMENTS)}; "
+              "shared/config.py RETRIEVAL_EXCLUDED_DOCUMENTS.)")
 
     print("\nQueries whose answer was not in the top 5:")
     for outcome in with_german:

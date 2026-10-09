@@ -6,9 +6,12 @@
   prosthetic components for this case, and the functional level they depend
   on (reasoning/component_support.py). Every statement is quoted word for
   word with its source and grade; none is the system's own advice.
+- FittingSupport: what the sources say about design and fitting for this
+  case: readiness, preparatory or definitive prosthesis, fitting and
+  alignment (reasoning/fitting_support.py). Quoted the same way.
 
-Neither is a prescription: see shared/config.py DISCLAIMER. The specialist
-decides.
+None of them is a prescription: see shared/config.py DISCLAIMER. The
+specialist decides.
 """
 
 from dataclasses import dataclass, field
@@ -37,6 +40,9 @@ class Quote:
     page: int  # as numbered in a PDF viewer, like ProtocolChunk.page
     text: str
     end_page: Optional[int] = None  # set when the words run onto the next page
+    # A list the text introduces, item by item as printed (without the bullet),
+    # e.g. text "Appropriate prosthetic alignment involves several steps:".
+    items: tuple[str, ...] = ()
 
     @property
     def pages(self) -> str:
@@ -50,7 +56,9 @@ class GuidelineStatement:
     """What one source says, quoted word for word. Never the system's own words."""
 
     id: str  # stable, e.g. "va_dod_ll_17_microprocessor_knee"; logged, and names the review choice
-    component: str  # a reasoning/component_guide.py COMPONENTS key, or "functional_level"
+    # A reasoning/component_guide.py COMPONENTS key, "functional_level", or a
+    # reasoning/fitting_guide.py SECTIONS key.
+    component: str
     doc_id: str  # catalog id of the source document
     grade: Optional[str]  # the source's own strength, e.g. "Weak for"; None if it gives none
     quote: Quote
@@ -65,6 +73,9 @@ class CitedStatement:
     title: str
     year: Optional[int]
     language: str = "en"  # the document's, so the page can show the quote in its direction
+    # The catalog's kind of source (the brief's six), e.g. "protocol" for a
+    # guideline, "professional_knowledge" for a training manual.
+    source_type: str = "protocol"
 
     def citation(self, quote: Quote) -> str:
         """E.g. "Lower Limb Prosthetic Workgroup Consensus Document (2017), p. 10"."""
@@ -74,7 +85,7 @@ class CitedStatement:
 
 @dataclass
 class ComponentSection:
-    component: str  # COMPONENTS key, e.g. "knee"
+    component: str  # COMPONENTS key, e.g. "knee", or a fitting SECTIONS key, e.g. "alignment"
     statements: list[CitedStatement]  # empty: no source in the library covers it for this case
 
 
@@ -98,6 +109,21 @@ class ComponentSupport:
     # Why some statements are not shown, as shared/i18n.py keys, e.g.
     # "components.k_not_recorded".
     notes: list[str] = field(default_factory=list)
+
+    @property
+    def statements(self) -> list[CitedStatement]:
+        return [cited for section in self.sections for cited in section.statements]
+
+
+@dataclass
+class FittingSupport:
+    """What the sources say about design and fitting for this case."""
+
+    sections: list[ComponentSection]
+    # The intake fields the readiness statements speak about, as
+    # (dotted field path, value as recorded); None: not recorded. Shown next
+    # to the statements without any judgement of whether the case is ready.
+    recorded: list[tuple[str, object]] = field(default_factory=list)
 
     @property
     def statements(self) -> list[CitedStatement]:

@@ -243,6 +243,21 @@
       "language": "en"
     },
     {
+      "id": "prosthetic_gait_analysis_icrc_manual_2014",
+      "file": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+      "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+      "authors": "Morvan C, Packirisamy V, Rechsteiner M, Friedel F",
+      "year": 2014,
+      "publisher": "International Committee of the Red Cross",
+      "doi": null,
+      "url": "https://shop.icrc.org/prosthetic-gait-analysis-for-physiotherapists.html",
+      "notes": "Manifest K01. A training manual for physiotherapists in ICRC programmes, built on ICRC polypropylene technology (e.g. PTB/supracondylar transtibial sockets, quadrilateral transfemoral sockets); not a guideline, no grades. Many alignment diagrams are images without text. Licence not shown (© ICRC, January 2014).",
+      "source_type": "professional_knowledge",
+      "domains": ["prosthetics", "gait", "rehabilitation"],
+      "limbs": ["lower"],
+      "language": "en"
+    },
+    {
       "id": "afo_care_quality_instruments_review_2020",
       "file": "03_outcome_measures/O02_Fatone2020_Custom_AFO_Outcome_Measures.pdf",
       "title": "Identifying Instruments to Assess Care Quality for Individuals With Custom Ankle Foot Orthoses: A Scoping Review",

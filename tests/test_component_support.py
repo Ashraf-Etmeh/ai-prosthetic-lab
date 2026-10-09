@@ -24,19 +24,32 @@ class LowerLimbTests(unittest.TestCase):
         self.assertEqual(shown(support), {
             "foot_ankle": ["va_dod_ll_19_esar_over_sach", "va_dod_ll_18_no_specific_foot",
                            "cms_power_assist_ankle"],
-            "socket": [],  # listed: no source in the library covers transtibial sockets
-            "interface": ["cms_interface_material"],
-            "suspension": ["cms_multiple_suspension", "cms_elevated_vacuum"],
+            # Only the ICRC manual describes transtibial sockets ("TT" in its text).
+            "socket": ["icrc_tt_ptb_socket", "icrc_tt_total_surface_bearing_socket",
+                       "icrc_total_contact_socket_conditions"],
+            "interface": ["cms_interface_material", "icrc_grafted_skin_interface"],
+            "suspension": ["cms_multiple_suspension", "cms_elevated_vacuum", "icrc_tt_suspension_methods"],
         })
         self.assertEqual(support.notes, [])
 
     def test_transfemoral_k2_gets_the_k2_statements(self):
         sections = shown(component_support(make_case("transfemoral", "K2")))
-        self.assertEqual(sections["knee"], ["va_dod_ll_17_microprocessor_knee", "cms_k2_microprocessor_knee"])
+        self.assertEqual(sections["knee"], ["va_dod_ll_17_microprocessor_knee", "cms_k2_microprocessor_knee",
+                                            "icrc_tf_hip_flexion_contracture_knee"])
         self.assertEqual(sections["pylon"], ["cms_k2_shock_absorbing_pylon"])
         self.assertEqual(sections["socket"], ["va_dod_ll_15_transfemoral_socket",
-                                              "va_dod_ll_16_ischial_containment"])
+                                              "va_dod_ll_16_ischial_containment",
+                                              "icrc_total_contact_socket_conditions"])
         self.assertEqual(list(sections), ["knee", "foot_ankle", "pylon", "socket", "interface", "suspension"])
+
+    def test_icrc_tt_and_tf_statements_only_at_their_level(self):
+        tt = {c.statement.id for c in component_support(make_case("transtibial", "K3")).statements}
+        tf = {c.statement.id for c in component_support(make_case("transfemoral", "K3")).statements}
+        kd = {c.statement.id for c in component_support(make_case("knee_disarticulation", "K3")).statements}
+        self.assertIn("icrc_tt_suspension_methods", tt)
+        self.assertNotIn("icrc_tt_suspension_methods", tf | kd)
+        self.assertIn("icrc_tf_hip_flexion_contracture_knee", tf)
+        self.assertNotIn("icrc_tf_hip_flexion_contracture_knee", tt | kd)
 
     def test_k2_statements_need_k2(self):
         for k_level in ("K1", "K3", "K4", "unknown", None):
@@ -48,10 +61,13 @@ class LowerLimbTests(unittest.TestCase):
     def test_k0_leaves_out_statements_about_ambulators(self):
         support = component_support(make_case("transfemoral", "K0"))
         sections = shown(support)
-        self.assertEqual(sections["knee"], [])
+        # Statements that don't speak of ambulators stay.
+        self.assertEqual(sections["knee"], ["icrc_tf_hip_flexion_contracture_knee"])
         self.assertEqual(sections["foot_ankle"], [])
-        self.assertEqual(sections["socket"], [])
-        self.assertEqual(sections["interface"], ["cms_interface_material"])  # not about walking
+        self.assertEqual(sections["socket"], ["icrc_total_contact_socket_conditions"])
+        self.assertEqual(sections["interface"], ["cms_interface_material", "icrc_grafted_skin_interface"])
+        ambulator_ids = {rule.statement.id for rule in RULES if rule.ambulators_only}
+        self.assertEqual(ambulator_ids & {c.statement.id for c in support.statements}, set())
         self.assertEqual(support.notes, [NOTE_K0])
 
     def test_missing_k_level_noted(self):

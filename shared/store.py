@@ -4,15 +4,15 @@ There is no database in v1. A case is created by intake, analyzed once, and
 held in memory so the review page can display it by case_id. This does not
 survive a server restart — that's fine for a local prototype. Only the
 review *decisions* (approve/edit/reject) are saved to disk, by
-review/decision_log.py, each with its own copy of the case, gap list and
-component statements.
+review/decision_log.py, each with its own copy of the case, gap list,
+component statements and design and fitting statements.
 """
 
 from dataclasses import dataclass, field
 from typing import Optional
 
 from knowledge.models import ProtocolChunk
-from reasoning.models import ComponentSupport, Gap
+from reasoning.models import ComponentSupport, FittingSupport, Gap
 from shared.case_schema import Case
 
 
@@ -26,6 +26,13 @@ class CaseRecord:
     knowledge_warning: Optional[str] = None
     # What the guidelines say about this case's components (None: not run).
     components: Optional[ComponentSupport] = None
+    # What the sources say about design and fitting for this case (None: not run).
+    fitting: Optional[FittingSupport] = None
+
+    def shown_statements(self) -> list:
+        """Every component and fitting statement on the review page (CitedStatement)."""
+        return [*(self.components.statements if self.components else []),
+                *(self.fitting.statements if self.fitting else [])]
 
 
 class CaseStore:

@@ -44,11 +44,12 @@ TEXT: dict[str, dict[str, str]] = {
     "disclaimer": {
         "en": DISCLAIMER,
         "ar": "هذه أداة آلية لدعم القرار، وليست تقييماً سريرياً ولا تشخيصاً ولا وصفةً. تعرض "
-        "المعلومات الناقصة في بيانات الحالة، وتقتبس ما تقوله الأدلة الإرشادية في مكتبة مصادرها "
-        "عن مكوّنات الطرف الاصطناعي لهذه الحالة، مع درجة التوصية التي يحددها كل دليل. لا تختار "
-        "المكوّنات ولا ترتّبها. كل بند يحتاج إلى مراجعة مختص مؤهل في الأطراف الاصطناعية، والقرار "
-        "له. قد تكون القوائم غير مكتملة: البند غير المدرج فُحص من حيث تعبئته فقط لا من حيث كفاية "
-        "محتواه، ولا يُعرض إلا ما في مكتبة المصادر من مكوّنات وبيانات.",
+        "المعلومات الناقصة في بيانات الحالة، وتقتبس ما تقوله الأدلة الإرشادية والأدلة التدريبية "
+        "في مكتبة مصادرها عن مكوّنات الطرف الاصطناعي لهذه الحالة وتصميمه وتركيبه، مع درجة "
+        "التوصية التي يحددها المصدر إن وُجدت. لا تختار المكوّنات ولا ترتّبها. لا تحكم على جاهزية "
+        "المريض للتركيب. كل بند يحتاج إلى مراجعة مختص مؤهل في الأطراف الاصطناعية، والقرار له. "
+        "قد تكون القوائم غير مكتملة: البند غير المدرج فُحص من حيث تعبئته فقط لا من حيث كفاية "
+        "محتواه، ولا يُعرض إلا ما في مكتبة المصادر من بيانات.",
     },
     # Intake form
     "intake.page_title": {
@@ -58,11 +59,11 @@ TEXT: dict[str, dict[str, str]] = {
     "intake.heading": {"en": "New Case Intake", "ar": "إدخال حالة جديدة"},
     "intake.banner": {
         "en": "This tool lists missing intake information and quotes what published guidelines "
-        "say about the case's prosthetic components. It does not diagnose, prescribe or choose "
-        "components: the specialist decides.",
+        "and manuals say about the case's prosthetic components, design and fitting. It does not "
+        "diagnose, prescribe or choose components: the specialist decides.",
         "ar": "تعرض هذه الأداة المعلومات الناقصة في بيانات الحالة، وتقتبس ما تقوله الأدلة "
-        "الإرشادية المنشورة عن مكوّنات الطرف الاصطناعي للحالة. لا تشخّص ولا تصف ولا تختار "
-        "المكوّنات: القرار للمختص.",
+        "الإرشادية والأدلة التدريبية المنشورة عن مكوّنات الطرف الاصطناعي للحالة وتصميمه وتركيبه. "
+        "لا تشخّص ولا تصف ولا تختار المكوّنات: القرار للمختص.",
     },
     "intake.not_saved": {"en": "Case not saved:", "ar": "لم تُحفظ الحالة:"},
     "intake.amputation": {"en": "Amputation", "ar": "البتر"},
@@ -220,11 +221,21 @@ TEXT: dict[str, dict[str, str]] = {
         "en": "No statement in the source library covers this component for this case.",
         "ar": "لا يوجد في مكتبة المصادر بيان يتناول هذا المكوّن لهذه الحالة.",
     },
-    "components.grade": {"en": "Guideline grade:", "ar": "درجة التوصية:"},
+    "components.grade": {"en": "Source grade:", "ar": "درجة التوصية في المصدر:"},
     "components.same_source": {"en": "Same source, {pages}", "ar": "المصدر نفسه، {pages}"},
     "grade.Weak for": {"en": "Weak for", "ar": "ضعيفة لصالح"},
     "grade.Neither for nor against": {"en": "Neither for nor against", "ar": "لا لصالح ولا ضد"},
-    "grade.none": {"en": "none given (consensus statement)", "ar": "غير محددة (بيان توافقي)"},
+    "grade.none": {"en": "none given", "ar": "غير محددة"},
+    # The brief's six kinds of source (catalog "source_type"), shown with each statement
+    "source_type.protocol": {"en": "guideline or protocol", "ar": "دليل إرشادي أو بروتوكول"},
+    "source_type.professional_knowledge": {
+        "en": "professional knowledge (manual)",
+        "ar": "معرفة مهنية (دليل تدريبي)",
+    },
+    "source_type.scientific_reference": {"en": "scientific reference", "ar": "مرجع علمي"},
+    "source_type.applied_case": {"en": "applied case", "ar": "حالة تطبيقية"},
+    "source_type.structured_data": {"en": "structured data", "ar": "بيانات منظمة"},
+    "source_type.specialist_expertise": {"en": "specialist expertise", "ar": "خبرة المختصين"},
     "component.knee": {"en": "Knee unit", "ar": "وحدة الركبة"},
     "component.foot_ankle": {"en": "Foot and ankle", "ar": "القدم والكاحل"},
     "component.pylon": {"en": "Pylon", "ar": "الأنبوب الواصل (البايلون)"},
@@ -239,6 +250,44 @@ TEXT: dict[str, dict[str, str]] = {
         "en": "Control strategy, socket, suspension and components",
         "ar": "طريقة التحكم والتجويف والتعليق والمكوّنات",
     },
+    # Design and fitting (reasoning/fitting_support.py)
+    "fitting.heading": {
+        "en": "What the sources say about design and fitting ({n} statements)",
+        "ar": "ما تقوله المصادر عن التصميم والتركيب ({n} بيانات)",
+    },
+    "fitting.intro": {
+        "en": "Statements from the guidelines and manuals in the source library on readiness for "
+        "fitting, a preparatory or definitive prosthesis, fitting, and alignment, quoted word for "
+        "word. They do not say whether this patient is ready, or how the prosthesis should be "
+        "built or aligned: the specialist decides.",
+        "ar": "بيانات من الأدلة الإرشادية والأدلة التدريبية في مكتبة المصادر عن الجاهزية للتركيب، "
+        "والطرف الاصطناعي التمهيدي أو النهائي، والتركيب، والمحاذاة، مقتبسة حرفياً. لا تحدد ما إذا "
+        "كان هذا المريض جاهزاً، ولا كيف يُصنع الطرف أو تُضبط محاذاته: القرار للمختص.",
+    },
+    "fitting.components_above": {
+        "en": "Socket, interface and suspension are listed with the components above.",
+        "ar": "التجويف والواجهة ونظام التعليق مدرجة مع المكوّنات أعلاه.",
+    },
+    "fitting.recorded": {
+        "en": "Recorded at intake for this case (as entered, not judged):",
+        "ar": "ما سُجِّل لهذه الحالة عند الإدخال (كما أُدخل، دون تقييم):",
+    },
+    "fitting.none_reported": {"en": "none reported", "ar": "لا يوجد"},
+    "fitting.months": {"en": "{n} months", "ar": "عدد الأشهر: {n}"},
+    "fitting.no_statement": {
+        "en": "No statement in the source library covers this for this case.",
+        "ar": "لا يوجد في مكتبة المصادر بيان يتناول هذا الجانب لهذه الحالة.",
+    },
+    "fitting_section.readiness": {"en": "Readiness for fitting", "ar": "الجاهزية للتركيب"},
+    "fitting_section.prosthesis_stage": {
+        "en": "Preparatory or definitive prosthesis",
+        "ar": "طرف اصطناعي تمهيدي (مؤقت) أو نهائي",
+    },
+    "fitting_section.fitting": {
+        "en": "Fitting, check-out and follow-up",
+        "ar": "التركيب والفحص النهائي والمتابعة",
+    },
+    "fitting_section.alignment": {"en": "Alignment", "ar": "المحاذاة"},
     "review.relevant": {"en": "Relevant", "ar": "ذو صلة"},
     "review.not_relevant": {"en": "Not relevant for this case", "ar": "غير ذي صلة بهذه الحالة"},
     # A logged decision, as the log stores it
@@ -252,6 +301,7 @@ TEXT: dict[str, dict[str, str]] = {
     "summary.separator": {"en": ", ", "ar": "، "},
     "summary.no_gaps": {"en": "no gaps", "ar": "لا معلومات ناقصة"},
     "summary.components": {"en": "; components: ", "ar": "؛ المكوّنات: "},
+    "summary.fitting": {"en": "; design and fitting: ", "ar": "؛ التصميم والتركيب: "},
     "summary.relevant": {"en": "{n} relevant", "ar": "ذو صلة: {n}"},
     "summary.not_relevant": {"en": "{n} not relevant", "ar": "غير ذي صلة: {n}"},
     # Language of a source document
@@ -318,8 +368,8 @@ TEXT: dict[str, dict[str, str]] = {
         "ar": "تقدير غير معروف «{judgement}» للبند «{field}».",
     },
     "error.not_a_statement": {
-        "en": "{statement!r} is not one of the component statements shown for this case.",
-        "ar": "البيان «{statement}» ليس من بيانات المكوّنات المعروضة لهذه الحالة.",
+        "en": "{statement!r} is not one of the statements shown for this case.",
+        "ar": "البيان «{statement}» ليس من البيانات المعروضة لهذه الحالة.",
     },
 }
 

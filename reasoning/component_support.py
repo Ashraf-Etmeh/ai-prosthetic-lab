@@ -37,9 +37,9 @@ NOTE_K0 = "components.k0"
 
 
 @lru_cache(maxsize=1)
-def _documents() -> dict[str, tuple[str, Optional[int], str]]:
-    """Catalog id -> (title, year, language)."""
-    return {doc.id: (doc.title, doc.year, doc.language) for doc in load_catalog()}
+def _documents() -> dict[str, tuple[str, Optional[int], str, str]]:
+    """Catalog id -> (title, year, language, source type)."""
+    return {doc.id: (doc.title, doc.year, doc.language, doc.source_type) for doc in load_catalog()}
 
 
 def cite(statement: GuidelineStatement) -> CitedStatement:
@@ -59,6 +59,8 @@ def applies(rule: Rule, case: Case) -> bool:
     if case.amputation_level not in rule.levels:
         return False
     if rule.unilateral_only and case.side is Side.BILATERAL:
+        return False
+    if rule.bilateral_only and case.side is not Side.BILATERAL:
         return False
     if rule.k_levels is not None and k_level not in rule.k_levels:
         return False

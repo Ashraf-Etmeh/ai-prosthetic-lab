@@ -13,6 +13,8 @@ object that can be read on its own, holding
   and every component statement shown, with its quote, context, citation
   and grade, and the reviewer's judgement on it: relevant, not relevant,
   or not marked,
+- the same for every design and fitting statement shown, plus the intake
+  values shown next to the readiness statements,
 - the language of the review page ("ui_language", "en" or "ar"). Labels
   and explanations are logged in English whichever language was shown;
   the Arabic page shows the same items, translated (shared/i18n.py),
@@ -25,10 +27,11 @@ scope for v1 (FUTURE_WORK.md).
 import json
 import threading
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from reasoning.models import CitedStatement, ComponentSupport, Gap
+from reasoning.models import CitedStatement, ComponentSection, ComponentSupport, FittingSupport, Gap, Quote
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
@@ -46,8 +49,10 @@ GAP_JUDGEMENTS = ("needed", "not_needed")
 STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
 # Raise when the shape of an entry changes. 2 (2026-10-08): adds "ui_language";
 # version 1 entries were all made on the English page. 3 (2026-10-08): adds
-# "components" (functional level and component statements).
-LOG_VERSION = 3
+# "components" (functional level and component statements). 4 (2026-10-09):
+# adds "fitting" (design and fitting statements), "source_type" per
+# statement, and "items" for a quote that introduces a list.
+LOG_VERSION = 4
 
 # The development server answers requests in threads; one write at a time
 # keeps two decisions from mixing into one line.
@@ -69,9 +74,9 @@ def build_entry(
     """The log entry for one decision. Raises InvalidDecision if it is not valid.
 
     gap_judgements maps a gap's field path to "needed" or "not_needed";
-    statement_judgements maps a component statement's id to "relevant" or
-    "not_relevant". Gaps and statements left out are logged as not marked
-    (None).
+    statement_judgements maps the id of a component or fitting statement
+    to "relevant" or "not_relevant". Gaps and statements left out are
+    logged as not marked (None).
     """
     note = (note or "").strip() or None
     gap_judgements = gap_judgements or {}
@@ -86,7 +91,7 @@ def build_entry(
             raise InvalidDecision("error.not_a_gap", field=field)
         if judgement not in GAP_JUDGEMENTS:
             raise InvalidDecision("error.unknown_judgement", judgement=judgement, field=field)
-    shown = {c.statement.id for c in record.components.statements} if record.components else set()
+    shown = {cited.statement.id for cited in record.shown_statements()}
     for statement_id, judgement in statement_judgements.items():
         if statement_id not in shown:
             raise InvalidDecision("error.not_a_statement", statement=statement_id)
@@ -102,6 +107,7 @@ def build_entry(
         "ui_language": ui_language,
         "gaps": [_gap_entry(gap, gap_judgements.get(gap.field)) for gap in record.gaps],
         "components": _components_entry(record.components, statement_judgements),
+        "fitting": _fitting_entry(record.fitting, statement_judgements),
         "knowledge_warning": record.knowledge_warning,  # set if no sources were searched
         "settings": {
             "embedding_model": EMBEDDING_MODEL_NAME,
@@ -142,14 +148,37 @@ def _gap_entry(gap: Gap, judgement: Optional[str]) -> dict:
     }
 
 
+def _quote(cited: CitedStatement, quote: Quote) -> dict:
+    entry = {"citation": cited.citation(quote), "quote": quote.text}
+    if quote.items:  # the list the quote introduces
+        entry["items"] = list(quote.items)
+    return entry
+
+
 def _quoted(cited: CitedStatement) -> dict:
     statement = cited.statement
-    return {
-        "id": statement.id,
-        "doc_id": statement.doc_id,
-        "citation": cited.citation(statement.quote),
-        "quote": statement.quote.text,
-    }
+    return {"id": statement.id, "doc_id": statement.doc_id, **_quote(cited, statement.quote)}
+
+
+def _sections_entry(sections: list[ComponentSection], judgements: dict[str, str]) -> list[dict]:
+    return [
+        {
+            "component": section.component,
+            "statements": [
+                {
+                    **_quoted(cited),
+                    "component": cited.statement.component,
+                    "grade": cited.statement.grade,  # the source's own; None if it gives none
+                    "source_type": cited.source_type,  # e.g. "protocol", "professional_knowledge"
+                    "context": [_quote(cited, quote) for quote in cited.statement.context],
+                    # "relevant", "not_relevant", or None (not marked)
+                    "reviewer_judgement": judgements.get(cited.statement.id),
+                }
+                for cited in section.statements
+            ],
+        }
+        for section in sections
+    ]
 
 
 def _components_entry(support: Optional[ComponentSupport], judgements: dict[str, str]) -> Optional[dict]:
@@ -164,26 +193,18 @@ def _components_entry(support: Optional[ComponentSupport], judgements: dict[str,
             "cautions": [_quoted(cited) for cited in functional.cautions],
         },
         "notes": list(support.notes),  # why some statements were left out
-        "sections": [
-            {
-                "component": section.component,
-                "statements": [
-                    {
-                        **_quoted(cited),
-                        "component": cited.statement.component,
-                        "grade": cited.statement.grade,  # the source's own; None if it gives none
-                        "context": [
-                            {"citation": cited.citation(quote), "quote": quote.text}
-                            for quote in cited.statement.context
-                        ],
-                        # "relevant", "not_relevant", or None (not marked)
-                        "reviewer_judgement": judgements.get(cited.statement.id),
-                    }
-                    for cited in section.statements
-                ],
-            }
-            for section in support.sections
-        ],
+        "sections": _sections_entry(support.sections, judgements),
+    }
+
+
+def _fitting_entry(support: Optional[FittingSupport], judgements: dict[str, str]) -> Optional[dict]:
+    if support is None:
+        return None
+    return {
+        # The intake values shown next to the readiness statements; None: not recorded.
+        "recorded": {path: value.value if isinstance(value, Enum) else value
+                     for path, value in support.recorded},
+        "sections": _sections_entry(support.sections, judgements),
     }
 
 

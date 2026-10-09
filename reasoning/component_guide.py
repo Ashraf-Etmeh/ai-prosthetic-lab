@@ -5,12 +5,21 @@ copied word for word from a catalogued document, with its page and the
 source's own grade, and says which cases it applies to. Who a rule applies
 to comes from the source's own wording:
 - amputation levels: a knee statement only for levels with a prosthetic knee,
-  upper-limb recommendation 7 only "through or proximal to the wrist",
-- "unilateral": not shown for bilateral cases,
+  upper-limb recommendation 7 only "through or proximal to the wrist", an
+  ICRC manual statement marked "TT:" or "TF:" only for transtibial or
+  transfemoral,
+- "unilateral": not shown for bilateral cases; "bilateral": only for them,
 - "at the K2 level": shown only when K2 is recorded,
 - "prosthetic ambulators" / "community ambulators": not shown when K0 is
   recorded, which the CMS document describes as no ability or potential to
   ambulate or transfer safely.
+
+Sources: the VA/DoD guidelines and the CMS consensus document, which grade
+or agree their statements, and the ICRC gait-analysis manual, a training
+manual written for ICRC programmes (no grades). The page shows each
+statement's kind of source (catalog "source_type") next to its grade.
+reasoning/fitting_guide.py holds the design and fitting statements in the
+same form.
 
 Nothing here ranks options or adds advice. Where the sources differ (e.g.
 microprocessor knees at K2: VA/DoD 2024 "Weak for", CMS 2017 "may
@@ -31,13 +40,18 @@ from shared.case_schema import AmputationLevel as Level
 
 LOWER = frozenset(level for level in Level if level.is_lower_limb)
 UPPER = frozenset(level for level in Level if not level.is_lower_limb)
+ALL_LEVELS = LOWER | UPPER
 # "major unilateral upper limb amputation (i.e., through or proximal to the wrist)"
 MAJOR_UPPER = UPPER - {Level.PARTIAL_HAND}
 WITH_KNEE = frozenset({Level.KNEE_DISARTICULATION, Level.TRANSFEMORAL, Level.HIP_DISARTICULATION})
+TT = frozenset({Level.TRANSTIBIAL})
+TF = frozenset({Level.TRANSFEMORAL})
 
 VA_DOD_LOWER = "lower_limb_amputation_va_dod_cpg_2024"
 VA_DOD_UPPER = "upper_limb_amputation_va_dod_cpg_2022"
 CMS = "lower_limb_prosthesis_cms_consensus_2017"
+ICRC = "prosthetic_gait_analysis_icrc_manual_2014"  # lower limb; "TT"/"TF" in its text
+WHO_MANUAL = "who_po_implementation_manual_part2_2017"  # prostheses and orthoses, any level
 
 WEAK_FOR = "Weak for"
 NEITHER = "Neither for nor against"
@@ -73,6 +87,7 @@ class Rule:
     k_levels: Optional[frozenset[str]] = None  # shown only when one of these is recorded
     ambulators_only: bool = False  # the source speaks of ambulators: not shown for K0
     unilateral_only: bool = False
+    bilateral_only: bool = False
 
 
 RULES: tuple[Rule, ...] = (
@@ -108,6 +123,17 @@ RULES: tuple[Rule, ...] = (
         ),
         levels=WITH_KNEE,
         k_levels=frozenset({"K2"}),
+    ),
+    Rule(
+        GuidelineStatement(
+            id="icrc_tf_hip_flexion_contracture_knee",
+            component="knee",
+            doc_id=ICRC,
+            grade=None,
+            quote=Quote(46, "TF: A hip flexion contracture contributes to knee instability and may "
+                            "result in the use of a lockable knee."),
+        ),
+        levels=TF,
     ),
     # Foot and ankle
     Rule(
@@ -207,6 +233,54 @@ RULES: tuple[Rule, ...] = (
         levels=frozenset({Level.TRANSFEMORAL}),
         ambulators_only=True,
     ),
+    Rule(
+        GuidelineStatement(
+            id="icrc_tt_ptb_socket",
+            component="socket",
+            doc_id=ICRC,
+            grade=None,
+            quote=Quote(20, "Although the socket has total contact with the stump, it concentrates force "
+                            "on pressure-tolerant areas and relieves force on pressure-sensitive areas. The "
+                            "PTB design was created to take advantage of normal forces on the patellar "
+                            "ligament. This is done by adding initial flexion of the socket."),
+            context=(
+                Quote(20, "Note: In fact, prosthetists in ICRC physical rehabilitation projects generally "
+                          "build “hybrid” sockets since long-term studies have revealed a negative impact "
+                          "related to exaggerated pressure on the patella tendon in PTB sockets (chronic "
+                          "bursitis, dislocation of the patella)."),
+            ),
+        ),
+        levels=TT,
+    ),
+    Rule(
+        GuidelineStatement(
+            id="icrc_tt_total_surface_bearing_socket",
+            component="socket",
+            doc_id=ICRC,
+            grade=None,
+            quote=Quote(20, "The total-contact socket completely encases the stump. It is designed to "
+                            "distribute the weight over the entire stump. This socket type is primarily "
+                            "indicated for use with silicon or gel liners or in connection with suction "
+                            "suspension/adhesion."),
+            context=(
+                Quote(20, "Mainly due to the specificities of the ICRC’s patient population and working "
+                          "locations, these technologies are rarely applied at ICRC physical rehabilitation "
+                          "centres."),
+            ),
+        ),
+        levels=TT,
+    ),
+    Rule(
+        GuidelineStatement(
+            id="icrc_total_contact_socket_conditions",
+            component="socket",
+            doc_id=ICRC,
+            grade=None,
+            quote=Quote(46, "A total contact socket could be the better prescription in conditions such as "
+                            "phantom sensations, verrucous hyperplasia* and volume fluctuations."),
+        ),
+        levels=LOWER,
+    ),
     # Interface (liner / socket insert)
     Rule(
         GuidelineStatement(
@@ -221,6 +295,22 @@ RULES: tuple[Rule, ...] = (
                             "patient’s hand/upper extremity function, as well as the activity level, "
                             "suspension, comfort and limb/skin protection provided by the material and "
                             "needed by the user."),
+        ),
+        levels=LOWER,
+    ),
+    Rule(
+        GuidelineStatement(
+            id="icrc_grafted_skin_interface",
+            component="interface",
+            doc_id=ICRC,
+            grade=None,
+            quote=Quote(46, "If the skin has grafts (or burn) on the stump or under suspension, it must be "
+                            "carefully examined when the prosthesis is used. The pressure changes could have "
+                            "a greater impact on the design of the prosthesis. In such conditions of "
+                            "pressure-sensitive skin, alternative pressure loading is employed (e.g. ischial "
+                            "weight-bearing). A highly sophisticated interface could also be an alternative "
+                            "solution. The decision is made in accordance with the availability of expertise, "
+                            "affordability and access to the material."),
         ),
         levels=LOWER,
     ),
@@ -251,6 +341,29 @@ RULES: tuple[Rule, ...] = (
                             "improved functional health outcomes with the use of this component."),
         ),
         levels=LOWER,
+    ),
+    Rule(
+        GuidelineStatement(
+            id="icrc_tt_suspension_methods",
+            component="suspension",
+            doc_id=ICRC,
+            grade=None,
+            quote=Quote(20, "A transtibial prosthesis may be held in place in a number of different ways:",
+                        items=(
+                            "Exploitation of anatomical conditions (e.g. supracondylar suspension or "
+                            "thigh corset);",
+                            "Adhesion due to material properties (e.g. silicon liner or knee sleeves);",
+                            "Adhesion by pressure difference (e.g. valve).",
+                        )),
+            context=(
+                Quote(20, "Furthermore, owing to the many negative side effects of the external "
+                          "suspension, the ICRC recommends suspension by the shape of the brim of the socket "
+                          "whenever possible."),
+                Quote(45, "Knee stability must therefore always be checked carefully as it determines, "
+                          "among other things, the type of suspension that will be prescribed."),
+            ),
+        ),
+        levels=TT,
     ),
     # Upper limb: type of prosthesis
     Rule(

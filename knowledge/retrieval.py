@@ -3,7 +3,8 @@
 For every missing field of a case (shared/field_guide.py), this searches the
 vector store that `python -m knowledge.ingest` builds and returns the most
 similar passages, best first. Only documents whose catalog domains include
-one of RETRIEVAL_DOMAINS are searched (v1: prosthetics).
+one of RETRIEVAL_DOMAINS are searched (v1: prosthetics), and none of
+RETRIEVAL_EXCLUDED_DOCUMENTS.
 
 How the search works: the query is turned into a vector with the same model
 as the chunks. All vectors have length 1, so the dot product of the query
@@ -27,6 +28,7 @@ from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
     RETRIEVAL_DOMAINS,
+    RETRIEVAL_EXCLUDED_DOCUMENTS,
     RETRIEVAL_LANGUAGES,
     RETRIEVAL_TOP_K,
     VECTOR_STORE_DIR,
@@ -76,6 +78,7 @@ class VectorStore:
         domains: Optional[Iterable[str]] = None,
         languages: Optional[Iterable[str]] = None,
         limb: Optional[str] = None,
+        exclude: Iterable[str] = (),
     ) -> list[ProtocolChunk]:
         """The top_k chunks most similar to the query, best first.
 
@@ -83,14 +86,17 @@ class VectorStore:
         of these domains, in one of these languages. None means any.
         limb: "lower" or "upper" leaves out documents only about the other
         limb. None means any.
+        exclude: catalog ids of documents to leave out.
         """
         domains = None if domains is None else set(domains)
         languages = None if languages is None else set(languages)
+        exclude = set(exclude)
         allowed = np.array(
             [
                 (domains is None or not domains.isdisjoint(chunk["domains"]))
                 and (languages is None or chunk["language"] in languages)
                 and (limb is None or not chunk.get("limbs") or limb in chunk["limbs"])
+                and chunk["doc_id"] not in exclude
                 for chunk in self.chunks
             ],
             dtype=bool,
@@ -140,10 +146,11 @@ def search_text(
     languages: Optional[Iterable[str]] = None,
     store: Optional[VectorStore] = None,
     embed: Callable[[list[str]], np.ndarray] = embed_texts,
+    exclude: Iterable[str] = RETRIEVAL_EXCLUDED_DOCUMENTS,
 ) -> list[ProtocolChunk]:
     """Search the source library for any text (used by knowledge/evaluate.py)."""
     store = store if store is not None else get_store()
-    return store.search(embed([query])[0], top_k, domains, languages)
+    return store.search(embed([query])[0], top_k, domains, languages, exclude=exclude)
 
 
 def retrieve_relevant_chunks(
@@ -167,7 +174,8 @@ def retrieve_relevant_chunks(
     query_vectors = embed([build_query(case, field.info) for field in missing])
     return {
         field.info.path: store.search(
-            vector, top_k, domains=RETRIEVAL_DOMAINS, languages=RETRIEVAL_LANGUAGES, limb=limb
+            vector, top_k, domains=RETRIEVAL_DOMAINS, languages=RETRIEVAL_LANGUAGES, limb=limb,
+            exclude=RETRIEVAL_EXCLUDED_DOCUMENTS,
         )
         for field, vector in zip(missing, query_vectors)
     }

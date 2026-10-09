@@ -7,10 +7,11 @@ from pathlib import Path
 
 from knowledge.models import ProtocolChunk
 from reasoning.component_support import component_support
+from reasoning.fitting_support import fitting_support
 from reasoning.gap_analysis import analyze_gaps
 from review.decision_log import InvalidDecision, read_decisions, record_decision
 from review.routes import judgement_summary
-from shared.case_schema import ActivityProfile, Case
+from shared.case_schema import ActivityProfile, Case, ResidualLimb
 from shared.config import RETRIEVAL_LANGUAGES
 from shared.store import CaseRecord
 
@@ -87,7 +88,7 @@ class DecisionLogTests(unittest.TestCase):
     def test_page_language_recorded_but_log_stays_english(self):
         self.assertEqual(self.log()["ui_language"], "en")
         entry = self.log(ui_language="ar")
-        self.assertEqual((entry["log_version"], entry["ui_language"]), (3, "ar"))
+        self.assertEqual((entry["log_version"], entry["ui_language"]), (4, "ar"))
         volume = self.gap_entry(entry, VOLUME)
         self.assertEqual(volume["label"], "Residual limb volume stability")
         self.assertTrue(volume["why_needed"].startswith("Residual limb volume stability was not recorded"))
@@ -117,7 +118,9 @@ class DecisionLogTests(unittest.TestCase):
         self.assertIn("يجب قياس حجم الطرف المتبقي", self.path.read_text(encoding="utf-8"))
 
     def test_record_without_components(self):
-        self.assertIsNone(self.log()["components"])
+        entry = self.log()
+        self.assertIsNone(entry["components"])
+        self.assertIsNone(entry["fitting"])
         with self.assertRaises(InvalidDecision):
             record_decision(self.record, "approve", path=self.path,
                             statement_judgements={"cms_elevated_vacuum": "relevant"})
@@ -182,6 +185,58 @@ class ComponentLogTests(unittest.TestCase):
                          f"16 not marked; components: 1 relevant, {len(self.statements(entry)) - 1} not marked")
         del entry["components"]  # as in entries logged before version 3
         self.assertEqual(judgement_summary(entry), "16 not marked")
+
+
+class FittingLogTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.path = Path(tmp.name) / "review_log.jsonl"
+        case = Case(amputation_level="transtibial", side="left", comorbidities=[],
+                    residual_limb=ResidualLimb(wound_status="open", skin_condition="graft"))
+        self.record = CaseRecord(case=case, gaps=analyze_gaps(case, {}), components=component_support(case),
+                                 fitting=fitting_support(case))
+
+    def log(self, **judgements):
+        return record_decision(self.record, "approve", path=self.path, statement_judgements=judgements)
+
+    def statements(self, entry) -> dict[str, dict]:
+        return {s["id"]: s for section in entry["fitting"]["sections"] for s in section["statements"]}
+
+    def test_every_fitting_statement_logged_with_its_list(self):
+        entry = self.log(icrc_ready_for_fitting="not_relevant", icrc_tt_foot_angle="relevant")
+        logged = self.statements(entry)
+        self.assertEqual(list(logged), [c.statement.id for c in self.record.fitting.statements])
+        self.assertEqual([s["component"] for s in entry["fitting"]["sections"]],
+                         ["readiness", "prosthesis_stage", "fitting", "alignment"])
+        ready = logged["icrc_ready_for_fitting"]
+        self.assertEqual((ready["quote"], ready["items"][:2]),
+                         ("Those who are ready for fitting", ["Free of pain and infection;", "No oedema;"]))
+        self.assertEqual(ready["source_type"], "professional_knowledge")
+        self.assertTrue(ready["citation"].endswith("Reference Manual (2014), p. 49"))
+        self.assertEqual(ready["reviewer_judgement"], "not_relevant")
+        self.assertEqual(logged["icrc_tt_foot_angle"]["reviewer_judgement"], "relevant")
+        self.assertNotIn("items", logged["icrc_tt_foot_angle"])  # a plain quote
+        self.assertEqual(logged["va_dod_ll_5_rigid_dressing"]["grade"], "Weak for")
+
+    def test_recorded_values_logged_as_stored(self):
+        recorded = self.log()["fitting"]["recorded"]
+        self.assertEqual(recorded["residual_limb.wound_status"], "open")
+        self.assertEqual(recorded["residual_limb.skin_condition"], "graft")
+        self.assertEqual(recorded["comorbidities"], [])  # asked, none reported
+        self.assertIsNone(recorded["cognitive_status"])  # not recorded
+
+    def test_component_and_fitting_marks_in_one_decision(self):
+        entry = self.log(cms_elevated_vacuum="relevant", who_delivery_check="relevant")
+        components = {s["id"]: s for section in entry["components"]["sections"] for s in section["statements"]}
+        self.assertEqual(components["cms_elevated_vacuum"]["reviewer_judgement"], "relevant")
+        self.assertEqual(self.statements(entry)["who_delivery_check"]["reviewer_judgement"], "relevant")
+        self.assertIn("; design and fitting: 1 relevant, ", judgement_summary(entry))
+
+    def test_statement_for_another_level_refused(self):
+        with self.assertRaises(InvalidDecision):
+            self.log(icrc_tf_knee_axis="relevant")  # transfemoral only
+        self.assertFalse(self.path.exists())
 
 
 if __name__ == "__main__":

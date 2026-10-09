@@ -406,20 +406,124 @@ disclaimer, intake banner and out-of-scope list were revised.
   title (the first screenshot repeated a 120-character title three times).
   The server's request log was lost when it was stopped, so no 500 check
   from it this time; the check script verified every response's status.
-- **What the library can't support yet (needs sources):** transtibial
-  socket design (only transfemoral sockets are covered), alignment,
-  upper-limb terminal devices and partial-hand prostheses, and any Arabic
-  source. CMS 2017 is US Medicare policy ("coverage"); its statements are
-  shown as written, with the year.
+- **What the library can't support yet (needs sources):** upper-limb
+  terminal devices and partial-hand prostheses, and any Arabic source.
+  (Transtibial socket design and alignment were added from the ICRC manual
+  in stage C, see below.) CMS 2017 is US Medicare policy ("coverage"); its
+  statements are shown as written, with the year.
 - **Review log:** 24 lines, all test cases: the 21 earlier, two "automated
   run check 2026-10-08 (components)", and one at 11:29 UTC (approve, no
   note) not made by a check script.
-- **Next (stage C): design and fitting.** Readiness before the definitive
-  socket and the design decisions (preparatory vs definitive, socket,
-  interface, suspension, alignment), each with what the sources say. CMS
-  p. 10 covers preparatory vs definitive (no evidence; "does not recommend
-  the use of non-alignable preparatory prosthetics"); alignment needs
-  sources.
+- Committed 2026-10-09 as `a7ff631` (17 files) and `fdc0078` (the 33
+  manifest rows), with the commit email corrected for this repository
+  (`ashraf.eee2003@gmail.com`; older commits keep the typo). Not pushed.
+
+## Design and fitting (stage C, done 2026-10-09)
+
+The last part of the brief's prosthetics domain ("design and fit"), built
+like the component support: hand-written statements quoted word for word,
+applicability only from the source's wording, a quote test.
+
+- **New source: the ICRC manual** *Prosthetic Gait Analysis for
+  Physiotherapists* (2014, manifest K01) is catalogued as
+  `prosthetic_gait_analysis_icrc_manual_2014` (lower limb,
+  `professional_knowledge`) and ingested: 19 documents, 3,468 chunks. It
+  is the only source in the library with alignment text (definition,
+  steps, and which alignment error may cause which gait deviation, for TT
+  and TF) and transtibial socket and suspension descriptions. It is a
+  training manual for ICRC programmes (polypropylene technology), not a
+  guideline: no grades, and the page labels every statement with its kind
+  of source. The WHO PIR modules (G15/G16) have almost nothing on fitting
+  or alignment (one "alignment" mention, about fractures) and were not
+  added. K02 (ICRC gait-training exercises) is mostly illustrations.
+- **The ICRC manual is quoted, not searched** (`RETRIEVAL_EXCLUDED_DOCUMENTS`
+  in `shared/config.py`). Measured before deciding, on all 12 levels with
+  only level and side: searched, it changed 28 of 102 lower-limb gap
+  citations. Most new quotes were worse: page-header and table residue
+  ("Replacing the weight loss of the missing limb 214 Weight % (average)
+  …", "Femur … PhysiotheraPists12 The minimum length for a tibial stump is
+  5 cm." for a partial-foot case), a footnote fragment for skin, and
+  comorbidities quoting the manual instead of the VA/DoD guideline on 6
+  levels. It also pushed one Arabic evaluation query (ar-05, peer support)
+  out of the top 5 without German (7/8 -> 6/8). Left out: gap lists are
+  identical to before (0 differences on the 12 cases) and the evaluation is
+  unchanged. It stays in the index, so searching it again needs no
+  re-ingest. Its running headers ("Prosthetic Gait analysis for
+  [icrc] PhysiotheraPists" + page) survive `drop_repeated_lines` because
+  they come in two variants, each on under 40% of pages.
+- **`reasoning/fitting_guide.py`**: 33 statements in four sections:
+  - *Readiness for fitting* (8): ICRC "In brief" (p. 49: ready for
+    fitting / need preparatory treatment / cannot be fitted, each with its
+    list), TT knee flexion contracture (p. 46), VA/DoD lower limb
+    recommendation 5 (rigid or semi-rigid dressing after transtibial
+    amputation, "Weak for", p. 36), VA/DoD upper limb "cleared … for a
+    diagnostic socket fitting" (p. 17), WHO preparatory training and the
+    decision not to prescribe (pp. 100-102).
+  - *Preparatory or definitive prosthesis* (6): CMS p. 10 (no evidence; not
+    non-alignable preparatory prostheses), ICRC "A definitive socket is
+    fitted to a stable stump" (p. 44), stump shrinkage and recasting
+    (p. 46), stubbies for bilateral TF (p. 48), and the upper-limb
+    prescription list that starts with "Design (e.g., preparatory versus
+    definitive)" (VA/DoD table 5, p. 18).
+  - *Fitting, check-out and follow-up* (7): the VA/DoD lower-limb
+    algorithm (module B: candidate? -> prescription -> "fabrication,
+    fitting, and delivery" -> "final prosthesis check out" -> does it meet
+    the goals?, pp. 144-145), ICRC first fitting principles and structured
+    process (p. 66), TF check socket and length (pp. 72-73), WHO delivery
+    check (p. 102), VA/DoD upper limb table 6 (signs the prosthesis needs
+    modifying, p. 18).
+  - *Alignment* (12): ICRC definition and steps (p. 31), initial TT and TF
+    alignment (pp. 31-41), TT foot angle, socket flexion and foot position
+    (p. 68), TF socket angles, foot, knee axis and knee friction (p. 71),
+    footwear and heel height (p. 110); WHO "Individual customization is
+    required for fit and alignment" (p. 101) for every level.
+- **Six more component statements** from the ICRC manual: TT PTB and
+  total-surface-bearing sockets (p. 20), total contact socket conditions
+  and grafted skin / interface (p. 46), TT suspension methods with knee
+  stability (pp. 20, 45), TF hip flexion contracture and a lockable knee
+  (p. 46). The transtibial socket section is no longer empty.
+- **Not used:** the VA/DoD upper limb 2014 recommendation "Initiate upper
+  extremity prosthetic fitting as soon as the patient can tolerate mild
+  pressure" (p. 96) is marked "Deleted" in the 2022 guideline; the
+  multi-column phase tables (VA/DoD lower limb pp. 104-110) extract with
+  their cells mixed, so no quote can be tied to its phase.
+- **Readiness shows the case's own entries** (time since amputation,
+  wound, volume, skin, pain, sensation, comorbidities, cognition) as
+  entered, above the statements, never judged; statements never depend on
+  them (tested).
+- **Model and page:** `Quote.items` (a list a quote introduces),
+  `CitedStatement.source_type`, `FittingSupport`; `Rule.bilateral_only`.
+  The grade badge now reads "Source grade: none given" plus the kind of
+  source ("guideline or protocol", "professional knowledge (manual)")
+  instead of "Guideline grade: none given (consensus statement)", which
+  would have been wrong for a manual. The disclaimer and intake banner
+  mention design and fitting and say the tool does not judge readiness.
+- **Review log version 4:** adds `fitting` (recorded values and every
+  statement with quote, items, context, citation, grade, source type and
+  mark) and `source_type` / `items` on component statements.
+- **Tests:** 219 (25 new). The quote test covers both guides and checks
+  list items follow their heading in order. Checked with four deliberate
+  errors in memory (one word changed, wrong page, two list items swapped,
+  wrong grade): all four caught, each naming the statement.
+- **Run check** (`python app.py`, real model and index): 13 English cases
+  (all 12 levels, bilateral TT/TF/transhumeral, K0-K4) and 2 Arabic,
+  1,514 page checks plus the decision checks, 0 failed: every statement
+  that applies on the page word for word with its list, context and
+  citation; statements for other levels absent; no gap cites the ICRC
+  manual. Statements per case: transtibial 22 fitting + 11 component,
+  transfemoral K2 23 + 14, bilateral TF 24 + 12, KD/HD/partial foot/Syme
+  16, upper limb 7. First case 12.3 s (model load), then 0.10-0.18 s.
+  Server log: 74 requests, no 500s (one deliberate 400, two favicon 404s).
+  Screenshots (English TT readiness and alignment, Arabic TF) checked by
+  eye: lists, badges and right-to-left layout fine.
+- **Review log:** 26 lines; the two new ones carry the note "automated run
+  check 2026-10-09 (design and fitting)".
+- **Needs checking by a prosthetist:** whether the alignment-to-gait
+  statements (written for ICRC polypropylene prostheses) read as general
+  enough, and the Arabic section names (المحاذاة for alignment, طرف اصطناعي
+  تمهيدي (مؤقت) for preparatory prosthesis).
+- **Manifest note:** R04 (AHRQ CER 213, 255 pages) is on disk and extracts
+  cleanly, but its manifest row still says "needs manual download".
 
 ## Open decisions
 
@@ -517,8 +621,9 @@ they're recorded so v1 choices don't block them.
 - **Assistive recommendations** (pathway step 04, use case 02 component
   selection support): started 2026-10-08 as quoted guideline statements
   per component (see "Component selection support" above), with the
-  disclaimer, banners and out-of-scope list revised. Design and fitting
-  support is next. The final decision still stays with the specialist.
+  disclaimer, banners and out-of-scope list revised; design and fitting
+  added 2026-10-09 in the same form. The final decision still stays with
+  the specialist.
 - **Gait and motion data** (use case 04) is measured data over time, not
   form fields. It will need its own upload/intake path. It is also a
   regulatory boundary: FDA CDS guidance (2026) Criterion 1 excludes
@@ -533,7 +638,9 @@ they're recorded so v1 choices don't block them.
 ## Explicitly out of scope for v1 (per original build spec — don't build)
 
 - Treatment recommendations, and the system choosing or ranking
-  components. (Revised 2026-10-08: component support may quote guideline
-  statements word for word with their grade; the specialist decides.)
+  components or judging readiness for fitting. (Revised 2026-10-08:
+  component support may quote guideline statements word for word with
+  their grade; 2026-10-09: the same for design and fitting statements. The
+  specialist decides.)
 - Auth, multi-user accounts, deployment config, cloud services.
 - Editing/removing already-logged review decisions.

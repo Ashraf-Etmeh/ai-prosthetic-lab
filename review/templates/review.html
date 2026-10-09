@@ -19,6 +19,7 @@
     .gap-field { font-family: ui-monospace, monospace; font-size: 0.75rem; color: #777; }
     .gap p { margin: 0.4rem 0; }
     blockquote { margin: 0.4rem 0; padding: 0.3rem 0.7rem; border-inline-start: 3px solid #9bb7d4; background: #f6f9fc; }
+    blockquote ul { margin: 0.2rem 0; padding-inline-start: 1.2rem; }
     .gap-source { color: #666; font-size: 0.8rem; }
     .no-source { color: #8a6d00; }
     details { margin-top: 0.3rem; font-size: 0.8rem; color: #444; }
@@ -124,16 +125,40 @@
   <p>{{ t('review.no_gaps') }}</p>
   {% endfor %}
 
+  {# A quote's words, and the list it introduces, if any. #}
+  {% macro quote_body(quote) %}{{ quote.text }}{% if quote.items %}<ul>{% for item in quote.items %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}{% endmacro %}
   {# A source's words with their citation, in the source's own language and direction. #}
   {% macro quoted(cited, quote, extra_class="") %}
-  <blockquote class="{{ extra_class }}" dir="auto" lang="{{ cited.language }}">{{ quote.text }}</blockquote>
+  <blockquote class="{{ extra_class }}" dir="auto" lang="{{ cited.language }}">{{ quote_body(quote) }}</blockquote>
   <div class="gap-source" dir="auto" lang="{{ cited.language }}">{{ cited.citation(quote) }}</div>
   {% endmacro %}
   {# More words from the same document as the statement above: only the page. #}
   {% macro context_quote(cited, quote) %}
-  <blockquote class="context" dir="auto" lang="{{ cited.language }}">{{ quote.text }}</blockquote>
+  <blockquote class="context" dir="auto" lang="{{ cited.language }}">{{ quote_body(quote) }}</blockquote>
   <div class="gap-source">{{ t('components.same_source', pages=quote.pages) }}</div>
   {% endmacro %}
+  {# One component or fitting statement: grade, kind of source, quote, context, the reviewer's mark. #}
+  {% macro statement_block(cited) %}
+  {% set statement = cited.statement %}
+  <div class="gap">
+    <div class="gap-head">
+      <span class="gap-status">{{ t('components.grade') }} {{ t('grade.' ~ (statement.grade or 'none')) }}</span>
+      <span class="gap-status">{{ t('source_type.' ~ cited.source_type) }}</span>
+      <span class="gap-field" dir="ltr">{{ statement.id }}</span>
+    </div>
+    {{ quoted(cited, statement.quote) }}
+    {% for quote in statement.context %}{{ context_quote(cited, quote) }}{% endfor %}
+    {% set name = statement_prefix ~ statement.id %}
+    {% set chosen = form.get(name, "") %}
+    <div class="gap-judgement">
+      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("relevant", "not_relevant") }}> {{ t('review.not_marked') }}</label>
+      <label><input type="radio" name="{{ name }}" value="relevant" {{ "checked" if chosen == "relevant" }}> {{ t('review.relevant') }}</label>
+      <label><input type="radio" name="{{ name }}" value="not_relevant" {{ "checked" if chosen == "not_relevant" }}> {{ t('review.not_relevant') }}</label>
+    </div>
+  </div>
+  {% endmacro %}
+  {# An intake value as recorded: a choice in the page's language, typed text as typed. #}
+  {% macro recorded(path, value) %}{% if value is none %}{{ t('status.not recorded') }}{% elif path == "months_since_amputation" %}{{ t('fitting.months', n="%g" | format(value)) }}{% elif value.value is defined %}{{ value_label(value) }}{% elif value is string %}<bdi>{{ value }}</bdi>{% elif value is number %}{{ value }}{% elif value %}<bdi>{{ value | join(", ") }}</bdi>{% else %}{{ t('fitting.none_reported') }}{% endif %}{% endmacro %}
 
   {% if components %}
   {% set functional = components.functional %}
@@ -160,32 +185,39 @@
     </dl>
   </div>
 
-  <h2>{{ t('components.heading', n=components.statements | length) }}</h2>
+  <h2 id="components">{{ t('components.heading', n=components.statements | length) }}</h2>
   <div class="banner">{{ t('components.intro') }}</div>
   {% for note in components.notes %}
   <p class="gap-source no-source">{{ t(note) }}</p>
   {% endfor %}
   {% for section in components.sections %}
   <h3>{{ t('component.' ~ section.component) }}</h3>
-  {% for cited in section.statements %}
-  {% set statement = cited.statement %}
-  <div class="gap">
-    <div class="gap-head">
-      <span class="gap-status">{{ t('components.grade') }} {{ t('grade.' ~ (statement.grade or 'none')) }}</span>
-      <span class="gap-field" dir="ltr">{{ statement.id }}</span>
-    </div>
-    {{ quoted(cited, statement.quote) }}
-    {% for quote in statement.context %}{{ context_quote(cited, quote) }}{% endfor %}
-    {% set name = statement_prefix ~ statement.id %}
-    {% set chosen = form.get(name, "") %}
-    <div class="gap-judgement">
-      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("relevant", "not_relevant") }}> {{ t('review.not_marked') }}</label>
-      <label><input type="radio" name="{{ name }}" value="relevant" {{ "checked" if chosen == "relevant" }}> {{ t('review.relevant') }}</label>
-      <label><input type="radio" name="{{ name }}" value="not_relevant" {{ "checked" if chosen == "not_relevant" }}> {{ t('review.not_relevant') }}</label>
-    </div>
-  </div>
+  {% for cited in section.statements %}{{ statement_block(cited) }}
   {% else %}
   <p class="gap-source no-source">{{ t('components.no_statement') }}</p>
+  {% endfor %}
+  {% endfor %}
+  {% endif %}
+
+  {% if fitting %}
+  <h2 id="fitting">{{ t('fitting.heading', n=fitting.statements | length) }}</h2>
+  <div class="banner">{{ t('fitting.intro') }}</div>
+  <p class="gap-source">{{ t('fitting.components_above') }}</p>
+  {% for section in fitting.sections %}
+  <h3>{{ t('fitting_section.' ~ section.component) }}</h3>
+  {% if section.component == "readiness" %}
+  <div class="gap">
+    <p class="gap-source">{{ t('fitting.recorded') }}</p>
+    <dl>
+      {% for path, value in fitting.recorded %}
+      <dt>{{ field_label(path) }}</dt><dd>{{ recorded(path, value) }}</dd>
+      {% endfor %}
+    </dl>
+  </div>
+  {% endif %}
+  {% for cited in section.statements %}{{ statement_block(cited) }}
+  {% else %}
+  <p class="gap-source no-source">{{ t('fitting.no_statement') }}</p>
   {% endfor %}
   {% endfor %}
   {% endif %}

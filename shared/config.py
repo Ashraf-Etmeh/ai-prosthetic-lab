@@ -40,19 +40,28 @@ EVAL_QUERIES_PATH = DATA_DIR / "eval" / "retrieval_queries.json"
 # Only documents whose catalog "domains" include one of these are searched.
 # v1 is use case 01 (amputation), so orthotics-only documents are skipped.
 RETRIEVAL_DOMAINS = ("prosthetics",)
+# Catalog ids of documents the gap search leaves out. They stay ingested, so
+# searching one again needs no re-ingest, and the hand-written statements in
+# reasoning/ can still quote them. The ICRC gait-analysis manual was left out
+# on 2026-10-09: searched, it changed 28 of the 102 lower-limb gap citations
+# (12 test cases), most to page-header or table residue, replaced VA/DoD
+# guideline quotes for comorbidities, and cost 1 of 8 Arabic evaluation
+# queries (see FUTURE_WORK.md, design and fitting).
+RETRIEVAL_EXCLUDED_DOCUMENTS = ("prosthetic_gait_analysis_icrc_manual_2014",)
 
 # Shown on every review page. The tool reports missing information and quotes
-# what its sources say about components; it does not make clinical decisions.
-# Revised 2026-10-08 when component statements were added (was: "missing
-# information only").
+# what its sources say about components, design and fitting; it does not make
+# clinical decisions. Revised 2026-10-08 when component statements were added
+# (was: "missing information only"), and 2026-10-09 for design and fitting.
 DISCLAIMER = (
     "This is automated decision support, not a clinical assessment, diagnosis "
     "or prescription. It lists intake information that appears to be missing "
-    "and quotes what the guidelines in its source library say about this "
-    "case's prosthetic components, each with the guideline's own grade. It "
-    "does not choose or rank components. Every item requires review by a "
-    "qualified prosthetics specialist, who makes the decision. The lists may "
-    "be incomplete: a field that is not listed has not been checked for "
-    "adequacy, only for being filled in, and only components and statements "
-    "in the source library are shown."
+    "and quotes what the guidelines and manuals in its source library say "
+    "about this case's prosthetic components, design and fitting, each with "
+    "the source's own grade where it gives one. It does not choose or rank "
+    "components. It does not judge whether the patient is ready for fitting. "
+    "Every item requires review by a qualified prosthetics specialist, who "
+    "makes the decision. The lists may be incomplete: a field that is not "
+    "listed has not been checked for adequacy, only for being filled in, and "
+    "only statements in the source library are shown."
 )

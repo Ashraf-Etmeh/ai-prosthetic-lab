@@ -3,9 +3,10 @@
 import re
 import unittest
 
-from knowledge.catalog import load_catalog
+from knowledge.catalog import SOURCE_TYPES, load_catalog
 from reasoning.component_guide import COMPONENT_KEYS, GRADES
 from reasoning.component_support import NOTE_K0, NOTE_K_NOT_RECORDED
+from reasoning.fitting_guide import SECTION_KEYS
 from review.decision_log import DECISIONS
 from shared import case_schema
 from shared.config import PROJECT_ROOT
@@ -90,6 +91,10 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"component.{key}" for key in COMPONENT_KEYS}
         expected |= {f"grade.{grade}" for grade in (*GRADES, "none")}
         expected |= {NOTE_K0, NOTE_K_NOT_RECORDED}
+        # Fitting sections and every statement's kind of source
+        expected |= {f"fitting_section.{key}" for key in SECTION_KEYS}
+        expected |= {f"source_type.{source_type}" for source_type in SOURCE_TYPES}
+        expected |= {"summary.components", "summary.fitting"}  # review/routes.py judgement_summary
         self.assertEqual(expected - set(TEXT), set())
 
 
@@ -112,7 +117,8 @@ class TextTests(unittest.TestCase):
         self.assertEqual(language_from_cookies({"lang": "fr"}), "en")
 
     def test_gap_explanations_never_recommend(self):
-        for key in ("gap.not_recorded", "gap.recorded_unknown", "gap.no_source", "gap.cited"):
+        for key in ("gap.not_recorded", "gap.recorded_unknown", "gap.no_source", "gap.cited",
+                    "fitting.intro", "fitting.recorded"):
             with self.subTest(key=key):
                 self.assertNotIn("recommend", TEXT[key]["en"].lower())
                 self.assertIsNone(re.search(r"توص|يوصى|نوصي|ننصح|يُنصح", TEXT[key]["ar"]))
