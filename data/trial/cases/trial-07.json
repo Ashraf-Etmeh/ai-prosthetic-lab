@@ -1,0 +1,20 @@
+{
+  "case_id": "trial-07",
+  "amputation_level": "partial_foot",
+  "side": "right",
+  "age_years": 63,
+  "etiology": "vascular",
+  "months_since_amputation": 1.5,
+  "residual_limb": {
+    "wound_status": "open",
+    "volume_stability": "unknown",
+    "sensation": "absent on the sole"
+  },
+  "activity": {
+    "k_level": "unknown"
+  },
+  "comorbidities": [
+    "Diabetes"
+  ],
+  "contralateral_limb_status": "callus under the first metatarsal head"
+}

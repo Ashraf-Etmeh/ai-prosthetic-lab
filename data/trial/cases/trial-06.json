@@ -1,0 +1,21 @@
+{
+  "case_id": "trial-06",
+  "amputation_level": "hip_disarticulation",
+  "side": "left",
+  "age_years": 71,
+  "etiology": "oncologic",
+  "months_since_amputation": 4,
+  "residual_limb": {
+    "wound_status": "healed",
+    "pain": "residual limb pain when sitting"
+  },
+  "activity": {
+    "k_level": "K0",
+    "description": "wheelchair user",
+    "functional_goals": "sit comfortably"
+  },
+  "comorbidities": [
+    "Heart failure"
+  ],
+  "cognitive_status": "mild memory problems"
+}

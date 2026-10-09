@@ -55,11 +55,16 @@ Then open http://127.0.0.1:5000. The first case you submit takes about
 second. Build the search index first (below), or the review page will
 warn that no sources were searched.
 
+Each case is saved as `data/cases/<case id>.json` (not in git), so its
+review page still works after the server is restarted. The files hold the
+case as entered (no patient identifiers), the passages found and the gap
+list.
+
 ## Languages
 
 The pages are in English (default) or Arabic, right to left. The link at
 the top of each page switches language; the browser remembers the choice
-(a cookie). Headings, labels, choices, buttons, messages, the disclaimer
+(a cookie). On the intake form it keeps what has been typed so far. Headings, labels, choices, buttons, messages, the disclaimer
 and each gap's explanation are translated. Quotes and citations stay in
 the source's own language, and what the user types is shown as typed.
 
@@ -169,7 +174,22 @@ mark, the intake values shown next to the readiness statements, and the
 search settings, so it can be checked later even after the source library
 is re-ingested. Labels and explanations are logged in English whichever
 language the reviewer used; `ui_language` records which one it was. Lines are never changed or removed. The file stays on this
-machine (it is in `.gitignore`).
+machine (it is in `.gitignore`). The 26 lines written while building and
+checking the prototype were moved, unchanged, to
+`data/review_log.test.jsonl` (2026-10-09), so `data/review_log.jsonl` holds
+only the trial's decisions.
+
+## Trial tools
+
+For the Arabic term check and the specialist trial (details in
+[data/trial/README.md](data/trial/README.md)):
+
+```
+python -m shared.arabic_terms export     # every interface text -> data/trial/arabic_terms.csv
+python -m shared.arabic_terms apply data/trial/arabic_terms.csv   # a prosthetist's corrections -> shared/i18n.py
+python -m intake.load_trial_cases        # the 15 prepared fake cases in data/trial/cases/ -> the app
+python -m review.trial_report            # counts from the review log -> data/trial/report.csv
+```
 
 ## Tests
 
@@ -181,8 +201,8 @@ python -m unittest
 
 ```
 app.py              Flask entry point; registers the intake and review pages
-shared/             Case schema, config (paths, settings, disclaimer), in-memory store,
-                    interface text in English and Arabic (i18n.py)
+shared/             Case schema, config (paths, settings, disclaimer), case store
+                    (memory + data/cases/), interface text in English and Arabic (i18n.py)
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
 knowledge/          Source catalog, text extraction, ingestion, search, evaluation
 reasoning/          Gap analysis (what is missing, and which source says why),
@@ -194,6 +214,8 @@ data/sources/       Knowledge documents: catalog.json in git, the PDFs kept loca
 data/extracted/     Cleaned text per document (generated, not in git)
 data/vector_store/  Chunks and their vectors (generated, not in git)
 data/eval/          Retrieval evaluation queries (in git)
+data/cases/         One JSON file per case entered (not in git)
+data/trial/         Arabic term sheet, prepared trial cases (in git); trial report (not in git)
 ```
 
 ## Plan and open decisions

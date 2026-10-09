@@ -1,0 +1,20 @@
+{
+  "case_id": "trial-12",
+  "amputation_level": "transradial",
+  "side": "right",
+  "age_years": 40,
+  "etiology": "trauma",
+  "months_since_amputation": 6,
+  "residual_limb": {
+    "wound_status": "healed",
+    "volume_stability": "stable",
+    "length_description": "mid-length"
+  },
+  "activity": {
+    "description": "office work",
+    "functional_goals": "drive and type"
+  },
+  "prior_devices": [],
+  "comorbidities": [],
+  "cognitive_status": "intact"
+}

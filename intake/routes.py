@@ -4,6 +4,11 @@ GET  /intake        -> show the intake form
 POST /intake         -> build a Case from the form, run it through
                         knowledge -> reasoning, store the result, and
                         redirect to the review page for that case.
+                        A form that can't be used comes back filled in as
+                        it was sent, with a message (400).
+                        With "switch_language" (the language button), the
+                        form comes back filled in, in the other language,
+                        and nothing is saved.
 
 v1 thin-slice status: the form has an input for every Case field the gap
 analysis checks. Prior devices get MAX_PRIOR_DEVICES fixed rows (no
@@ -11,7 +16,9 @@ JavaScript), which is enough to tell "not asked" from "asked, none" from
 "has used a prosthesis".
 """
 
-from flask import Blueprint, redirect, render_template, request, url_for
+import math
+
+from flask import Blueprint, abort, current_app, g, redirect, render_template, request, url_for
 
 from knowledge.retrieval import KnowledgeBaseMissing, retrieve_relevant_chunks
 from reasoning.component_support import component_support
@@ -29,7 +36,7 @@ from shared.case_schema import (
     VolumeStability,
     WoundStatus,
 )
-from shared.i18n import TranslatableError, error_message, language_from_cookies
+from shared.i18n import LANGUAGES, TextKey, TranslatableError, language_from_cookies, set_language_cookie
 from shared.store import CaseRecord, store
 
 bp = Blueprint("intake", __name__, template_folder="templates")
@@ -49,22 +56,38 @@ def _required(form, name: str) -> str:
     return value
 
 
-def _optional_enum(enum_cls, raw: str | None):
+# Each parser below refuses a value with the form's own label for the field
+# (a shared/i18n.py key), never with Python's wording.
+
+def _choice(enum_cls, raw: str, label: str):
+    try:
+        return enum_cls(raw)
+    except ValueError:
+        raise TranslatableError("error.unknown_choice", field=TextKey(label)) from None
+
+
+def _optional_enum(enum_cls, raw: str | None, label: str):
     if not raw:
         return None
-    return enum_cls(raw)
+    return _choice(enum_cls, raw, label)
 
 
-def _optional_float(raw: str | None) -> float | None:
-    if not raw:
+def _optional_number(raw: str | None, label: str, whole: bool = False, positive: bool = False):
+    """The number typed, or None if left empty. 0 or more; greater than 0 if `positive`."""
+    if not raw or not raw.strip():
         return None
-    return float(raw)
-
-
-def _optional_int(raw: str | None) -> int | None:
-    if not raw:
-        return None
-    return int(raw)
+    try:
+        value = int(raw) if whole else float(raw)
+    except ValueError:
+        raise TranslatableError("error.whole_number" if whole else "error.number",
+                                field=TextKey(label)) from None
+    if not math.isfinite(value):  # "nan", "inf"
+        raise TranslatableError("error.number", field=TextKey(label))
+    if positive and value <= 0:
+        raise TranslatableError("error.positive", field=TextKey(label))
+    if value < 0:
+        raise TranslatableError("error.not_negative", field=TextKey(label))
+    return value
 
 
 def _optional_list(raw: str | None) -> list[str] | None:
@@ -103,11 +126,11 @@ def _prior_devices(form) -> list[PriorDevice] | None:
         try:
             devices.append(PriorDevice(
                 device_description=raw["description"],
-                years_used=_optional_float(raw["years"]),
+                years_used=_optional_number(raw["years"], "intake.years_used"),
                 currently_using=_optional_bool(raw["current"]),
                 issues=raw["issues"] or None,
             ))
-        except ValueError as e:
+        except TranslatableError as e:
             raise TranslatableError("error.device_invalid", n=n, detail=e) from e
     if form.get("no_prior_devices"):
         if devices:
@@ -118,24 +141,25 @@ def _prior_devices(form) -> list[PriorDevice] | None:
 
 def _case_from_form(form) -> Case:
     return Case(
-        amputation_level=AmputationLevel(_required(form, "amputation_level")),
-        side=Side(_required(form, "side")),
-        age_years=_optional_int(form.get("age_years")),
-        body_weight_kg=_optional_float(form.get("body_weight_kg")),
-        etiology=_optional_enum(Etiology, form.get("etiology")),
-        months_since_amputation=_optional_float(form.get("months_since_amputation")),
+        amputation_level=_choice(AmputationLevel, _required(form, "amputation_level"),
+                                 "intake.amputation_level"),
+        side=_choice(Side, _required(form, "side"), "intake.side"),
+        age_years=_optional_number(form.get("age_years"), "intake.age", whole=True),
+        body_weight_kg=_optional_number(form.get("body_weight_kg"), "intake.body_weight", positive=True),
+        etiology=_optional_enum(Etiology, form.get("etiology"), "intake.etiology"),
+        months_since_amputation=_optional_number(form.get("months_since_amputation"),
+                                                 "intake.months_since_amputation"),
         residual_limb=ResidualLimb(
-            wound_status=_optional_enum(WoundStatus, form.get("wound_status")),
-            volume_stability=_optional_enum(
-                VolumeStability, form.get("volume_stability")
-            ),
+            wound_status=_optional_enum(WoundStatus, form.get("wound_status"), "intake.wound_status"),
+            volume_stability=_optional_enum(VolumeStability, form.get("volume_stability"),
+                                            "intake.volume_stability"),
             skin_condition=form.get("skin_condition") or None,
             length_description=form.get("length_description") or None,
             pain=form.get("pain") or None,
             sensation=form.get("sensation") or None,
         ),
         activity=ActivityProfile(
-            k_level=_optional_enum(ActivityLevel, form.get("k_level")),
+            k_level=_optional_enum(ActivityLevel, form.get("k_level"), "intake.k_level"),
             description=form.get("activity_description") or None,
             functional_goals=form.get("functional_goals") or None,
         ),
@@ -147,10 +171,11 @@ def _case_from_form(form) -> Case:
     )
 
 
-def _render_form(error: str | None = None):
+def _render_form(error: str | None = None, form=None):
     return render_template(
         "intake_form.html",
         error=error,
+        form=form or {},  # what was sent, so the form comes back filled in
         amputation_levels=list(AmputationLevel),
         sides=list(Side),
         etiologies=list(Etiology),
@@ -158,7 +183,6 @@ def _render_form(error: str | None = None):
         volume_stabilities=list(VolumeStability),
         k_levels=list(ActivityLevel),
         max_prior_devices=MAX_PRIOR_DEVICES,
-        here=url_for("intake.show_form"),  # where the language link comes back to
     )
 
 
@@ -169,10 +193,36 @@ def show_form():
 
 @bp.route("/intake", methods=["POST"])
 def submit_form():
+    switch_to = request.form.get("switch_language")
+    if switch_to:
+        # The language button: show the same form, filled in, in the other language.
+        if switch_to not in LANGUAGES:
+            abort(404)
+        g.lang = switch_to  # the page is drawn in it before the browser has the cookie
+        response = current_app.make_response(_render_form(form=request.form))
+        set_language_cookie(response, switch_to)
+        return response
+
+    lang = language_from_cookies(request.cookies)
     try:
         case = _case_from_form(request.form)
-    except ValueError as e:  # bad number or enum value
-        return _render_form(error=error_message(e, language_from_cookies(request.cookies))), 400
+    except ValueError as e:  # a value the form can't use (TranslatableError is a ValueError)
+        if not isinstance(e, TranslatableError):
+            # Not expected: the parsers above translate every refusal. Python's
+            # wording goes to the server log only.
+            current_app.logger.warning("intake value refused: %s", e)
+            e = TranslatableError("error.invalid_input")
+        return _render_form(error=e.message(lang), form=request.form), 400
+    store.save(analyse_case(case))
+    return redirect(url_for("review.show_case", case_id=case.case_id))
+
+
+def analyse_case(case: Case) -> CaseRecord:
+    """Everything the review page shows for a case: search, gaps, components, fitting.
+
+    Used for a submitted form and for the prepared trial cases
+    (intake/load_trial_cases.py), so both are analysed the same way.
+    """
     warning = None
     try:
         chunks = retrieve_relevant_chunks(case)
@@ -180,6 +230,5 @@ def submit_form():
         # Still list the gaps, but say plainly that no sources were searched.
         chunks, warning = {}, f"The source library was not searched: {e}"
     gaps = analyze_gaps(case, chunks)
-    store.save(CaseRecord(case=case, retrieved_chunks=chunks, gaps=gaps, knowledge_warning=warning,
-                          components=component_support(case), fitting=fitting_support(case)))
-    return redirect(url_for("review.show_case", case_id=case.case_id))
+    return CaseRecord(case=case, retrieved_chunks=chunks, gaps=gaps, knowledge_warning=warning,
+                      components=component_support(case), fitting=fitting_support(case))

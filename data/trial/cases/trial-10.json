@@ -1,0 +1,17 @@
+{
+  "case_id": "trial-10",
+  "amputation_level": "partial_hand",
+  "side": "left",
+  "age_years": 31,
+  "etiology": "trauma",
+  "months_since_amputation": 3,
+  "residual_limb": {
+    "wound_status": "healed",
+    "skin_condition": "skin graft on the palm"
+  },
+  "activity": {
+    "description": "mechanic, right-handed",
+    "functional_goals": "hold tools with both hands"
+  },
+  "prior_devices": []
+}

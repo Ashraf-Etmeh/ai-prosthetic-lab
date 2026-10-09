@@ -10,8 +10,7 @@ Not translated:
 - citations (title, year and page of the source document),
 - what the user typed into the form,
 - technical messages for whoever runs the app (e.g. "Build it with:
-  python -m knowledge.ingest") and Python's own wording for impossible form
-  values, which the form's drop-downs and number inputs normally prevent.
+  python -m knowledge.ingest").
 
 The review log stays in English (field labels, gap explanations) and records
 the language the reviewer saw as "ui_language", so entries can be compared
@@ -27,6 +26,7 @@ LANGUAGES = ("en", "ar")
 DEFAULT_LANGUAGE = "en"
 RTL_LANGUAGES = ("ar",)
 LANGUAGE_COOKIE = "lang"
+LANGUAGE_COOKIE_DAYS = 365
 
 # Unicode "first strong isolate" ... "pop directional isolate". A value put
 # into an Arabic sentence (an English citation, a number, a field name) is
@@ -351,6 +351,23 @@ TEXT: dict[str, dict[str, str]] = {
         "en": '"No prior prosthesis" is ticked, but a device is described',
         "ar": "خيار «لا يوجد طرف اصطناعي سابق» محدَّد، لكن وُصف جهاز",
     },
+    # A form value that can't be used; {field} is the form's own label.
+    "error.whole_number": {"en": "{field}: enter a whole number.", "ar": "{field}: أدخل عدداً صحيحاً."},
+    "error.number": {"en": "{field}: enter a number.", "ar": "{field}: أدخل رقماً."},
+    "error.not_negative": {"en": "{field}: enter 0 or more.", "ar": "{field}: أدخل صفراً أو أكثر."},
+    "error.positive": {
+        "en": "{field}: enter a number greater than 0.",
+        "ar": "{field}: أدخل رقماً أكبر من صفر.",
+    },
+    "error.unknown_choice": {
+        "en": "{field}: choose one of the listed options.",
+        "ar": "{field}: اختر أحد الخيارات المعروضة.",
+    },
+    # Any other value the form can't read (the details go to the server log).
+    "error.invalid_input": {
+        "en": "A value could not be read. Check the form and try again.",
+        "ar": "تعذّرت قراءة إحدى القيم. راجع النموذج وحاول مرة أخرى.",
+    },
     "error.unknown_decision": {
         "en": "Unknown decision {decision!r}: expected approve, edit or reject.",
         "ar": "قرار غير معروف «{decision}»: المتوقع اعتماد أو تعديل أو رفض.",
@@ -473,6 +490,15 @@ def language_from_cookies(cookies) -> str:
     return lang if lang in LANGUAGES else DEFAULT_LANGUAGE
 
 
+def set_language_cookie(response, lang: str) -> None:
+    """Remember the chosen language in the browser."""
+    response.set_cookie(LANGUAGE_COOKIE, lang, max_age=LANGUAGE_COOKIE_DAYS * 24 * 3600, samesite="Lax")
+
+
+class TextKey(str):
+    """A TEXT key given to TranslatableError, e.g. a form label: shown in the page's language."""
+
+
 class TranslatableError(ValueError):
     """An error the pages can show in the reviewer's language.
 
@@ -486,12 +512,17 @@ class TranslatableError(ValueError):
         super().__init__(self.message("en"))
 
     def message(self, lang: str) -> str:
-        # A wrapped error (e.g. a device row's own error) is translated too.
-        params = {
-            name: value.message(lang) if isinstance(value, TranslatableError) else value
-            for name, value in self.params.items()
-        }
+        # A wrapped error (e.g. a device row's own error) and a label are translated too.
+        params = {name: _translated(value, lang) for name, value in self.params.items()}
         return t(self.key, lang, **params)
+
+
+def _translated(value, lang: str):
+    if isinstance(value, TranslatableError):
+        return value.message(lang)
+    if isinstance(value, TextKey):
+        return t(value, lang)
+    return value
 
 
 def error_message(error: Exception, lang: str) -> str:

@@ -1,0 +1,32 @@
+{
+  "case_id": "trial-01",
+  "amputation_level": "transtibial",
+  "side": "left",
+  "age_years": 34,
+  "body_weight_kg": 78,
+  "etiology": "trauma",
+  "months_since_amputation": 7,
+  "residual_limb": {
+    "wound_status": "healed",
+    "volume_stability": "stable",
+    "skin_condition": "intact, well-healed scar",
+    "length_description": "mid-length",
+    "pain": "occasional phantom sensation, no pain",
+    "sensation": "intact"
+  },
+  "activity": {
+    "k_level": "K3",
+    "description": "teacher, walks to work",
+    "functional_goals": "jog with the children"
+  },
+  "prior_devices": [
+    {
+      "device_description": "preparatory PTB socket, SACH foot",
+      "years_used": 0.4,
+      "currently_using": true,
+      "issues": "socket loose by the evening"
+    }
+  ],
+  "comorbidities": [],
+  "cognitive_status": "intact"
+}

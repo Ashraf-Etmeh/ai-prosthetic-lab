@@ -1,0 +1,21 @@
+{
+  "case_id": "trial-09",
+  "amputation_level": "transtibial",
+  "side": "bilateral",
+  "age_years": 74,
+  "etiology": "vascular",
+  "months_since_amputation": 5,
+  "residual_limb": {
+    "wound_status": "healing",
+    "volume_stability": "fluctuating"
+  },
+  "activity": {
+    "k_level": "K1",
+    "functional_goals": "الوقوف والمشي داخل المنزل"
+  },
+  "comorbidities": [
+    "Diabetes",
+    "Chronic kidney disease on dialysis"
+  ],
+  "cognitive_status": "intact"
+}

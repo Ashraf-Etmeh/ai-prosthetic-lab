@@ -1,0 +1,23 @@
+{
+  "case_id": "trial-11",
+  "amputation_level": "wrist_disarticulation",
+  "side": "bilateral",
+  "age_years": 26,
+  "etiology": "trauma",
+  "months_since_amputation": 9,
+  "residual_limb": {
+    "wound_status": "healed",
+    "volume_stability": "stable"
+  },
+  "activity": {
+    "functional_goals": "الأكل وارتداء الملابس دون مساعدة"
+  },
+  "prior_devices": [
+    {
+      "device_description": "body-powered hooks",
+      "years_used": 0.5,
+      "currently_using": false,
+      "issues": "harness painful"
+    }
+  ]
+}

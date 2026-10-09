@@ -20,11 +20,18 @@
     .device { border-top: 1px dashed #ddd; margin-top: 0.8rem; }
     .device-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0 0.8rem; }
     .lang-switch { text-align: end; font-size: 0.85rem; }
+    .lang-switch button { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: LinkText; text-decoration: underline; cursor: pointer; }
+    .default-submit { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
   </style>
 </head>
 <body>
+  {# Enter in a field submits the form with its first submit button. This
+     invisible one comes before the language button, so Enter sends the case. #}
+  <button type="submit" form="intake-form" class="default-submit" tabindex="-1" aria-hidden="true"></button>
   <nav class="lang-switch">
-    <a href="{{ url_for('set_language', code=t('nav.other_code'), next=here) }}" lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</a>
+    {# Posts the form: it comes back filled in, in the other language; nothing is saved. #}
+    <button type="submit" form="intake-form" name="switch_language" value="{{ t('nav.other_code') }}"
+            formnovalidate lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</button>
   </nav>
   <h1>{{ t('intake.heading') }}</h1>
   <div class="banner">{{ t('intake.banner') }}</div>
@@ -33,119 +40,114 @@
   <div class="error">{{ t('intake.not_saved') }} <bdi>{{ error }}</bdi></div>
   {% endif %}
 
-  <form method="post" action="{{ url_for('intake.submit_form') }}">
+  {# A sent value, so the form comes back as it was. #}
+  {% macro sent(name) %}{{ form.get(name, "") }}{% endmacro %}
+  {# A drop-down's options, the sent one selected; the empty option if nothing (valid) was sent. #}
+  {% macro options(name, choices, empty_label, required=False) %}
+  {% set chosen = form.get(name, "") %}
+  <option value=""{{ " disabled" if required }}{{ " selected" if chosen not in choices | map(attribute="value") | list }}>{{ empty_label }}</option>
+  {% for choice in choices %}
+  <option value="{{ choice.value }}"{{ " selected" if chosen == choice.value }}>{{ value_label(choice) }}</option>
+  {% endfor %}
+  {% endmacro %}
+
+  <form id="intake-form" method="post" action="{{ url_for('intake.submit_form') }}">
     <fieldset>
       <legend>{{ t('intake.amputation') }}</legend>
       <label class="required" for="amputation_level">{{ t('intake.amputation_level') }}</label>
       <select id="amputation_level" name="amputation_level" required>
-        <option value="" disabled selected>{{ t('intake.select') }}</option>
-        {% for lvl in amputation_levels %}
-        <option value="{{ lvl.value }}">{{ value_label(lvl) }}</option>
-        {% endfor %}
+        {{ options("amputation_level", amputation_levels, t('intake.select'), required=True) }}
       </select>
 
       <label class="required" for="side">{{ t('intake.side') }}</label>
       <select id="side" name="side" required>
-        <option value="" disabled selected>{{ t('intake.select') }}</option>
-        {% for s in sides %}
-        <option value="{{ s.value }}">{{ value_label(s) }}</option>
-        {% endfor %}
+        {{ options("side", sides, t('intake.select'), required=True) }}
       </select>
 
       <label for="etiology">{{ t('intake.etiology') }}</label>
       <select id="etiology" name="etiology">
-        <option value="">{{ t('intake.not_recorded') }}</option>
-        {% for e in etiologies %}
-        <option value="{{ e.value }}">{{ value_label(e) }}</option>
-        {% endfor %}
+        {{ options("etiology", etiologies, t('intake.not_recorded')) }}
       </select>
 
       <label for="months_since_amputation">{{ t('intake.months_since_amputation') }}</label>
-      <input type="number" step="0.1" min="0" id="months_since_amputation" name="months_since_amputation">
+      <input type="number" step="0.1" min="0" id="months_since_amputation" name="months_since_amputation" value="{{ sent('months_since_amputation') }}">
     </fieldset>
 
     <fieldset>
       <legend>{{ t('intake.demographics') }}</legend>
       <label for="age_years">{{ t('intake.age') }}</label>
-      <input type="number" min="0" id="age_years" name="age_years">
+      <input type="number" min="0" id="age_years" name="age_years" value="{{ sent('age_years') }}">
 
       <label for="body_weight_kg">{{ t('intake.body_weight') }}</label>
-      <input type="number" step="0.1" min="0.1" id="body_weight_kg" name="body_weight_kg">
+      <input type="number" step="0.1" min="0.1" id="body_weight_kg" name="body_weight_kg" value="{{ sent('body_weight_kg') }}">
     </fieldset>
 
     <fieldset>
       <legend>{{ t('intake.residual_limb') }}</legend>
       <label for="wound_status">{{ t('intake.wound_status') }}</label>
       <select id="wound_status" name="wound_status">
-        <option value="">{{ t('intake.not_recorded') }}</option>
-        {% for w in wound_statuses %}
-        <option value="{{ w.value }}">{{ value_label(w) }}</option>
-        {% endfor %}
+        {{ options("wound_status", wound_statuses, t('intake.not_recorded')) }}
       </select>
 
       <label for="volume_stability">{{ t('intake.volume_stability') }}</label>
       <select id="volume_stability" name="volume_stability">
-        <option value="">{{ t('intake.not_recorded') }}</option>
-        {% for v in volume_stabilities %}
-        <option value="{{ v.value }}">{{ value_label(v) }}</option>
-        {% endfor %}
+        {{ options("volume_stability", volume_stabilities, t('intake.not_recorded')) }}
       </select>
 
       <label for="skin_condition">{{ t('intake.skin_condition') }}</label>
-      <input type="text" id="skin_condition" name="skin_condition" dir="auto">
+      <input type="text" id="skin_condition" name="skin_condition" dir="auto" value="{{ sent('skin_condition') }}">
 
       <label for="length_description">{{ t('intake.length') }}</label>
-      <input type="text" id="length_description" name="length_description" dir="auto">
+      <input type="text" id="length_description" name="length_description" dir="auto" value="{{ sent('length_description') }}">
 
       <label for="pain">{{ t('intake.pain') }}</label>
-      <input type="text" id="pain" name="pain" dir="auto">
+      <input type="text" id="pain" name="pain" dir="auto" value="{{ sent('pain') }}">
 
       <label for="sensation">{{ t('intake.sensation') }}</label>
-      <input type="text" id="sensation" name="sensation" dir="auto">
+      <input type="text" id="sensation" name="sensation" dir="auto" value="{{ sent('sensation') }}">
     </fieldset>
 
     <fieldset>
       <legend>{{ t('intake.activity') }}</legend>
       <label for="k_level">{{ t('intake.k_level') }}</label>
       <select id="k_level" name="k_level">
-        <option value="">{{ t('intake.not_recorded') }}</option>
-        {% for k in k_levels %}
-        <option value="{{ k.value }}">{{ value_label(k) }}</option>
-        {% endfor %}
+        {{ options("k_level", k_levels, t('intake.not_recorded')) }}
       </select>
 
       <label for="activity_description">{{ t('intake.activity_description') }}</label>
-      <textarea id="activity_description" name="activity_description" dir="auto"></textarea>
+      <textarea id="activity_description" name="activity_description" dir="auto">{{ sent('activity_description') }}</textarea>
 
       <label for="functional_goals">{{ t('intake.functional_goals') }}</label>
-      <textarea id="functional_goals" name="functional_goals" dir="auto"></textarea>
+      <textarea id="functional_goals" name="functional_goals" dir="auto">{{ sent('functional_goals') }}</textarea>
     </fieldset>
 
     <fieldset>
       <legend>{{ t('intake.prior_prostheses') }}</legend>
-      <label class="checkbox"><input type="checkbox" name="no_prior_devices" value="1">{{ t('intake.no_prior') }}</label>
+      <label class="checkbox"><input type="checkbox" name="no_prior_devices" value="1"{{ " checked" if form.get("no_prior_devices") }}>{{ t('intake.no_prior') }}</label>
       <p class="hint">{{ t('intake.no_prior_hint') }}</p>
       {% for n in range(1, max_prior_devices + 1) %}
+      {% set row = "device_" ~ n ~ "_" %}
       <div class="device">
-        <label for="device_{{ n }}_description">{{ t('intake.device', n=n) }}</label>
-        <input type="text" id="device_{{ n }}_description" name="device_{{ n }}_description" dir="auto"
-               placeholder="{{ t('intake.device_placeholder') }}">
+        <label for="{{ row }}description">{{ t('intake.device', n=n) }}</label>
+        <input type="text" id="{{ row }}description" name="{{ row }}description" dir="auto"
+               placeholder="{{ t('intake.device_placeholder') }}" value="{{ sent(row ~ 'description') }}">
         <div class="device-details">
           <div>
-            <label for="device_{{ n }}_years">{{ t('intake.years_used') }}</label>
-            <input type="number" step="0.1" min="0" id="device_{{ n }}_years" name="device_{{ n }}_years">
+            <label for="{{ row }}years">{{ t('intake.years_used') }}</label>
+            <input type="number" step="0.1" min="0" id="{{ row }}years" name="{{ row }}years" value="{{ sent(row ~ 'years') }}">
           </div>
           <div>
-            <label for="device_{{ n }}_current">{{ t('intake.currently_using') }}</label>
-            <select id="device_{{ n }}_current" name="device_{{ n }}_current">
-              <option value="">{{ t('intake.not_recorded') }}</option>
-              <option value="yes">{{ t('intake.yes') }}</option>
-              <option value="no">{{ t('intake.no') }}</option>
+            <label for="{{ row }}current">{{ t('intake.currently_using') }}</label>
+            {% set current = form.get(row ~ "current", "") %}
+            <select id="{{ row }}current" name="{{ row }}current">
+              <option value=""{{ " selected" if current not in ("yes", "no") }}>{{ t('intake.not_recorded') }}</option>
+              <option value="yes"{{ " selected" if current == "yes" }}>{{ t('intake.yes') }}</option>
+              <option value="no"{{ " selected" if current == "no" }}>{{ t('intake.no') }}</option>
             </select>
           </div>
         </div>
-        <label for="device_{{ n }}_issues">{{ t('intake.device_issues') }}</label>
-        <input type="text" id="device_{{ n }}_issues" name="device_{{ n }}_issues" dir="auto">
+        <label for="{{ row }}issues">{{ t('intake.device_issues') }}</label>
+        <input type="text" id="{{ row }}issues" name="{{ row }}issues" dir="auto" value="{{ sent(row ~ 'issues') }}">
       </div>
       {% endfor %}
     </fieldset>
@@ -153,16 +155,16 @@
     <fieldset>
       <legend>{{ t('intake.other_context') }}</legend>
       <label for="comorbidities">{{ t('intake.comorbidities') }}</label>
-      <textarea id="comorbidities" name="comorbidities" dir="auto"></textarea>
+      <textarea id="comorbidities" name="comorbidities" dir="auto">{{ sent('comorbidities') }}</textarea>
 
       <label for="contralateral_limb_status">{{ t('intake.contralateral') }}</label>
-      <input type="text" id="contralateral_limb_status" name="contralateral_limb_status" dir="auto">
+      <input type="text" id="contralateral_limb_status" name="contralateral_limb_status" dir="auto" value="{{ sent('contralateral_limb_status') }}">
 
       <label for="cognitive_status">{{ t('intake.cognitive') }}</label>
-      <input type="text" id="cognitive_status" name="cognitive_status" dir="auto">
+      <input type="text" id="cognitive_status" name="cognitive_status" dir="auto" value="{{ sent('cognitive_status') }}">
 
       <label for="intake_notes">{{ t('intake.notes') }}</label>
-      <textarea id="intake_notes" name="intake_notes" dir="auto"></textarea>
+      <textarea id="intake_notes" name="intake_notes" dir="auto">{{ sent('intake_notes') }}</textarea>
     </fieldset>
 
     <button type="submit">{{ t('intake.submit') }}</button>

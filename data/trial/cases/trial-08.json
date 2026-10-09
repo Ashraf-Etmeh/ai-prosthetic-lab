@@ -1,0 +1,17 @@
+{
+  "case_id": "trial-08",
+  "amputation_level": "syme",
+  "side": "left",
+  "age_years": 45,
+  "etiology": "trauma",
+  "months_since_amputation": 12,
+  "residual_limb": {
+    "wound_status": "healed",
+    "volume_stability": "stable"
+  },
+  "activity": {
+    "k_level": "K3",
+    "description": "farmer, walks on uneven ground"
+  },
+  "prior_devices": []
+}

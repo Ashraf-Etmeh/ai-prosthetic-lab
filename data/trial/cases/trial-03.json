@@ -1,0 +1,9 @@
+{
+  "case_id": "trial-03",
+  "amputation_level": "transfemoral",
+  "side": "left",
+  "age_years": 58,
+  "activity": {
+    "k_level": "K2"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "case_id": "trial-04",
+  "amputation_level": "transfemoral",
+  "side": "bilateral",
+  "age_years": 29,
+  "etiology": "trauma",
+  "months_since_amputation": 10,
+  "residual_limb": {
+    "wound_status": "healed",
+    "volume_stability": "unknown"
+  },
+  "activity": {
+    "k_level": "K1",
+    "functional_goals": "transfer without help and stand to cook"
+  },
+  "cognitive_status": "intact"
+}

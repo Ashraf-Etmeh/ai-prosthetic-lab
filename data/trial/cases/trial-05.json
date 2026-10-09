@@ -1,0 +1,30 @@
+{
+  "case_id": "trial-05",
+  "amputation_level": "knee_disarticulation",
+  "side": "right",
+  "age_years": 22,
+  "body_weight_kg": 70,
+  "etiology": "trauma",
+  "months_since_amputation": 14,
+  "residual_limb": {
+    "wound_status": "healed",
+    "volume_stability": "stable",
+    "skin_condition": "intact",
+    "length_description": "long, bulbous end"
+  },
+  "activity": {
+    "k_level": "K4",
+    "description": "construction work, plays football",
+    "functional_goals": "return to football"
+  },
+  "prior_devices": [
+    {
+      "device_description": "knee disarticulation socket, polycentric knee, dynamic foot",
+      "years_used": 1,
+      "currently_using": true,
+      "issues": "knee unstable on uneven ground"
+    }
+  ],
+  "comorbidities": [],
+  "cognitive_status": "intact"
+}

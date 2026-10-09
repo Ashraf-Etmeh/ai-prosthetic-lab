@@ -1,0 +1,19 @@
+{
+  "case_id": "trial-14",
+  "amputation_level": "transhumeral",
+  "side": "right",
+  "age_years": 36,
+  "etiology": "trauma",
+  "months_since_amputation": 18,
+  "residual_limb": {
+    "pain": "phantom pain most days"
+  },
+  "prior_devices": [
+    {
+      "device_description": "myoelectric transhumeral prosthesis",
+      "years_used": 1.5,
+      "currently_using": false,
+      "issues": "too heavy, sweating in the socket"
+    }
+  ]
+}

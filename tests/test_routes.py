@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from markupsafe import escape
+
 from app import create_app
 from intake.routes import _optional_list
 from knowledge.models import ProtocolChunk
@@ -79,13 +81,18 @@ class RouteTestCase(unittest.TestCase):
         retrieval = patch("intake.routes.retrieve_relevant_chunks", side_effect=fake_retrieval)
         retrieval.start()
         self.addCleanup(retrieval.stop)
-        # Decisions go to a temporary log, never to the real data/review_log.jsonl.
+        # Decisions go to a temporary log, never to the real data/review_log.jsonl,
+        # and cases to a temporary folder, never to the real data/cases/.
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.log_path = Path(tmp.name) / "review_log.jsonl"
         log_path = patch("review.decision_log.REVIEW_LOG_PATH", self.log_path)
         log_path.start()
         self.addCleanup(log_path.stop)
+        self.cases_dir = Path(tmp.name) / "cases"
+        cases_dir = patch.object(store, "folder", self.cases_dir)
+        cases_dir.start()
+        self.addCleanup(cases_dir.stop)
 
     def post_intake(self, **fields):
         return self.client.post("/intake", data={**BASE_FORM, **fields})
@@ -135,7 +142,8 @@ class IntakeRouteTests(RouteTestCase):
         for fields, message in [
             ({"device_2_years": "3"}, b"prior device 2: describe the device"),
             ({"no_prior_devices": "1", "device_1_description": "socket"}, b"is ticked, but a device"),
-            ({"device_1_description": "socket", "device_1_years": "-1"}, b"prior device 1: years_used"),
+            ({"device_1_description": "socket", "device_1_years": "-1"},
+             b"prior device 1: Years used: enter 0 or more."),
             ({"device_1_description": "socket", "device_1_current": "maybe"}, b"expected yes or no"),
         ]:
             with self.subTest(**fields):
@@ -183,6 +191,171 @@ class IntakeRouteTests(RouteTestCase):
                 resp = self.client.post("/intake", data=data)
                 self.assertEqual(resp.status_code, 400)
                 self.assertIn(name, resp.data)  # the form with a message, not a crash page
+
+
+class RestartTests(RouteTestCase):
+    """Cases are saved to disk: a review page still works after the server restarts."""
+
+    def restart(self):
+        store._records.clear()  # what a restart loses: everything in memory; the files stay
+
+    def test_review_page_after_a_restart(self):
+        case_id = self.client.post("/intake", data=FULL_FORM | {"age_years": "", "k_level": "K2"}) \
+            .headers["Location"].rsplit("/", 1)[-1]
+        before = self.client.get(f"/review/{case_id}").get_data(as_text=True)
+        self.assertTrue((self.cases_dir / f"{case_id}.json").is_file())
+
+        self.restart()
+        after = self.client.get(f"/review/{case_id}")
+
+        self.assertEqual(after.status_code, 200)
+        self.assertEqual(after.get_data(as_text=True), before)  # the same page, word for word
+
+    def test_decision_after_a_restart(self):
+        case_id = self.post_intake().headers["Location"].rsplit("/", 1)[-1]
+        self.restart()
+        resp = self.client.post(f"/review/{case_id}/decision", follow_redirects=True, data={
+            "decision": "approve", "gap:residual_limb.volume_stability": "needed",
+            "opt:icrc_ready_for_fitting": "relevant"})
+        self.assertEqual(resp.status_code, 200)
+        [entry] = read_decisions(case_id, path=self.log_path)
+        self.assertEqual(entry["case"]["case_id"], case_id)
+        volume = next(g for g in entry["gaps"] if g["field"] == "residual_limb.volume_stability")
+        self.assertEqual(volume["source"]["citation"], "Test Guideline (2024), p. 14")
+
+    def test_case_never_saved_is_still_404(self):
+        self.restart()
+        self.assertEqual(self.client.get("/review/0123456789ab").status_code, 404)
+
+
+class FormKeptTests(RouteTestCase):
+    """A refused form, or a language switch, brings the form back as it was sent."""
+
+    def test_form_kept_after_an_error(self):
+        resp = self.client.post("/intake", data=FULL_FORM | {"age_years": "abc"})
+        self.assertEqual(resp.status_code, 400)
+        page = resp.get_data(as_text=True)
+        for name, value in FULL_FORM.items():
+            if name == "age_years":
+                continue
+            with self.subTest(name=name):
+                if name in ("activity_description", "functional_goals", "comorbidities", "intake_notes"):
+                    self.assertRegex(page, rf'<textarea id="{name}"[^>]*>{re.escape(value)}</textarea>')
+                elif name in ("amputation_level", "side", "etiology", "wound_status", "volume_stability",
+                              "k_level", "device_1_current"):
+                    self.assertRegex(page, rf'(?s)<select id="{name}"[^>]*>(?:(?!</select>).)*'
+                                           rf'<option value="{value}" selected>')
+                else:
+                    self.assertRegex(page, rf'name="{name}"[^>]*value="{re.escape(str(escape(value)))}"')
+        self.assertIn('name="age_years" value="abc"', page)  # the bad value too, to correct it
+
+    def test_checkbox_and_unknown_choice(self):
+        resp = self.post_intake(no_prior_devices="1", amputation_level="banana", side="right")
+        page = resp.get_data(as_text=True)
+        self.assertIn('name="no_prior_devices" value="1" checked', page)
+        self.assertIn('<option value="right" selected>', page)
+        # A value that isn't an option: the "Select…" placeholder, never a guessed level.
+        self.assertIn('<option value="" disabled selected>Select…</option>', page)
+        self.assertNotRegex(page, r'(?s)<select id="amputation_level"(?:(?!</select>).)*value="[a-z_]+" selected')
+
+    def test_typed_text_is_escaped(self):
+        page = self.post_intake(age_years="x", pain='"><b>bold</b>').get_data(as_text=True)
+        self.assertIn('value="&#34;&gt;&lt;b&gt;bold&lt;/b&gt;"', page)
+        self.assertNotIn("<b>bold</b>", page)
+
+    def test_language_switch_keeps_the_input(self):
+        before = len(store.all())
+        resp = self.client.post("/intake", data={
+            "switch_language": "ar", "amputation_level": "transfemoral", "pain": "ألم شبحي",
+            "comorbidities": "Diabetes", "device_1_description": "socket"})  # side not chosen yet
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("lang=ar", resp.headers["Set-Cookie"])
+        page = resp.get_data(as_text=True)
+        self.assertIn('<html lang="ar" dir="rtl">', page)
+        self.assertIn('<option value="transfemoral" selected>بتر فوق الركبة</option>', page)
+        self.assertIn('value="ألم شبحي"', page)
+        self.assertIn(">Diabetes</textarea>", page)
+        self.assertIn('name="device_1_description" dir="auto"', page)
+        self.assertIn('value="socket"', page)
+        self.assertNotIn('class="error"', page)  # not a submission: nothing checked, nothing saved
+        self.assertEqual(len(store.all()), before)
+        self.assertIn('dir="rtl"', self.client.get("/intake").get_data(as_text=True))  # remembered
+
+        back = self.client.post("/intake", data={"switch_language": "en", "pain": "ألم شبحي"})
+        self.assertIn('<html lang="en" dir="ltr">', back.get_data(as_text=True))
+        self.assertIn('value="ألم شبحي"', back.get_data(as_text=True))
+
+    def test_unknown_language_refused(self):
+        resp = self.client.post("/intake", data={"switch_language": "fr", **BASE_FORM})
+        self.assertEqual(resp.status_code, 404)
+        self.assertNotIn("Set-Cookie", resp.headers)
+
+    def test_enter_sends_the_case_not_the_language_button(self):
+        # Enter in a field submits with the form's first submit button in the page.
+        page = self.client.get("/intake").get_data(as_text=True)
+        buttons = re.findall(r"<button [^>]*>", page)
+        self.assertIn('form="intake-form" class="default-submit"', buttons[0])
+        self.assertNotIn("name=", buttons[0])
+        self.assertIn('name="switch_language"', buttons[1])
+
+
+class IntakeErrorTests(RouteTestCase):
+    """Refused values are explained with the form's own labels, in the page's language."""
+
+    CASES = [
+        ({"age_years": "abc"}, "Age (years): enter a whole number.",
+         "العمر (بالسنوات): أدخل عدداً صحيحاً."),
+        ({"age_years": "64.5"}, "Age (years): enter a whole number.",
+         "العمر (بالسنوات): أدخل عدداً صحيحاً."),
+        ({"age_years": "-5"}, "Age (years): enter 0 or more.", "العمر (بالسنوات): أدخل صفراً أو أكثر."),
+        ({"body_weight_kg": "0"}, "Body weight (kg): enter a number greater than 0.",
+         "وزن الجسم (كغ): أدخل رقماً أكبر من صفر."),
+        ({"body_weight_kg": "heavy"}, "Body weight (kg): enter a number.", "وزن الجسم (كغ): أدخل رقماً."),
+        ({"months_since_amputation": "nan"}, "Months since amputation: enter a number.",
+         "عدد الأشهر منذ البتر: أدخل رقماً."),
+        ({"months_since_amputation": "inf"}, "Months since amputation: enter a number.",
+         "عدد الأشهر منذ البتر: أدخل رقماً."),
+        ({"amputation_level": "banana"}, "Amputation level: choose one of the listed options.",
+         "مستوى البتر: اختر أحد الخيارات المعروضة."),
+        ({"side": "middle"}, "Side: choose one of the listed options.", "الجانب: اختر أحد الخيارات المعروضة."),
+        ({"etiology": "magic"}, "Etiology: choose one of the listed options.",
+         "سبب البتر: اختر أحد الخيارات المعروضة."),
+        ({"wound_status": "bleeding"}, "Wound status: choose one of the listed options.",
+         "حالة الجرح: اختر أحد الخيارات المعروضة."),
+        ({"volume_stability": "big"}, "Volume stability: choose one of the listed options.",
+         "ثبات الحجم: اختر أحد الخيارات المعروضة."),
+        ({"k_level": "K9"}, "K-level (lower limb only): choose one of the listed options.",
+         "المستوى الوظيفي K (للطرف السفلي فقط): اختر أحد الخيارات المعروضة."),
+        ({"device_1_description": "socket", "device_1_years": "x"},
+         "prior device 1: Years used: enter a number.", "الجهاز السابق 1: سنوات الاستخدام: أدخل رقماً."),
+        ({"device_1_description": "socket", "device_1_years": "-1"},
+         "prior device 1: Years used: enter 0 or more.", "الجهاز السابق 1: سنوات الاستخدام: أدخل صفراً أو أكثر."),
+    ]
+    PYTHON_WORDING = ("invalid literal", "could not convert", "is not a valid", "must be 0 or greater",
+                      "must be greater than 0")
+
+    def test_errors_in_both_languages(self):
+        for lang, prefix, column in (("en", "Case not saved: ", 1), ("ar", "لم تُحفظ الحالة: ", 2)):
+            self.client.set_cookie("lang", lang)
+            for case in self.CASES:
+                fields, expected = case[0], case[column]
+                with self.subTest(lang=lang, **fields):
+                    before = len(store.all())
+                    resp = self.post_intake(**fields)
+                    self.assertEqual(resp.status_code, 400)
+                    page = visible_text(resp.get_data(as_text=True))
+                    self.assertIn(prefix + expected, page)
+                    for wording in self.PYTHON_WORDING:
+                        self.assertNotIn(wording, page)
+                    self.assertEqual(len(store.all()), before)
+
+    def test_unexpected_error_shown_without_python_wording(self):
+        with patch("intake.routes._case_from_form", side_effect=ValueError("boom: internal detail")):
+            resp = self.post_intake()
+        self.assertEqual(resp.status_code, 400)
+        page = visible_text(resp.get_data(as_text=True))
+        self.assertIn("Case not saved: A value could not be read. Check the form and try again.", page)
+        self.assertNotIn("boom", page)
 
 
 class ReviewRouteTests(RouteTestCase):
@@ -476,7 +649,7 @@ class ArabicPageTests(RouteTestCase):
         # Shown in Arabic, but the value sent is still the stored code.
         self.assertIn('<option value="transtibial">بتر تحت الركبة</option>', page)
         self.assertIn('<option value="yes">نعم</option>', page)
-        self.assertIn('href="/language/en?next=/intake"', page)
+        self.assertIn('name="switch_language" value="en"', page)  # the language button posts the form
         self.assertNotIn("New Case Intake", page)
 
     def test_review_page_is_arabic_with_sources_untranslated(self):
@@ -536,12 +709,13 @@ class ArabicPageTests(RouteTestCase):
                 self.assertIn("لم تُحفظ الحالة: " + message, page)
                 self.assertNotIn("Case not saved", page)
 
-    def test_python_worded_error_still_shown(self):
-        # The browser's number input prevents this; if it happens, the
-        # message is Python's own English wording inside the Arabic page.
+    def test_number_error_in_arabic(self):
+        # The browser's number input prevents this; if it happens, the message is Arabic too.
         resp = self.post_intake(age_years="abc")
         self.assertEqual(resp.status_code, 400)
-        self.assertIn("لم تُحفظ الحالة: invalid literal for int()", visible_text(resp.get_data(as_text=True)))
+        page = visible_text(resp.get_data(as_text=True))
+        self.assertIn("لم تُحفظ الحالة: العمر (بالسنوات): أدخل عدداً صحيحاً.", page)
+        self.assertNotIn("invalid literal", page)
 
     def test_comorbidities_none_in_arabic(self):
         self.post_intake(comorbidities="لا يوجد")

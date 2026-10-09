@@ -1,0 +1,14 @@
+{
+  "case_id": "trial-15",
+  "amputation_level": "shoulder_disarticulation",
+  "side": "left",
+  "age_years": 60,
+  "etiology": "oncologic",
+  "months_since_amputation": 5,
+  "residual_limb": {
+    "wound_status": "healed"
+  },
+  "activity": {
+    "functional_goals": "natural appearance at work"
+  }
+}

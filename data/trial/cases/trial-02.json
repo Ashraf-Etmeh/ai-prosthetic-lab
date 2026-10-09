@@ -1,0 +1,27 @@
+{
+  "case_id": "trial-02",
+  "amputation_level": "transtibial",
+  "side": "right",
+  "age_years": 67,
+  "body_weight_kg": 92,
+  "etiology": "vascular",
+  "months_since_amputation": 2,
+  "residual_limb": {
+    "wound_status": "healing",
+    "volume_stability": "fluctuating",
+    "skin_condition": "thin skin over the distal tibia",
+    "pain": "ألم شبحي ليلاً",
+    "sensation": "reduced (neuropathy)"
+  },
+  "activity": {
+    "k_level": "K2",
+    "description": "uses a walker at home",
+    "functional_goals": "walk inside the house and to the mosque"
+  },
+  "prior_devices": [],
+  "comorbidities": [
+    "Diabetes type 2",
+    "Hypertension"
+  ],
+  "contralateral_limb_status": "healed foot ulcer, reduced sensation"
+}

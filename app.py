@@ -9,23 +9,23 @@ as part of handling a submitted case.
 
 The pages are in English or Arabic (shared/i18n.py). GET /language/<code>
 remembers the choice in a cookie and goes back to the page it came from.
+The intake form switches language by posting itself instead, so what was
+typed stays in the form (intake/routes.py).
 """
 
-from flask import Flask, abort, redirect, request, url_for
+from flask import Flask, abort, g, redirect, request, url_for
 
 from intake.routes import bp as intake_bp
 from review.routes import bp as review_bp
 from shared.i18n import (
-    LANGUAGE_COOKIE,
     LANGUAGES,
     field_label,
     language_from_cookies,
+    set_language_cookie,
     t,
     text_direction,
     value_label,
 )
-
-LANGUAGE_COOKIE_DAYS = 365
 
 
 def _local_page(target: str) -> bool:
@@ -45,7 +45,8 @@ def create_app() -> Flask:
     @app.context_processor
     def interface_language():
         # Available in every template: the chosen language and its helpers.
-        lang = language_from_cookies(request.cookies)
+        # g.lang: a language chosen in this very request, before the browser has its cookie.
+        lang = g.get("lang") or language_from_cookies(request.cookies)
         return {
             "lang": lang,
             "text_dir": text_direction(lang),
@@ -64,9 +65,7 @@ def create_app() -> Flask:
             abort(404)
         target = request.args.get("next", "")
         response = redirect(target if _local_page(target) else url_for("index"))
-        response.set_cookie(
-            LANGUAGE_COOKIE, code, max_age=LANGUAGE_COOKIE_DAYS * 24 * 3600, samesite="Lax"
-        )
+        set_language_cookie(response, code)
         return response
 
     return app

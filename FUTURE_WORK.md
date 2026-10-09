@@ -524,6 +524,91 @@ applicability only from the source's wording, a quote test.
   تمهيدي (مؤقت) for preparatory prosthesis).
 - **Manifest note:** R04 (AHRQ CER 213, 255 pages) is on disk and extracts
   cleanly, but its manifest row still says "needs manual download".
+- Committed 2026-10-09 as `988f13f`. Not pushed.
+
+## Trial readiness 1: stabilise for a specialist trial (done 2026-10-09)
+
+Roadmap item 1 (`CLAUDE.md`): five fixes, no new features.
+
+- **Cases persist.** `shared/store.py` writes each case to
+  `data/cases/<case_id>.json` (in `.gitignore`), atomically (temporary file,
+  then rename). A case not in memory is read from its file the first time
+  its page is asked for, so review pages work after a restart; nothing is
+  loaded up front. A file holds the case as entered, the retrieved passages,
+  the gaps and the "not searched" warning (`case_file_version` 1). The
+  component and fitting statements are not stored: they follow from the
+  case and the guides, so they are worked out again on reading. Only ids
+  of letters, digits, `-` and `_` are ever used as file names.
+- **The intake form comes back filled in after an error**, every field as
+  sent (a non-number typed into a number box shows empty: the browser can't
+  display it). A choice that isn't one of the options falls back to the
+  empty option, never a guessed one.
+- **Switching language keeps the intake input.** Chosen approach: the
+  language link on the intake page is a button that posts the form
+  (`switch_language`); the server sends the same form back, filled in, in
+  the other language, sets the cookie, and saves nothing. No JavaScript;
+  it reuses the refill above. An invisible submit button placed before it
+  keeps Enter sending the case (Enter uses the form's first submit button).
+  The review page still switches by link, so its unsent note and marks are
+  still lost on a switch.
+- **No Python wording in intake errors.** Each value is parsed with the
+  form's own label: "Age (years): enter a whole number." / "العمر
+  (بالسنوات): أدخل عدداً صحيحاً.", likewise "enter a number", "enter 0 or
+  more", "greater than 0", "choose one of the listed options", and for
+  device rows "prior device 1: Years used: …". Anything unexpected shows a
+  generic translated message; Python's text goes to the server log only.
+- **Test lines moved out of the review log.** The 26 lines are now
+  `data/review_log.test.jsonl`, unchanged (SHA-256 identical);
+  `data/review_log.jsonl` was started empty for the trial.
+- **Tests:** 237 (18 new: 7 in `tests/test_store.py`, 11 in
+  `tests/test_routes.py`). Route tests use a temporary cases folder, like
+  the temporary log. Checked by undoing each fix in memory: no disk write
+  failed 7 tests, no refill 26, Python's number parsing 17.
+- **Live check** (real model; cases and decisions redirected to a scratch
+  folder, so `data/` stayed clean): translated errors and refill in both
+  languages, language switch, a case written (50 KB), the server process
+  stopped and started again, the same review page identical character for
+  character, a decision saved after the restart. 11 checks, 0 failed; no
+  tracebacks in either server log.
+
+## Trial readiness 2: tooling for the two human reviews (done 2026-10-09)
+
+Roadmap item 2 (`CLAUDE.md`), first part. How cases are analysed is
+unchanged: the intake route's analysis moved, word for word, into
+`intake/routes.py analyse_case()`, which the trial loader calls too.
+
+- **Arabic term sheet** (`shared/arabic_terms.py`): `export` writes
+  `data/trial/arabic_terms.csv`, 209 rows (157 page texts, 17 gap field
+  names, 35 choices) with key, English, Arabic, where it appears, and empty
+  "corrected Arabic" and "comment" columns. "Where it appears" comes from
+  searching the templates and modules for the key, or for the prefix a
+  template builds it from (`'component.' ~ key`, `f"error.required.{name}"`);
+  every key was found. `apply` uses Python's `ast` to find each corrected
+  string's exact place in `shared/i18n.py` and replaces only those (a
+  multi-line Arabic text becomes one line), shows a diff, writes after a
+  yes, and refuses the whole sheet on an unknown key, Arabic changed since
+  the export, or a `{placeholder}` the English lacks. `export` won't
+  overwrite a filled-in sheet.
+- **15 trial cases** in `data/trial/cases/` (`trial-01` … `trial-15`):
+  all 12 levels, left/right/bilateral in both limbs, K0-K4 and unknown,
+  1 to 15 gaps each with the real index, some free text in Arabic. Only
+  `Case` fields, so no identifiers. `python -m intake.load_trial_cases`
+  analyses and saves them to `data/cases/`; a file whose `case_id` doesn't
+  match its name stops the load before anything is saved.
+- **Trial report** (`python -m review.trial_report`): reads the review log,
+  prints a summary, writes `data/trial/report.csv` (in `.gitignore`) in
+  sections: totals, gap fields (Needed / Not needed / not marked, split by
+  source shown), gaps without a source marked Needed (with case ids),
+  statements (Relevant / Not relevant / not marked), decisions, edit notes.
+  Counts only; rows in field-guide and statement-guide order; each logged
+  decision counts once and the totals say how many cases were decided more
+  than once. Older log versions are read (gap marks only).
+- **Tests:** 262 (25 new: 10 term sheet incl. the export/apply round trip
+  on a copy of `i18n.py`, 7 trial cases and loader, 8 report on a small fake
+  log written by `record_decision`).
+- **Sample** (scratch folder, real model): the 15 cases loaded, 8 fake
+  decisions on 7 cases logged, report built; e.g. "prior_devices" marked
+  Needed 3 times with no source shown, which matches the known library gap.
 
 ## Open decisions
 
@@ -566,10 +651,10 @@ applicability only from the source's wording, a quote test.
 
 ## Known v1 simplifications (acceptable for now, revisit later if scope grows)
 
-- `shared/store.py` is an in-memory, single-process dict — no persistence
-  across a server restart, no concurrency handling. Fine for a local
-  single-user prototype; would need a real store if this ever becomes
-  multi-user.
+- `shared/store.py` keeps cases in memory and in one JSON file each
+  (`data/cases/`, since 2026-10-09), single process, no concurrency
+  handling. Fine for a local single-user prototype; would need a real store
+  if this ever becomes multi-user.
 - The intake form has three fixed prior-device rows (no JavaScript). A
   patient with more devices needs the rest in the intake notes; an "add
   device" button would need a little JavaScript.
@@ -589,17 +674,12 @@ applicability only from the source's wording, a quote test.
   a tiny fake embedder (`tests/helpers.py`), so they never load the real
   model; the real model is checked by `python -m knowledge.evaluate`.
   Uses the standard library's `unittest`, so no extra dependency.
-- After a validation error, the intake form comes back empty; the user has
-  to retype everything, now including the device rows. Fix by passing the
-  submitted values back into the template, as the review page already
-  does for a refused decision.
-- Some intake error messages are Python's own wording ("'banana' is not
-  a valid AmputationLevel", "could not convert string to float"). The
-  form's drop-downs and number inputs prevent most of them in a browser;
-  friendlier wording per field would help if they show up in practice.
-  They are not translated: the Arabic page shows them in English.
-- Switching language reloads the page, so anything typed but not yet
-  submitted is lost (the intake form, the review note and marks).
+- ~~After a validation error, the intake form comes back empty.~~ Fixed
+  2026-10-09 (Trial readiness 1).
+- ~~Some intake error messages are Python's own wording.~~ Fixed
+  2026-10-09: every intake error is a translated text with the field's label.
+- Switching language on the review page reloads it, so an unsent note and
+  marks are lost. (Fixed for the intake form 2026-10-09.)
 
 ## Path to the full system
 
