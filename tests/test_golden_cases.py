@@ -1,4 +1,9 @@
-"""Tests for intake/golden_cases.py: the golden-case files and the checks run on them.
+"""Tests for intake/golden_cases.py: the reviewed golden cases, and the checks run on them.
+
+Every golden case marked "reviewed" runs here (statements, supporting
+sources, reasoning path, functional level, and for an Arabic or twin case
+the intake form and the twin), so a regression fails the normal test run.
+Unreviewed cases stay out: only `python -m intake.golden_cases` checks them.
 
 No embedding model: the search is replaced (analyse_case's `retrieve`), and
 gap sources come from fake passages.
@@ -13,13 +18,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from intake import golden_cases
+from intake import golden_cases, routes
 from intake.golden_cases import (
     FAIL,
     PASS,
     SKIP,
     WARN,
     check_case,
+    intake_form,
     main,
     read_golden_case,
     run_case,
@@ -30,7 +36,17 @@ from knowledge.models import ProtocolChunk
 from reasoning.models import Gap
 from shared.config import GOLDEN_CASES_DIR
 
-CASE_FILES = sorted(GOLDEN_CASES_DIR.glob("*.json"))
+
+def _status(path: Path):
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("review_status")
+    except (ValueError, AttributeError):
+        return None  # not readable, so not reviewed: only the runner reports it
+
+
+# Only the reviewed cases: an unreviewed case is a draft, checked by the runner alone.
+REVIEWED = [path for path in sorted(GOLDEN_CASES_DIR.glob("*.json")) if _status(path) == "reviewed"]
+GOLDEN_01 = GOLDEN_CASES_DIR / "golden-01.json"  # reviewed; the fixtures below start from it
 
 
 def no_search(case):
@@ -41,26 +57,32 @@ def by_check(findings):
     return {finding.check: finding for finding in findings}
 
 
-class GoldenFileTests(unittest.TestCase):
-    def test_the_case_files_are_valid(self):
-        self.assertEqual([path.stem for path in CASE_FILES], ["golden-01", "golden-02", "golden-03"])
-        for path in CASE_FILES:
+class ReviewedCaseTests(unittest.TestCase):
+    """A difference in a reviewed case fails the normal test run."""
+
+    def test_there_are_reviewed_cases(self):
+        self.assertIn(GOLDEN_01, REVIEWED)
+
+    def test_every_reviewed_case_decides_every_rule(self):
+        for path in REVIEWED:
             with self.subTest(path.name):
                 golden = read_golden_case(path)
-                self.assertIn(golden.data["review_status"], golden_cases.REVIEW_STATUSES)
-                # Every component and fitting rule is decided one way or the other.
                 self.assertEqual(sorted(golden.present + golden.absent), sorted(golden_cases.RULES))
 
-    def test_the_case_files_run_without_the_model(self):
-        # A reviewed case fails on any difference, so this guards the statements
-        # and functional level of every reviewed case.
-        for path in CASE_FILES:
+    def test_every_reviewed_case_still_passes(self):
+        # Statements, supporting sources, reasoning path, functional level (and
+        # the intake form and twin where the case has them). Gap checks need the
+        # search model, so they are SKIPPED here and run in python -m intake.golden_cases.
+        for path in REVIEWED:
             with self.subTest(path.name):
-                golden, findings = run_case(path, gaps_skipped="test: no search")
-                statuses = {finding.check: finding.status for finding in findings}
-                self.assertNotIn(FAIL, statuses.values())
-                self.assertEqual(statuses["gaps"], SKIP)
-                self.assertIn("statements", statuses)
+                golden, findings = run_case(path, gaps_skipped="unit tests: no search")
+                self.assertTrue(golden.reviewed)
+                checked = {f.check: f for f in findings if f.status != SKIP}
+                self.assertIn("statements", checked)
+                self.assertIn("functional level", checked)
+                for finding in checked.values():
+                    self.assertEqual(finding.status, PASS, f"{finding.check}: {finding.lines}")
+                self.assertEqual(by_check(findings)["gaps"].status, SKIP)
 
 
 class ReadingTests(unittest.TestCase):
@@ -68,7 +90,7 @@ class ReadingTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.folder = Path(tmp.name)
-        self.data = json.loads(CASE_FILES[0].read_text(encoding="utf-8"))
+        self.data = json.loads(GOLDEN_01.read_text(encoding="utf-8"))
 
     def write(self, data, name="golden-01") -> Path:
         path = self.folder / f"{name}.json"
@@ -122,7 +144,7 @@ class CheckTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.folder = Path(tmp.name)
-        self.data = json.loads(CASE_FILES[1].read_text(encoding="utf-8"))  # transfemoral K2
+        self.data = json.loads((GOLDEN_CASES_DIR / "golden-02.json").read_text(encoding="utf-8"))  # transfemoral K2
         self.data["review_status"] = "unreviewed"  # mismatches WARN; the tests that need FAIL set "reviewed"
 
     def golden(self, change=None):
@@ -217,6 +239,88 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(list(findings), ["functional level"])
 
 
+class ArabicInterfaceAndTwinTests(unittest.TestCase):
+    """A case submitted through the Arabic intake form, checked against its English twin (golden-01)."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.folder = Path(tmp.name)
+        self.twin = json.loads(GOLDEN_01.read_text(encoding="utf-8"))
+        (self.folder / "golden-01.json").write_text(json.dumps(self.twin, ensure_ascii=False), encoding="utf-8")
+
+    def arabic_copy(self, change=None) -> Path:
+        data = copy.deepcopy(self.twin)
+        data.update(id="golden-91", interface_language="ar", twin_of="golden-01", review_status="unreviewed")
+        data["question"]["case_id"] = "golden-91"
+        data["question"]["residual_limb"]["skin_condition"] = "سليم، ندبة ملتئمة"
+        data["question"]["cognitive_status"] = "سليم"
+        if change:
+            change(data)
+        path = self.folder / "golden-91.json"
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def test_the_form_is_filled_in_as_each_interface_would(self):
+        question = dict(self.twin["question"], comorbidities=[], prior_devices=[])
+        self.assertEqual(intake_form(question, "ar")["comorbidities"], "لا يوجد")
+        self.assertEqual(intake_form(question, "en")["comorbidities"], "none")
+        self.assertEqual(intake_form(question, "ar")["no_prior_devices"], "on")
+        devices = dict(question, comorbidities=["a", "b"], prior_devices=[
+            {"device_description": "PTB socket", "years_used": 2, "currently_using": False, "issues": None}])
+        form = intake_form(devices, "ar")
+        self.assertEqual((form["comorbidities"], form["device_1_description"], form["device_1_years"],
+                          form["device_1_current"], form["device_1_issues"]), ("a\nb", "PTB socket", "2", "no", ""))
+        self.assertNotIn("no_prior_devices", form)
+
+    def test_arabic_submission_matching_its_twin_passes(self):
+        cases_folder, store_before, search_before = routes.store.folder, routes.store, routes.retrieve_relevant_chunks
+        golden, findings = run_case(self.arabic_copy(), gaps_skipped="test: no search")
+        found = by_check(findings)
+        self.assertEqual(found["intake form"].status, PASS, found["intake form"].lines)
+        self.assertEqual(found["twin"].status, PASS, found["twin"].lines)
+        self.assertEqual(found["statements"].status, PASS)
+        # The route's store and search were put back; nothing was saved to the case folder.
+        self.assertIs(routes.store, store_before)
+        self.assertEqual(routes.store.folder, cases_folder)
+        self.assertIs(routes.retrieve_relevant_chunks, search_before)
+
+    def test_a_field_the_form_cannot_carry_is_reported(self):
+        def notes(data):
+            data["question"]["residual_limb"]["notes"] = "no form input for this"
+        found = by_check(run_case(self.arabic_copy(notes), gaps_skipped="test: no search")[1])
+        self.assertEqual(found["intake form"].status, WARN)
+        self.assertTrue(any(line.startswith("residual_limb:") for line in found["intake form"].lines))
+
+    def test_a_different_analysis_from_the_twin_is_reported(self):
+        def k2(data):
+            data["question"]["activity"]["k_level"] = "K2"
+        found = by_check(run_case(self.arabic_copy(k2), gaps_skipped="test: no search")[1])
+        self.assertEqual(found["intake form"].status, PASS)  # the form took it as written
+        self.assertEqual(found["twin"].status, WARN)
+        self.assertTrue(any(line.startswith("statements:") for line in found["twin"].lines))
+        self.assertTrue(any(line.startswith("functional level:") for line in found["twin"].lines))
+        reviewed = self.arabic_copy(lambda d: (k2(d), d.update(review_status="reviewed")))
+        self.assertEqual(by_check(run_case(reviewed, gaps_skipped="test: no search")[1])["twin"].status, FAIL)
+
+    def test_gap_sources_are_compared_when_the_search_ran(self):
+        golden = read_golden_case(self.arabic_copy())
+        record = analyse_case(golden.case, retrieve=no_search)
+        chunk = ProtocolChunk("lower_limb_amputation_va_dod_cpg_2024-0101", "pain", "g.pdf", "VA/DoD", 2024, 101)
+        record.gaps[1].evidence = chunk  # as if this case had cited a passage its twin did not
+        with mock.patch.object(golden_cases, "analyse_case", side_effect=lambda case, retrieve=None:
+                               analyse_case(case, retrieve=no_search)):
+            finding = golden_cases.compare_with_twin(golden, record, gaps_skipped=None)
+        self.assertEqual(finding.status, WARN)
+        self.assertTrue(any(line.startswith("gap sources:") for line in finding.lines))
+
+    def test_bad_language_or_twin_refused(self):
+        for change in (lambda d: d.update(interface_language="fr"), lambda d: d.update(twin_of="golden-91"),
+                       lambda d: d.update(twin_of="golden-99")):
+            with self.subTest(change), self.assertRaises(ValueError):
+                read_golden_case(self.arabic_copy(change))
+
+
 class SearchAvailabilityTests(unittest.TestCase):
     def test_reasons_without_loading_the_model(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -241,15 +345,16 @@ class CommandTests(unittest.TestCase):
         out.flush()
         return status, out.buffer.getvalue().decode("utf-8")
 
-    def test_no_search_run_of_the_case_files(self):
-        status, text = self.run_main(["--no-search"])
+    def test_no_search_run_of_the_reviewed_cases(self):
+        status, text = self.run_main([*map(str, REVIEWED), "--no-search"])
         self.assertEqual(status, 0)
         self.assertIn("Gap checks SKIPPED: skipped with --no-search", text)
-        self.assertIn("3 case(s):", text)
+        self.assertIn(f"{len(REVIEWED)} case(s):", text)
+        self.assertIn(" 0 FAIL", text)
 
     def test_exit_status_1_on_fail_or_error(self):
         with tempfile.TemporaryDirectory() as tmp:
-            data = json.loads(CASE_FILES[2].read_text(encoding="utf-8"))
+            data = json.loads((GOLDEN_CASES_DIR / "golden-03.json").read_text(encoding="utf-8"))
             data["review_status"] = "reviewed"
             data["expected_answer"]["functional_level"] = "cms_k1_description"
             reviewed = Path(tmp) / "golden-03.json"

@@ -78,7 +78,8 @@ python -m knowledge.ingest     # extract + chunk + embed all catalogued document
 python -m knowledge.evaluate   # measure retrieval quality (hit@1 / hit@5)
 python -m knowledge.items      # knowledge items with the owner's rules applied -> data/knowledge/
 python -m intake.golden_cases  # golden cases vs the app (gap checks need the model)
-python -m unittest             # 319 tests, a few seconds, no model needed
+python -m unittest             # 326 tests, a few seconds, no model needed
+python scripts/verify_all.py   # the 0-2 checks, then the golden cases
 ```
 
 ---
@@ -359,7 +360,8 @@ review/
   decision_log.py          validation, log entry building, append/read
   trial_report.py          counts of the reviewers' marks in the log → data/trial/report.csv
   templates/review.html
-tests/                     unittest suite (319 tests) + a tiny fake embedder
+tests/                     unittest suite (326 tests) + a tiny fake embedder
+scripts/                   verify_prompts_0_2.py (checks for prompts 0-2), verify_all.py (that + golden cases)
 data/
   sources/                 catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
   knowledge/               evidence_rules.csv (the owner's), items.json, items_to_curate.csv
@@ -452,7 +454,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **319 unit tests** (standard `unittest`, fake embedder, no model load):
+- **326 unit tests** (standard `unittest`, fake embedder, no model load):
   schema, catalog, extraction, ingestion, retrieval filters, field guide,
   gap analysis, component and fitting applicability, review log, case
   files across a simulated restart, pages (through Flask's test client,
@@ -471,9 +473,14 @@ uses a missing key.
 - **Golden cases** (`python -m intake.golden_cases`, `data/eval/golden_cases/`):
   fake cases with the statements, functional level and gaps they must give
   (and the statements they must not), run through the intake analysis.
-  Three reviewed cases (transtibial K3, transfemoral K2, transradial), all
-  52 rules decided in each; 0 differences (2026-10-10). Gap checks need
-  the model and are skipped without it; a difference fails a reviewed case.
+  13 cases, all 52 rules decided in each: every lower-limb level,
+  unilateral and bilateral, K0-K4, K-level unknown and not recorded, upper
+  limb unilateral and bilateral, an empty intake (17 gaps), and one case
+  submitted through the Arabic form that must match its English twin;
+  0 differences (2026-10-10). Three are reviewed (transtibial K3,
+  transfemoral K2, transradial) and also run in `python -m unittest`; ten
+  are unreviewed drafts. Gap checks need the model and are skipped without
+  it; a difference fails a reviewed case and warns for an unreviewed one.
 - **Live run checks** with the real model over HTTP. Latest (2026-10-09):
   13 English and 2 Arabic cases, 1,514 page checks, 0 failed (every
   applicable statement on the page word for word, statements for other
@@ -511,7 +518,7 @@ uses a missing key.
   tooling — done, then a real prosthetist trial), evidence (3 knowledge-item and
   evidence fields — structure and the first rule pass done; the owner's own
   values and showing them on the review page (3e) next; 4 golden-case
-  benchmark — format, runner and three reviewed cases done), product (5 smart search,
+  benchmark — runner and 13 cases, 3 reviewed), product (5 smart search,
   6 split `Case`, 7 orthotics after the trial). An Arabic-reading
   prosthetist should also check the Arabic terms.
 - Possible: Arabic versions of quotes from the WHO implementation manual

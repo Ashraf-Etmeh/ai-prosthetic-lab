@@ -85,4 +85,5 @@ python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
 python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
                               # (python -m knowledge.evidence_rules does the same)
 python -m intake.golden_cases # golden cases vs the app (--no-search: no model needed)
+python scripts/verify_all.py  # the 0-2 checks and the golden cases (--with-model: real search)
 ```

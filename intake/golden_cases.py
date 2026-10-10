@@ -20,9 +20,17 @@ Each file holds one fake case in the research brief's benchmark fields:
                                    ambulators_only, unilateral_only, bilateral_only), each with the
                                    "case_value" it reads (amputation_level, activity.k_level or side)
   evaluation_criteria              the checks that apply: statements, gaps, functional_level
+and, optionally:
+  interface_language               "ar": the case is submitted through POST /intake with the
+                                   Arabic interface, filled in as an Arabic user would (لا يوجد
+                                   for "none"); the case it stores must be the question
+  twin_of                          the id of a case whose analysis this one must match exactly
+                                   (statements, functional level, notes, gaps and, with the
+                                   search, the passage each gap cites)
 
 Every case goes through intake/routes.py analyse_case(), the analysis behind
-POST /intake. The statement and functional-level checks don't depend on the
+POST /intake (an Arabic one through the route itself, with the case store in
+memory only, so nothing reaches data/cases/). The statement and functional-level checks don't depend on the
 search, so they run without the embedding model. The gap checks need the
 model and the vector store: without either (or with --no-search) they are
 SKIPPED, with the reason; the model is never downloaded here.
@@ -36,11 +44,13 @@ a malformed file is ERROR. Exit status 1 if anything is FAIL or ERROR.
 import argparse
 import json
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from intake.routes import analyse_case
+from intake import routes
+from intake.routes import MAX_PRIOR_DEVICES, analyse_case
 from knowledge.catalog import load_catalog
 from knowledge.ingest import INFO_FILE
 from knowledge.retrieval import KnowledgeBaseMissing
@@ -56,11 +66,17 @@ from shared.config import (
     VECTOR_STORE_DIR,
 )
 from shared.field_guide import FIELDS_BY_PATH
-from shared.store import CaseRecord
+from shared.i18n import LANGUAGE_COOKIE, LANGUAGES
+from shared.store import CaseRecord, CaseStore
 
 KEYS = ("id", "description", "review_status", "question", "expected_answer", "common_wrong_answers",
         "supporting_sources", "reasoning_path", "evaluation_criteria")
+OPTIONAL_KEYS = ("interface_language", "twin_of")
 REVIEW_STATUSES = ("unreviewed", "reviewed")
+# What a user of each interface types in the comorbidities box for "none" (intake/routes.py NONE_ANSWERS).
+NONE_TYPED = {"en": "none", "ar": "لا يوجد"}
+# Set by the app, not by the form: left out when the stored case is compared with the question.
+GENERATED = ("case_id", "created_at")
 CRITERIA = ("statements", "gaps", "functional_level")
 RULE_FIELDS = ("levels", "k_levels", "ambulators_only", "unilateral_only", "bilateral_only")
 RULES = {rule.statement.id: rule for rule in (*component_guide.RULES, *fitting_guide.RULES)}
@@ -91,6 +107,14 @@ class GoldenCase:
     def absent(self) -> list[str]:
         return self.data["common_wrong_answers"]["statements_absent"]
 
+    @property
+    def interface_language(self) -> str:
+        return self.data.get("interface_language", "en")
+
+    @property
+    def twin_of(self) -> Optional[str]:
+        return self.data.get("twin_of")
+
 
 @dataclass
 class Finding:
@@ -120,7 +144,14 @@ def read_golden_case(path: Path) -> GoldenCase:
     """The case file, checked for shape. ValueError naming the file and the problem."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        _keys("the file", data, KEYS)
+        if not isinstance(data, dict):
+            raise ValueError("the file must hold one JSON object")
+        _keys("the file", {key: value for key, value in data.items() if key not in OPTIONAL_KEYS}, KEYS)
+        if data.get("interface_language", "en") not in LANGUAGES:
+            raise ValueError(f"interface_language must be one of {list(LANGUAGES)}")
+        twin = data.get("twin_of")
+        if twin is not None and (twin == data["id"] or not (path.parent / f"{twin}.json").is_file()):
+            raise ValueError(f"twin_of {twin!r} must be the id of another case file in {path.parent.name}/")
         if data["id"] != path.stem:
             raise ValueError(f"id {data['id']!r} must be the file name ({path.stem!r})")
         if data["review_status"] not in REVIEW_STATUSES:
@@ -316,16 +347,130 @@ def _not_searched(reason: str):
     return retrieve
 
 
+def intake_form(question: dict, language: str) -> dict[str, str]:
+    """The intake form filled in with the question, as a user of that interface would."""
+    def text(value) -> str:
+        return "" if value is None else str(value)
+
+    limb, activity = question["residual_limb"], question["activity"]
+    form = {
+        "amputation_level": text(question["amputation_level"]), "side": text(question["side"]),
+        "age_years": text(question["age_years"]), "body_weight_kg": text(question["body_weight_kg"]),
+        "etiology": text(question["etiology"]),
+        "months_since_amputation": text(question["months_since_amputation"]),
+        "wound_status": text(limb["wound_status"]), "volume_stability": text(limb["volume_stability"]),
+        "skin_condition": text(limb["skin_condition"]), "length_description": text(limb["length_description"]),
+        "pain": text(limb["pain"]), "sensation": text(limb["sensation"]),
+        "k_level": text(activity["k_level"]), "activity_description": text(activity["description"]),
+        "functional_goals": text(activity["functional_goals"]),
+        "contralateral_limb_status": text(question["contralateral_limb_status"]),
+        "cognitive_status": text(question["cognitive_status"]), "intake_notes": text(question["intake_notes"]),
+    }
+    comorbidities = question["comorbidities"]
+    form["comorbidities"] = (NONE_TYPED[language] if comorbidities == [] else "\n".join(comorbidities or []))
+    devices = question["prior_devices"]
+    if devices == []:
+        form["no_prior_devices"] = "on"
+    for n, device in enumerate(devices or [], start=1):
+        current = device["currently_using"]
+        form.update({f"device_{n}_description": device["device_description"],
+                     f"device_{n}_years": text(device["years_used"]),
+                     f"device_{n}_current": "" if current is None else ("yes" if current else "no"),
+                     f"device_{n}_issues": text(device["issues"])})
+    return form
+
+
+@contextmanager
+def _intake_route(retrieve):
+    """POST /intake with this search (None: the normal one), saving cases in memory only."""
+    saved = routes.store, routes.retrieve_relevant_chunks
+    routes.store = CaseStore(folder=None)  # never data/cases/
+    if retrieve is not None:
+        routes.retrieve_relevant_chunks = retrieve
+    try:
+        yield routes.store
+    finally:
+        routes.store, routes.retrieve_relevant_chunks = saved
+
+
+def submit_through_form(golden: GoldenCase, retrieve) -> tuple[Finding, Optional[CaseRecord]]:
+    """Submit the question through the intake form in the case's interface language.
+
+    The finding says whether the form took it and stored exactly the question
+    (apart from the generated id and time); the record is what it stored.
+    """
+    from app import create_app  # here: the Flask app is only needed for this
+
+    mismatch = FAIL if golden.reviewed else WARN
+    language = golden.interface_language
+    if len(golden.data["question"]["prior_devices"] or []) > MAX_PRIOR_DEVICES:
+        return Finding("intake form", mismatch, [f"more than {MAX_PRIOR_DEVICES} prior devices: "
+                                                 "the form has no row for them"]), None
+    client = create_app().test_client()
+    client.set_cookie(LANGUAGE_COOKIE, language)
+    with _intake_route(retrieve) as case_store:
+        response = client.post("/intake", data=intake_form(golden.data["question"], language))
+    if response.status_code != 302:
+        return Finding("intake form", mismatch, [f"POST /intake ({language}) answered {response.status_code}, "
+                                                 "not 302 (case saved)"]), None
+    record = case_store.get(response.headers["Location"].rstrip("/").rsplit("/", 1)[-1])
+    stored = {k: v for k, v in record.case.to_dict().items() if k not in GENERATED}
+    asked = {k: v for k, v in golden.data["question"].items() if k not in GENERATED}
+    differing = [f"{key}: stored {stored[key]!r}, question {asked[key]!r}" for key in asked if stored[key] != asked[key]]
+    if differing:
+        return Finding("intake form", mismatch, [f"{len(differing)} field(s) stored otherwise", *differing]), record
+    return Finding("intake form", PASS, [f"submitted in '{language}', stored as the question"]), record
+
+
+def _analysis(record: CaseRecord, searched: bool) -> dict[str, list]:
+    """The parts of an analysis a twin must share; the cited passages only when the search ran."""
+    description = record.components.functional.description
+    parts = {
+        "statements": [c.statement.id for c in (*record.components.statements, *record.fitting.statements)],
+        "functional level": [description.statement.id if description else None],
+        "notes": list(record.components.notes),
+        "gaps": [f"{gap.field} ({gap.status})" for gap in record.gaps],
+    }
+    if searched:
+        parts["gap sources"] = [f"{gap.field}: {gap.evidence.chunk_id if gap.evidence else 'none'}"
+                                for gap in record.gaps]
+    return parts
+
+
+def compare_with_twin(golden: GoldenCase, record: CaseRecord, gaps_skipped: Optional[str]) -> Finding:
+    mismatch = FAIL if golden.reviewed else WARN
+    twin = read_golden_case(golden.path.parent / f"{golden.twin_of}.json")
+    twin_record = analyse_case(twin.case, retrieve=_not_searched(gaps_skipped) if gaps_skipped else None)
+    searched = not gaps_skipped and not record.knowledge_warning and not twin_record.knowledge_warning
+    mine, theirs = _analysis(record, searched), _analysis(twin_record, searched)
+    differing = [f"{part}: {mine[part]} here, {theirs[part]} in {twin.id}" for part in mine if mine[part] != theirs[part]]
+    if differing:
+        return Finding("twin", mismatch, [f"differs from {twin.id} in {len(differing)} part(s)", *differing])
+    compared = ", ".join(mine)
+    return Finding("twin", PASS, [f"same analysis as {twin.id} ({compared})"])
+
+
 def run_case(path: Path, gaps_skipped: Optional[str]) -> tuple[Optional[GoldenCase], list[Finding]]:
     try:
         golden = read_golden_case(path)
     except ValueError as error:
         return None, [Finding("case file", ERROR, [str(error)])]
+    retrieve = _not_searched(gaps_skipped) if gaps_skipped else None
+    findings = []
     try:
-        record = analyse_case(golden.case, retrieve=_not_searched(gaps_skipped) if gaps_skipped else None)
+        if golden.interface_language == "en":
+            record = analyse_case(golden.case, retrieve=retrieve)
+        else:
+            form, record = submit_through_form(golden, retrieve)
+            findings.append(form)
+            if record is None:
+                return golden, findings  # nothing stored: nothing else to check
+        findings += check_case(golden, record, gaps_skipped)
+        if golden.twin_of:
+            findings.append(compare_with_twin(golden, record, gaps_skipped))
     except Exception as error:  # the analysis itself failed: report it with the case, go on
-        return golden, [Finding("analysis", ERROR, [f"{type(error).__name__}: {error}"])]
-    return golden, check_case(golden, record, gaps_skipped)
+        findings.append(Finding("analysis", ERROR, [f"{type(error).__name__}: {error}"]))
+    return golden, findings
 
 
 def _shown(path: Path) -> str:
@@ -337,9 +482,13 @@ def _shown(path: Path) -> str:
 
 def describe(golden: GoldenCase) -> str:
     case = golden.case
-    k_level = f", {case.activity.k_level.value}" if case.activity.k_level else ""
+    k_level = f", {case.activity.k_level.value}" if case.activity.k_level else ", no K-level"
+    if not case.is_lower_limb:
+        k_level = ""
+    language = f", {golden.interface_language} interface" if golden.interface_language != "en" else ""
+    twin = f", twin of {golden.twin_of}" if golden.twin_of else ""
     return (f"{golden.id}  [{golden.data['review_status']}]  "
-            f"{case.amputation_level.value}, {case.side.value}{k_level}")
+            f"{case.amputation_level.value}, {case.side.value}{k_level}{language}{twin}")
 
 
 def main(argv=None) -> int:

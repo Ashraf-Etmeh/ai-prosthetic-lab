@@ -786,6 +786,67 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   every kind of difference named, reviewed FAIL vs unreviewed WARN,
   excluded documents, the skip without the model, exit status.
 
+## Evidence 4b: ten more golden cases, unittest guard, verify-all (done 2026-10-10)
+
+- **Ten cases, all "unreviewed"**, drafted by hand from the rule table
+  (each of the 52 rules decided present, or absent with the failing
+  field) before any run; hashes recorded:
+
+  | Case | Input (other fields: see the file) | Component + fitting | Gaps |
+  |---|---|---|---|
+  | golden-04 | transfemoral, bilateral, K1, uses stubbies | 12 + 24 | 2 |
+  | golden-05 | knee disarticulation, left, K4 | 9 + 16 | 2 |
+  | golden-06 | hip disarticulation, right, K2 | 11 + 16 | 4 |
+  | golden-07 | partial foot, right, K-level recorded as unknown | 8 + 16 | 5 |
+  | golden-08 | Syme, left, K3 | 8 + 16 | 2 |
+  | golden-09 | transfemoral, left, K0 (the six ambulators rules absent) | 6 + 23 | 1 |
+  | golden-10 | transtibial, right, no K-level recorded | 11 + 22 | 3 |
+  | golden-11 | transhumeral, bilateral (unilateral rule absent) | 1 + 7 | 2 |
+  | golden-12 | transtibial, left, only level and side (all 17 gaps) | 11 + 22 | 17 |
+  | golden-13 | golden-01 through the Arabic form, Arabic free text, لا يوجد | 11 + 22 | 4 |
+
+- **Result: 0 differences** in all ten (the runner with the real model,
+  80 checks over 13 cases; and a separate script comparing raw sets).
+  golden-13 was stored by the Arabic form exactly as its question and its
+  analysis equals golden-01's, down to the passage each gap cites.
+- **Section 4.5 cross-check** (counts the app showed): transtibial 22 + 11
+  (golden-01, -10, -12, -13), transfemoral K2 23 + 14 (golden-02),
+  bilateral transfemoral 24 + 12 (golden-04, K1), knee or hip
+  disarticulation, partial foot, Syme 16 fitting (golden-05 to -08), upper
+  limb 7 (golden-03, -11: 7 fitting; 9 and 8 with the components). No
+  mismatch, reading "upper limb 7" as fitting statements, as
+  `scripts/verify_prompts_0_2.py` check 0.6 also does. The 4.5 numbers hold
+  only for these K-levels: a transtibial or bilateral transfemoral case at
+  K2 shows one or two more component statements.
+- **golden-09 encodes the current power-ankle rule:** `cms_power_assist_ankle`
+  is drafted absent for K0, from its `ambulators_only`. The 4a review found
+  that field is not in the quote; when that bug is fixed, golden-09's
+  expectation must change at its review.
+- **Gap sources** (all drafted null except prior_devices): no source for
+  sensation in golden-06, -09, -12 and residual limb length in golden-06,
+  while golden-12 (transtibial) cites VA/DoD p. 98 for length; K-level
+  (unknown or not recorded) cites the ML walking-ability paper p. 5.
+- **Runner:** two optional case keys. `interface_language: "ar"` submits
+  the question through POST /intake with the Arabic cookie, filled in as an
+  Arabic user would (لا يوجد for none; the route's store swapped for a
+  memory-only one and its search for the runner's, both restored), and
+  checks the stored case equals the question. `twin_of` compares the whole
+  analysis with the twin's (statements, functional level, notes, gaps, and
+  each gap's cited passage when the search ran).
+- **unittest:** every golden case marked "reviewed" (now golden-01..03)
+  runs in `python -m unittest` without the model: any non-gap check other
+  than PASS fails the test run. Unreviewed cases are only read for their
+  status. Three regressions made in memory (TT PTB socket widened to every
+  lower-limb level, stubbies not bilateral-only, K-level read as K2) were
+  each caught.
+- **`python scripts/verify_all.py [--with-model]`** runs
+  `scripts/verify_prompts_0_2.py` and `python -m intake.golden_cases`
+  (`--no-search` without the model) as separate processes; exit 1 if
+  either fails. Check 0.2 of the 0-2 script looked for the old wording
+  "clinical judgements are the team"; it now looks for the owner's step-3a
+  wording "clinical judgements come only from the owner".
+- **Tests:** 326 (7 new: reviewed cases, Arabic form, twin).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

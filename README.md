@@ -223,10 +223,16 @@ python -m unittest
 python -m intake.golden_cases     # fake cases with the output they must give (data/eval/golden_cases/)
 ```
 
-The golden cases run through the same analysis as the intake form. Without
+The golden cases run through the same analysis as the intake form (one is
+submitted through the Arabic form and must match its English twin). Without
 the search model or the vector store (or with `--no-search`) their gap
 checks are skipped and the rest still run; the model is never downloaded.
 A difference fails a case marked "reviewed" and warns for an "unreviewed" one.
+The reviewed cases also run in `python -m unittest` (without their gap checks).
+
+```
+python scripts/verify_all.py      # the checks for prompts 0-2, then the golden cases
+```
 
 ## Layout
 
