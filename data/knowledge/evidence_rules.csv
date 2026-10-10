@@ -1,0 +1,9 @@
+﻿rule_id,matches,evidence_layer,evidence_tag,confidence,basis
+R1,"VA/DoD lower-limb amputation guideline 2024 or VA/DoD upper-limb amputation guideline 2022; recommendation graded ""Strong for"" or ""Strong against""",evidence-based practice,direct evidence,high,Graded strong by a guideline built on a systematic evidence review
+R2,"Same two guidelines; recommendation graded ""Weak for"" or ""Weak against""",evidence-based practice,direct evidence,medium,"Graded by the same evidence review, but only weakly"
+R3,"Same two guidelines; recommendation graded ""Neither for nor against""",evidence-based practice,direct evidence,low,The guideline's own review found the evidence insufficient to recommend either way
+R4,"Same two guidelines; statement with no printed grade (algorithm steps, prescription elements, clearance for fitting, signs a prosthesis needs modifying)",unassigned,direct evidence,medium,National guideline content that the guideline itself does not rate; no layer without a rating
+R5,CMS 2017 Lower Limb Prosthetic Workgroup consensus; the five K-level descriptions (K0 to K4),established,direct evidence,medium,Published Medicare definitions quoted as written; medium because CMS itself cautions against reading them as a functional classification
+R6,"CMS 2017 Lower Limb Prosthetic Workgroup consensus; every other statement (the cautions, ""may benefit"", statements about missing evidence, preparatory prostheses)",unassigned,direct evidence,low,"Consensus statements, not rated evidence"
+R7,"WHO standards for prosthetics and orthotics 2017, parts 1 and 2, any language",unassigned,direct evidence,medium,International service standards; they set how services should work and do not grade clinical evidence
+R8,ICRC Prosthetic Gait Analysis for Physiotherapists 2014,unassigned,direct evidence,low,One training manual written for ICRC's own technology; the research brief says no single source is treated as established

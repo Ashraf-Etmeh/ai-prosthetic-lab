@@ -44,13 +44,15 @@ Extend it; don't rebuild it. Before changing anything, read
   `LOG_VERSION` in `review/decision_log.py`, and everything that reads the
   log must still read lines from earlier versions.
 - **Clinical judgements come only from the owner.** A knowledge item's
-  evidence layer, evidence tag, confidence, population and limitations are
-  set only from the owner's rule table (`data/knowledge/evidence_rules.csv`)
-  or values the owner gives, and the item records which (`assigned_by`: a
-  rule id such as R1, or "manual"). Code applies them and never infers,
-  normalises or fills them in; neither does Claude. Copying a grade exactly
-  as the source prints it is allowed (and tested, as `grade_as_printed`);
-  anything without an owner's rule or value stays "unassigned" or empty.
+  evidence layer, evidence tag and confidence are set only from the owner's
+  rule table (`data/knowledge/evidence_rules.csv`) or values the owner
+  gives, and the item records which (`assigned_by`: a rule id such as R1,
+  or "manual"); population and limitations only from the owner's values
+  (rules never set them). Code applies them and never infers, normalises or
+  fills them in; neither does Claude, and neither edits the rule table.
+  Copying a grade exactly as the source prints it is allowed (and tested,
+  as `grade_as_printed`); anything without an owner's rule or value stays
+  "unassigned" or empty.
 - **Ask the owner first** before committing, pushing (the owner decides
   when to push), adding a dependency, deleting data, or starting the next
   roadmap item.
@@ -80,5 +82,6 @@ python -m unittest            # all tests, ~1 s, no model needed
 python app.py                 # app at http://127.0.0.1:5000
 python -m knowledge.ingest    # rebuild data/extracted/ and the search index
 python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
-python -m knowledge.items     # export the knowledge items to data/knowledge/items.json
+python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
+                              # (python -m knowledge.evidence_rules does the same)
 ```

@@ -7,7 +7,17 @@ import unittest
 from pathlib import Path
 
 from knowledge.catalog import load_catalog
-from knowledge.items import build_items, export, read_items, to_json, write_items
+from knowledge.items import (
+    CURATE_FILE,
+    build_items,
+    classified_items,
+    export,
+    read_curate,
+    read_items,
+    to_curate,
+    to_json,
+    write_items,
+)
 from knowledge.models import (
     CONFIDENCE_LEVELS,
     EVIDENCE_LAYERS,
@@ -89,15 +99,33 @@ class ModelTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 make_item(list_items=value)
 
-    def test_clinical_value_needs_its_origin(self):
-        # Nothing clinical without the owner's rule or "manual" in assigned_by.
-        for name, value in (("evidence_layer", "established"), ("evidence_tag", "inferred"),
-                            ("confidence", "low"), ("population", "Adults"), ("limitations", "Small sample")):
+    def test_evidence_value_needs_its_origin(self):
+        # No evidence value without the owner's rule or "manual" in assigned_by.
+        for name, value in (("evidence_layer", "established"), ("evidence_tag", "inferred"), ("confidence", "low")):
             with self.subTest(name):
                 with self.assertRaises(ValueError):
                     make_item(**{name: value})
                 self.assertEqual(make_item(**{name: value}, assigned_by="R3").set_fields(), [name, "assigned_by"])
                 make_item(**{name: value}, assigned_by="manual")
+
+    def test_population_and_limitations_may_be_filled_for_any_item(self):
+        # The owner's decision (2026-10-10): the origin check covers only the evidence values.
+        for changes in ({}, {"assigned_by": "manual"},
+                        {"validation_status": "rule-assigned", "assigned_by": "R8", "confidence": "low"}):
+            with self.subTest(changes):
+                item = make_item(population="Adults", limitations="Small sample", **changes)
+                self.assertEqual((item.population, item.limitations), ("Adults", "Small sample"))
+
+    def test_kept_by_team(self):
+        # What no export may drop; a rule's values are not listed, the rule gives them again.
+        self.assertEqual(make_item().kept_by_team(), [])
+        self.assertEqual(make_item(validation_status="rule-assigned", assigned_by="R2", confidence="medium",
+                                   evidence_tag="direct evidence").kept_by_team(), [])
+        self.assertEqual(make_item(population="Adults").kept_by_team(), ["population"])
+        self.assertEqual(make_item(limitations="Small sample").kept_by_team(), ["limitations"])
+        self.assertEqual(make_item(confidence="low", assigned_by="manual").kept_by_team(), ["assigned_by 'manual'"])
+        self.assertEqual(make_item(validation_status="owner-reviewed", assigned_by="R2").kept_by_team(),
+                         ["validation_status 'owner-reviewed'"])
 
     def test_rule_assigned_names_the_rule(self):
         make_item(validation_status="rule-assigned", assigned_by="R1", confidence="medium")
@@ -187,17 +215,32 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(read_items(self.path), [arabic])
         self.assertIn("“", to_json(build_items()))  # the sources' curly quotes kept as printed
 
-    def test_values_set_by_the_team_are_never_overwritten(self):
+    def test_values_only_the_team_can_give_are_never_overwritten(self):
+        for changes, named in (({"confidence": "low", "assigned_by": "manual", "validation_status": "unreviewed"},
+                                "assigned_by 'manual'"),
+                               ({"population": "Adults"}, "population"),
+                               ({"limitations": "Small sample"}, "limitations"),
+                               ({"validation_status": "owner-reviewed"}, "validation_status 'owner-reviewed'")):
+            with self.subTest(changes):
+                items = export(self.path, force=True)
+                items[3] = dataclasses.replace(items[3], **changes)
+                write_items(items, self.path)
+                filled = self.path.read_bytes()
+                with self.assertRaises(FileExistsError) as refused:
+                    export(self.path)
+                self.assertIn(f"{items[3].knowledge_id} ({named})", str(refused.exception))
+                self.assertEqual(self.path.read_bytes(), filled)
+                export(self.path, force=True)
+                self.assertNotEqual(self.path.read_bytes(), filled)
+
+    def test_rule_values_are_worked_out_again(self):
+        # A file holding only the rules' values is replaced: the table gives them again.
         items = export(self.path)
-        items[3] = dataclasses.replace(items[3], confidence="low", assigned_by="manual")
-        write_items(items, self.path)
-        filled = self.path.read_bytes()
-        with self.assertRaises(FileExistsError) as refused:
-            export(self.path)
-        self.assertIn(f"{items[3].knowledge_id} (confidence, assigned_by)", str(refused.exception))
-        self.assertEqual(self.path.read_bytes(), filled)
-        export(self.path, force=True)
-        self.assertNotEqual(self.path.read_bytes(), filled)
+        self.assertTrue(any(item.validation_status == "rule-assigned" for item in items))
+        write_items([dataclasses.replace(item, confidence="high") if item.assigned_by == "R8" else item
+                     for item in items], self.path)  # as if the table had said "high" for R8 before
+        self.assertEqual(export(self.path), items)
+        self.assertEqual(read_items(self.path), items)
 
     def test_unreadable_file_is_not_overwritten(self):
         self.path.parent.mkdir(parents=True)
@@ -209,18 +252,22 @@ class ExportTests(unittest.TestCase):
                     export(self.path)
                 self.assertEqual(self.path.read_text(encoding="utf-8"), text)
 
-    def test_exported_file_matches_the_guides(self):
-        # data/knowledge/items.json is in git; it must follow the guides.
+    def test_exported_files_match_the_guides_and_rules(self):
+        # data/knowledge/items.json and items_to_curate.csv are in git; they must
+        # follow the guides and the rule table. population and limitations are the team's.
         if not KNOWLEDGE_ITEMS_PATH.is_file():
             self.skipTest(f"{KNOWLEDGE_ITEMS_PATH} not exported")
-        stored = read_items(KNOWLEDGE_ITEMS_PATH)
-        message = "data/knowledge/items.json is out of date: run python -m knowledge.items"
-        self.assertEqual([item.knowledge_id for item in stored], [item.knowledge_id for item in build_items()],
-                         message)
-        for item, built in zip(stored, build_items()):
+        stored, expected = read_items(KNOWLEDGE_ITEMS_PATH), classified_items()
+        message = "data/knowledge/ is out of date: run python -m knowledge.items"
+        self.assertEqual([item.knowledge_id for item in stored], [item.knowledge_id for item in expected], message)
+        compared = [f.name for f in dataclasses.fields(KnowledgeItem) if f.name not in ("population", "limitations")]
+        for item, built in zip(stored, expected):
             with self.subTest(item.knowledge_id):
-                self.assertEqual({name: getattr(item, name) for name in RECORDED},
-                                 {name: getattr(built, name) for name in RECORDED}, message)
+                self.assertEqual({name: getattr(item, name) for name in compared},
+                                 {name: getattr(built, name) for name in compared}, message)
+        sheet = KNOWLEDGE_ITEMS_PATH.parent / CURATE_FILE
+        self.assertEqual([row["knowledge_id"] for row in read_curate(sheet)],
+                         [item.knowledge_id for item in to_curate(expected)], message)
 
 
 if __name__ == "__main__":

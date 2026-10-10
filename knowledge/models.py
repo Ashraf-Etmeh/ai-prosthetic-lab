@@ -60,10 +60,14 @@ VALIDATION_STATUSES = ("unreviewed", "rule-assigned", "owner-reviewed", "special
 RULE_ID = re.compile(r"R[0-9]+")
 ASSIGNED_BY_WORDS = ("manual", "none")
 
+# The evidence values: set only by a rule in the owner's table or by hand,
+# and assigned_by says which. population and limitations may be filled for
+# any item (the owner's decision, 2026-10-10); rules never set them.
+EVIDENCE_FIELDS = ("evidence_layer", "evidence_tag", "confidence")
 # The clinical judgements, and with them who set them and how far they have
 # been reviewed: the fields the team fills in, never the code.
-CLINICAL_FIELDS = ("population", "limitations", "evidence_layer", "evidence_tag", "confidence")
-TEAM_FIELDS = (*CLINICAL_FIELDS, "validation_status", "assigned_by")
+TEAM_FIELDS = ("population", "limitations", *EVIDENCE_FIELDS, "validation_status", "assigned_by")
+REVIEWED = ("owner-reviewed", "specialist-reviewed")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -125,10 +129,10 @@ class KnowledgeItem:
         if self.assigned_by not in ASSIGNED_BY_WORDS and not RULE_ID.fullmatch(self.assigned_by):
             raise ValueError(f"{name}: assigned_by must be a rule id such as 'R1', 'manual' or 'none', "
                              f"got {self.assigned_by!r}")
-        # Nothing clinical without saying where it came from.
-        clinical = [f for f in self.set_fields() if f in CLINICAL_FIELDS]
-        if clinical and self.assigned_by == "none":
-            raise ValueError(f"{name}: {', '.join(clinical)} set, but assigned_by is 'none'; "
+        # No evidence value without saying where it came from.
+        evidence = [f for f in self.set_fields() if f in EVIDENCE_FIELDS]
+        if evidence and self.assigned_by == "none":
+            raise ValueError(f"{name}: {', '.join(evidence)} set, but assigned_by is 'none'; "
                              "name the owner's rule (e.g. 'R1') or 'manual'")
         if self.validation_status == "rule-assigned" and not RULE_ID.fullmatch(self.assigned_by):
             raise ValueError(f"{name}: validation_status 'rule-assigned' needs the rule id in assigned_by, "
@@ -138,3 +142,14 @@ class KnowledgeItem:
         """The TEAM_FIELDS that are no longer as a new item has them."""
         defaults = {field.name: field.default for field in fields(self)}
         return [name for name in TEAM_FIELDS if getattr(self, name) != defaults[name]]
+
+    def kept_by_team(self) -> list[str]:
+        """What only the team can give, so no export may drop it: population or
+        limitations filled, evidence values set by hand, a review. Values set by
+        a rule are not listed: the rule table gives them again."""
+        kept = [name for name in ("population", "limitations") if getattr(self, name)]
+        if self.assigned_by == "manual":
+            kept.append("assigned_by 'manual'")
+        if self.validation_status in REVIEWED:
+            kept.append(f"validation_status '{self.validation_status}'")
+        return kept

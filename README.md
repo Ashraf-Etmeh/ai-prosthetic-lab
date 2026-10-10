@@ -166,14 +166,24 @@ Every statement of both guides is also a *knowledge item*
 (`KnowledgeItem` in `knowledge/models.py`), in the structure of the
 research brief: the statement and its source, plus evidence fields
 (evidence layer, evidence tag, confidence, population, limitations) and a
-review state. Only the owner sets the evidence fields, through a rule table
-(`data/knowledge/evidence_rules.csv`) or by hand; until then they are
-"unassigned" and the item "unreviewed". Export them all (re-run after
-changing a guide):
+review state. Only the owner sets the evidence fields: evidence layer, tag
+and confidence through the owner's rule table
+(`data/knowledge/evidence_rules.csv`) or by hand, population and
+limitations by hand. A rule applies to an item when its condition in
+`knowledge/evidence_rules.py` matches (the item's document, the grade as
+printed); the item then gets the rule's values, status "rule-assigned" and
+the rule id. Two rules matching one item, or an invalid value in the table,
+stop the run before anything is written. Export them all (re-run after
+changing a guide or the rule table):
 
 ```
 python -m knowledge.items     # -> data/knowledge/items.json (UTF-8, Arabic readable)
+                              #    and items_to_curate.csv: the items no rule classified
 ```
+
+`python -m knowledge.evidence_rules` does the same. Neither ever replaces a
+file holding the team's own values (population, limitations, values set by
+hand, a review, a filled-in cell of the sheet).
 
 ## Review log
 
@@ -227,7 +237,7 @@ reasoning/          Gap analysis (what is missing, and which source says why),
 review/             Specialist review page and decision log (writes data/review_log.jsonl)
 tests/              unittest suite (uses a tiny fake embedder, not the real model)
 data/sources/       Knowledge documents: catalog.json in git, the PDFs kept local
-data/knowledge/     Knowledge items exported from the guides (items.json, in git)
+data/knowledge/     The owner's evidence rules, the knowledge items and the items to curate (in git)
 data/extracted/     Cleaned text per document (generated, not in git)
 data/vector_store/  Chunks and their vectors (generated, not in git)
 data/eval/          Retrieval evaluation queries (in git)

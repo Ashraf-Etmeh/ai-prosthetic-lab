@@ -76,8 +76,8 @@ Commands:
 python app.py                  # run the web app
 python -m knowledge.ingest     # extract + chunk + embed all catalogued documents
 python -m knowledge.evaluate   # measure retrieval quality (hit@1 / hit@5)
-python -m knowledge.items      # export the knowledge items to data/knowledge/items.json
-python -m unittest             # 283 tests, a few seconds, no model needed
+python -m knowledge.items      # knowledge items with the owner's rules applied -> data/knowledge/
+python -m unittest             # 303 tests, a few seconds, no model needed
 ```
 
 ---
@@ -280,26 +280,41 @@ shown. Lines are never edited or removed. The 26 lines written while
 building the prototype were moved unchanged to `data/review_log.test.jsonl`;
 `data/review_log.jsonl` started empty on 2026-10-09 for the trial.
 
-### 4.7 Knowledge items (evidence track, roadmap item 3, first part)
+### 4.7 Knowledge items and the owner's evidence rules (evidence track, roadmap item 3)
 
 `KnowledgeItem` (`knowledge/models.py`) puts each curated statement into the
 knowledge-item structure of the research brief. `knowledge/items.py` builds
-one item per statement of both guides (59: 26 component, 33 fitting), and
-`python -m knowledge.items` exports them to `data/knowledge/items.json`
-(UTF-8, Arabic readable, the same file on every export, in git).
+one item per statement of both guides (59: 26 component, 33 fitting);
+`knowledge/evidence_rules.py` applies the owner's rule table
+(`data/knowledge/evidence_rules.csv`, 8 rules). `python -m knowledge.items`
+(or `python -m knowledge.evidence_rules`) writes `data/knowledge/items.json`
+(UTF-8, Arabic readable, the same file for the same guides and table) and
+`items_to_curate.csv`, all in git.
 
 | Fields | Filled from |
 |---|---|
 | `knowledge_id`, `statement`, `list_items`, `topic`, `source_id`, `grade_as_printed` | the guide: statement id, quote and the list it introduces, component or fitting section, document, grade exactly as stored ("" if none) |
 | `citation`, `date`, `source_type` | the catalog: "title (year), p. N" as the review page shows it, the year, the kind of source |
 | `domain` | "prosthetics" (both guides) |
-| `population`, `limitations`, `evidence_layer`, `evidence_tag`, `confidence` | "" / "unassigned": only the owner's rule table (`data/knowledge/evidence_rules.csv`, not written yet) or the owner's own values may set them |
-| `validation_status`, `assigned_by` | "unreviewed", "none" |
+| `evidence_layer`, `evidence_tag`, `confidence`, `validation_status`, `assigned_by` | the one rule whose condition matches: its three values as written (its "unassigned" too), "rule-assigned", the rule id. No rule or a "per item" rule: "unassigned", "unreviewed", "none" |
+| `population`, `limitations` | "": only the owner's own values, for any item; rules never set them |
 
-The model refuses a value outside the allowed lists, a clinical value with
-`assigned_by` "none", and "rule-assigned" without a rule id. The export never
-overwrites a file in which one of these team fields is set (`--force`
-replaces it). The pages and the review log don't use the items yet.
+Each rule's "matches" text is a condition in `evidence_rules.py CONDITIONS`
+on the catalog document, the grade as printed and, for the CMS K-level
+descriptions, the knowledge ids; the owner approved each. Two rules matching
+one item stop the run with nothing written, as does an invalid value in the
+table; a rule never replaces evidence values set by hand or a reviewed item.
+First pass (2026-10-10): R2 4, R3 4, R4 4, R5 5, R6 10, R7 4, R8 28 (R1
+none); all 59 rule-assigned, 46 with the layer left unassigned by the rule,
+so `items_to_curate.csv` (items no rule classified) has no rows.
+
+The model refuses a value outside the allowed lists, an evidence value with
+`assigned_by` "none", and "rule-assigned" without a rule id. The export works
+the rules' values out again each time, but never replaces a file holding
+what only the team can give (population or limitations, values set by hand,
+a review, a filled-in cell of the sheet); `--force` does. The pages and the
+review log don't use the items yet (step 3e will show "Evidence layer: not
+rated by the source" where a rule left the layer unassigned).
 
 ---
 
@@ -327,7 +342,8 @@ knowledge/
   evaluate.py              hit@1/hit@5 evaluation
   models.py                ProtocolChunk (a retrieved passage with citation and score),
                            KnowledgeItem (a curated statement with its evidence fields)
-  items.py                 one KnowledgeItem per guide statement; export to data/knowledge/items.json
+  items.py                 one KnowledgeItem per guide statement, rules applied; export to data/knowledge/
+  evidence_rules.py        loads the owner's rule table, a condition per rule, applies the rules
 reasoning/
   models.py                Gap, Quote, GuidelineStatement, CitedStatement,
                            ComponentSection, FunctionalLevel, ComponentSupport, FittingSupport
@@ -341,10 +357,11 @@ review/
   decision_log.py          validation, log entry building, append/read
   trial_report.py          counts of the reviewers' marks in the log → data/trial/report.csv
   templates/review.html
-tests/                     unittest suite (283 tests) + a tiny fake embedder
+tests/                     unittest suite (303 tests) + a tiny fake embedder
 data/
   sources/                 catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
-  knowledge/items.json     the knowledge items (in git; regenerate after changing a guide)
+  knowledge/               evidence_rules.csv (the owner's), items.json, items_to_curate.csv
+                           (in git; regenerate after changing a guide or the rule table)
   extracted/               cleaned text per document (generated)
   vector_store/            vectors.npy, chunks.json, info.json (generated)
   eval/retrieval_queries.json
@@ -433,13 +450,15 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **283 unit tests** (standard `unittest`, fake embedder, no model load):
+- **303 unit tests** (standard `unittest`, fake embedder, no model load):
   schema, catalog, extraction, ingestion, retrieval filters, field guide,
   gap analysis, component and fitting applicability, review log, case
   files across a simulated restart, pages (through Flask's test client,
   English and Arabic, incl. refilled forms and translated errors),
   translations, knowledge items (allowed values, one item per statement,
-  exported file identical on re-export and in step with the guides).
+  exported files identical on re-export and in step with the guides and
+  the rule table) and the evidence rules (the approved mapping, overlaps
+  and invalid values refused, population and limitations never touched).
 - **Quote test** (`tests/test_component_guide.py`): every quote and context
   quote of all 59 statements is checked word for word on its page of
   `data/extracted/`; list items must follow their heading in order; each
@@ -478,12 +497,13 @@ uses a missing key.
 ## 8. Status and next steps
 
 - Git: the trial-readiness fixes and trial tooling are in `053a190`
-  (pushed); the knowledge-item structure (§4.7) is committed on top, not
-  pushed.
+  (pushed); the knowledge items and the owner's evidence rules (§4.7) are
+  committed on top, not pushed.
 - Roadmap (in `CLAUDE.md`): trial readiness (1 stabilise — done; 2 trial
   tooling — done, then a real prosthetist trial), evidence (3 knowledge-item and
-  evidence fields — structure done, the owner's rule table and its values
-  next; 4 golden-case benchmark), product (5 smart search,
+  evidence fields — structure and the first rule pass done; the owner's own
+  values and showing them on the review page (3e) next; 4 golden-case
+  benchmark), product (5 smart search,
   6 split `Case`, 7 orthotics after the trial). An Arabic-reading
   prosthetist should also check the Arabic terms.
 - Possible: Arabic versions of quotes from the WHO implementation manual

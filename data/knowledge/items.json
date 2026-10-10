@@ -14,11 +14,11 @@
       "grade_as_printed": "Weak for",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R2"
     },
     {
       "knowledge_id": "cms_k2_microprocessor_knee",
@@ -34,10 +34,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "icrc_tf_hip_flexion_contracture_knee",
@@ -53,10 +53,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "va_dod_ll_19_esar_over_sach",
@@ -71,11 +71,11 @@
       "grade_as_printed": "Weak for",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R2"
     },
     {
       "knowledge_id": "va_dod_ll_18_no_specific_foot",
@@ -90,11 +90,11 @@
       "grade_as_printed": "Neither for nor against",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R3"
     },
     {
       "knowledge_id": "cms_power_assist_ankle",
@@ -110,10 +110,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "cms_k2_shock_absorbing_pylon",
@@ -129,10 +129,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "va_dod_ll_15_transfemoral_socket",
@@ -147,11 +147,11 @@
       "grade_as_printed": "Neither for nor against",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R3"
     },
     {
       "knowledge_id": "va_dod_ll_16_ischial_containment",
@@ -166,11 +166,11 @@
       "grade_as_printed": "Neither for nor against",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R3"
     },
     {
       "knowledge_id": "icrc_tt_ptb_socket",
@@ -186,10 +186,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tt_total_surface_bearing_socket",
@@ -205,10 +205,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_total_contact_socket_conditions",
@@ -224,10 +224,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "cms_interface_material",
@@ -243,10 +243,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "icrc_grafted_skin_interface",
@@ -262,10 +262,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "cms_multiple_suspension",
@@ -281,10 +281,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "cms_elevated_vacuum",
@@ -300,10 +300,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "icrc_tt_suspension_methods",
@@ -323,10 +323,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "va_dod_ul_7_body_or_externally_powered",
@@ -341,11 +341,11 @@
       "grade_as_printed": "Weak for",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R2"
     },
     {
       "knowledge_id": "va_dod_ul_8_no_specific_component",
@@ -360,11 +360,11 @@
       "grade_as_printed": "Neither for nor against",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R3"
     },
     {
       "knowledge_id": "cms_k0_description",
@@ -379,11 +379,11 @@
       "grade_as_printed": "",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "established",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R5"
     },
     {
       "knowledge_id": "cms_k1_description",
@@ -398,11 +398,11 @@
       "grade_as_printed": "",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "established",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R5"
     },
     {
       "knowledge_id": "cms_k2_description",
@@ -417,11 +417,11 @@
       "grade_as_printed": "",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "established",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R5"
     },
     {
       "knowledge_id": "cms_k3_description",
@@ -436,11 +436,11 @@
       "grade_as_printed": "",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "established",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R5"
     },
     {
       "knowledge_id": "cms_k4_description",
@@ -455,11 +455,11 @@
       "grade_as_printed": "",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "established",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R5"
     },
     {
       "knowledge_id": "cms_k_level_intended_use",
@@ -475,10 +475,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "cms_k_level_research_gap",
@@ -494,10 +494,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "icrc_ready_for_fitting",
@@ -522,10 +522,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_needs_preparatory_treatment",
@@ -552,10 +552,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_cannot_be_fitted",
@@ -574,10 +574,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tt_knee_flexion_contracture",
@@ -593,10 +593,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "va_dod_ll_5_rigid_dressing",
@@ -611,11 +611,11 @@
       "grade_as_printed": "Weak for",
       "population": "",
       "limitations": "",
-      "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_layer": "evidence-based practice",
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R2"
     },
     {
       "knowledge_id": "va_dod_ul_cleared_for_socket_fitting",
@@ -631,10 +631,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R4"
     },
     {
       "knowledge_id": "who_preparatory_training",
@@ -650,10 +650,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R7"
     },
     {
       "knowledge_id": "who_decision_not_to_prescribe",
@@ -669,10 +669,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R7"
     },
     {
       "knowledge_id": "cms_preparatory_vs_definitive",
@@ -688,10 +688,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "cms_non_alignable_preparatory",
@@ -707,10 +707,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R6"
     },
     {
       "knowledge_id": "icrc_definitive_socket_stable_stump",
@@ -726,10 +726,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_stump_shrinkage_recasting",
@@ -745,10 +745,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_bilateral_tf_stubbies",
@@ -764,10 +764,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "va_dod_ul_prescription_elements",
@@ -794,10 +794,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R4"
     },
     {
       "knowledge_id": "va_dod_ll_algorithm_fitting",
@@ -813,10 +813,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R4"
     },
     {
       "knowledge_id": "icrc_socket_fit_and_alignment_most_important",
@@ -832,10 +832,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_structured_fitting_process",
@@ -857,10 +857,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tf_check_socket",
@@ -876,10 +876,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tf_prosthesis_length",
@@ -895,10 +895,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "who_delivery_check",
@@ -914,10 +914,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R7"
     },
     {
       "knowledge_id": "va_dod_ul_signs_prosthesis_needs_modification",
@@ -939,10 +939,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R4"
     },
     {
       "knowledge_id": "icrc_alignment_definition",
@@ -958,10 +958,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tt_initial_alignment",
@@ -977,10 +977,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tt_foot_angle",
@@ -996,10 +996,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tt_socket_flexion",
@@ -1015,10 +1015,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tt_foot_position",
@@ -1034,10 +1034,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tf_initial_alignment",
@@ -1053,10 +1053,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tf_socket_angles",
@@ -1072,10 +1072,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tf_foot_position",
@@ -1091,10 +1091,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tf_knee_axis",
@@ -1110,10 +1110,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_tf_knee_friction",
@@ -1129,10 +1129,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "icrc_footwear_alters_alignment",
@@ -1148,10 +1148,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "low",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R8"
     },
     {
       "knowledge_id": "who_fit_and_alignment_customization",
@@ -1167,10 +1167,10 @@
       "population": "",
       "limitations": "",
       "evidence_layer": "unassigned",
-      "evidence_tag": "unassigned",
-      "confidence": "unassigned",
-      "validation_status": "unreviewed",
-      "assigned_by": "none"
+      "evidence_tag": "direct evidence",
+      "confidence": "medium",
+      "validation_status": "rule-assigned",
+      "assigned_by": "R7"
     }
   ]
 }

@@ -658,6 +658,70 @@ values; the pages and the review log are unchanged.
   "rule-assigned"); where the owner's own values are kept; and how a
   re-export keeps values already set (today it refuses).
 
+## Evidence 3b-3c: source inventory and the owner's rules (done 2026-10-10)
+
+- **3b, facts for the rule table:** `data/knowledge/source_inventory.md`
+  (written by a one-off script, read-only otherwise): per cited document
+  its title, year, source_type, item counts (component / fitting) and
+  grades as printed, and per item its id, grade, page and first 120
+  characters. 5 documents; grades only in the two VA/DoD guidelines (4
+  "Weak for", 4 "Neither for nor against", 4 without a grade).
+- **3c, the owner's table:** `data/knowledge/evidence_rules.csv`, 8 rules
+  (R1-R8), copied cell for cell from the owner's message (UTF-8 with a
+  byte-order mark, like the Arabic term sheet). Code never writes it.
+- **Conditions, approved by the owner** (`knowledge/evidence_rules.py
+  CONDITIONS`):
+  - R1-R4: either VA/DoD guideline (lower limb 2024, upper limb 2022) and
+    `grade_as_printed` exactly "Strong for"/"Strong against" (R1),
+    "Weak for"/"Weak against" (R2), "Neither for nor against" (R3), or
+    empty (R4, "no printed grade").
+  - R5: CMS 2017 and the knowledge ids `cms_k0_description` …
+    `cms_k4_description`.
+  - R6: CMS 2017 and any other item. The CMS statements all have no
+    grade, so ids tell the K-level descriptions apart.
+  - R7: the four WHO standards documents, parts 1 and 2, in English and
+    Arabic. The catalog dates the Arabic editions 2019.
+  - R8: the ICRC manual.
+- **The owner's decisions (2026-10-10):**
+  - "unassigned" in a rule is deliberate: the rule sets tag and
+    confidence, marks the item rule-assigned and leaves the layer empty;
+    such items are not in `items_to_curate.csv`.
+  - The origin check (an evidence value needs `assigned_by`) covers only
+    evidence layer, tag and confidence; population and limitations may be
+    filled for any item later, and stay empty for now (model changed).
+  - "per item" in the layer column means the rule sets nothing (none of
+    the 8 rules uses it).
+- **Behaviour:** exactly one rule matching an item sets its three values,
+  "rule-assigned" and the rule id; none, or a "per item" rule, leaves it
+  "unassigned" (and undoes values of a rule that no longer matches); two
+  or more stop the run, naming each item and its rules, with nothing
+  written. Rules never touch population or limitations, and never replace
+  evidence values set by hand or a reviewed item (an error too). The table
+  must have exactly the six columns, valid values, unique ids, and one
+  condition per rule. The export works rule values out again each time;
+  it refuses to replace `items.json` holding population or limitations,
+  values set by hand or a review, or a sheet with a filled-in cell.
+- **First pass:** R1 0, R2 4, R3 4, R4 4, R5 5, R6 10, R7 4, R8 28. All
+  59 rule-assigned (46 with the layer left unassigned by the rule), so
+  `items_to_curate.csv` has only its header. Two exports gave the same
+  SHA-256 for both files, from either command.
+- **Tests:** 303 (20 new in `tests/test_evidence_rules.py`, step 3a's
+  tests adjusted for the model change). Eight deliberate errors in memory
+  (overlap resolved by the first rule, rules filling population, rule
+  confidence unchecked, a "per item" rule assigning values, R6 without the
+  K-level exception, the sheet listing layer-unassigned items, a filled
+  population overwritten, the sheet check skipped): all caught.
+- **Decided for later steps, not built:**
+  - **Importing the owner's values** (e.g. a filled-in
+    `items_to_curate.csv`): refuses evidence layer, tag and confidence
+    for a rule-assigned item; accepts population and limitations for any
+    item. Where those values are kept, so that an export keeps them, is
+    still open (today the export refuses to replace them).
+  - **Review page (3e):** where a rule left the layer unassigned on
+    purpose (status "rule-assigned", layer "unassigned"), show "Evidence
+    layer: not rated by the source" instead of nothing (with its Arabic
+    text in `shared/i18n.py`).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).
