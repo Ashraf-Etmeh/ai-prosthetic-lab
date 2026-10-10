@@ -217,15 +217,18 @@ def submit_form():
     return redirect(url_for("review.show_case", case_id=case.case_id))
 
 
-def analyse_case(case: Case) -> CaseRecord:
+def analyse_case(case: Case, retrieve=None) -> CaseRecord:
     """Everything the review page shows for a case: search, gaps, components, fitting.
 
-    Used for a submitted form and for the prepared trial cases
-    (intake/load_trial_cases.py), so both are analysed the same way.
+    Used for a submitted form, the prepared trial cases
+    (intake/load_trial_cases.py) and the golden cases (intake/golden_cases.py),
+    so all are analysed the same way. `retrieve` replaces the search
+    (default: retrieve_relevant_chunks); the golden cases pass one that
+    raises KnowledgeBaseMissing when the model is not available.
     """
     warning = None
     try:
-        chunks = retrieve_relevant_chunks(case)
+        chunks = (retrieve or retrieve_relevant_chunks)(case)
     except KnowledgeBaseMissing as e:
         # Still list the gaps, but say plainly that no sources were searched.
         chunks, warning = {}, f"The source library was not searched: {e}"

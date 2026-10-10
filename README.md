@@ -220,7 +220,13 @@ python -m review.trial_report            # counts from the review log -> data/tr
 
 ```
 python -m unittest
+python -m intake.golden_cases     # fake cases with the output they must give (data/eval/golden_cases/)
 ```
+
+The golden cases run through the same analysis as the intake form. Without
+the search model or the vector store (or with `--no-search`) their gap
+checks are skipped and the rest still run; the model is never downloaded.
+A difference fails a case marked "reviewed" and warns for an "unreviewed" one.
 
 ## Layout
 
@@ -240,7 +246,7 @@ data/sources/       Knowledge documents: catalog.json in git, the PDFs kept loca
 data/knowledge/     The owner's evidence rules, the knowledge items and the items to curate (in git)
 data/extracted/     Cleaned text per document (generated, not in git)
 data/vector_store/  Chunks and their vectors (generated, not in git)
-data/eval/          Retrieval evaluation queries (in git)
+data/eval/          Retrieval evaluation queries and golden cases (in git)
 data/cases/         One JSON file per case entered (not in git)
 data/trial/         Arabic term sheet, prepared trial cases (in git); trial report (not in git)
 ```

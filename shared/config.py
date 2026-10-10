@@ -48,6 +48,8 @@ RETRIEVAL_LANGUAGES = ("en", "ar")
 # answers scored 0.58 or more, off-topic text at most 0.44.
 MIN_RELEVANCE_SCORE = 0.50
 EVAL_QUERIES_PATH = DATA_DIR / "eval" / "retrieval_queries.json"
+# One fake case per file with the output it must give (intake/golden_cases.py)
+GOLDEN_CASES_DIR = DATA_DIR / "eval" / "golden_cases"
 # Only documents whose catalog "domains" include one of these are searched.
 # v1 is use case 01 (amputation), so orthotics-only documents are skipped.
 RETRIEVAL_DOMAINS = ("prosthetics",)

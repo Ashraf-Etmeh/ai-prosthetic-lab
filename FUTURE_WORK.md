@@ -722,6 +722,70 @@ values; the pages and the review log are unchanged.
     layer: not rated by the source" instead of nothing (with its Arabic
     text in `shared/i18n.py`).
 
+## Evidence 4a: golden-case benchmark, format, runner, three cases (done 2026-10-10)
+
+Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
+
+- **Format:** one fake case per file in `data/eval/golden_cases/`, in the
+  research brief's benchmark fields (id, description, review_status,
+  question = `Case.to_dict()`, expected_answer {gaps with source_expected
+  true/false/null, statements_present, functional_level},
+  common_wrong_answers {statements_absent}, supporting_sources,
+  reasoning_path, evaluation_criteria). `reasoning_path` names, per
+  statement, the rule fields that decide it and the case value each reads:
+  every field the rule sets for a present statement, the failing one(s)
+  for an absent one.
+- **Runner:** `python -m intake.golden_cases [FILE ...] [--no-search]`.
+  Each case goes through `analyse_case()` (POST /intake's analysis; it
+  now takes an optional `retrieve`, default the normal search). Statements,
+  supporting sources, reasoning path and functional level need no model;
+  gap checks need the model and the vector store and are SKIPPED with the
+  reason otherwise (looked up with `huggingface_hub.try_to_load_from_cache`,
+  never downloaded). A mismatch is FAIL in a reviewed case, WARN in an
+  unreviewed one; a gap citing a `RETRIEVAL_EXCLUDED_DOCUMENTS` document is
+  always FAIL; a malformed file is ERROR; exit status 1 on FAIL or ERROR.
+  The reasoning path is checked against the rule definitions and the case
+  (named fields set on the rule, case values) without deciding any rule.
+- **Three cases**, expectations drafted by hand from the rule fields and
+  the field guide before anything was run (hashes recorded): golden-01
+  transtibial left K3 (33 statements, 4 gaps), golden-02 transfemoral right
+  K2 (37, 6), golden-03 transradial left (9, 4; no K-level description).
+  All 52 component and fitting rules are decided in each case.
+  `source_expected` is false for prior_devices (no library source covers
+  it) and null elsewhere: whether a passage passes the score and topic
+  check can't be drawn from the rules.
+- **Result: 0 differences** (the runner, with the real model, and a
+  separate script comparing raw sets). Of the 12 gaps drafted null, 10
+  cited a source and 2 did not (golden-02 sensation, golden-03 residual
+  limb length); golden-03 comorbidities cites the phantom-limb-pain review
+  (the pattern of run-check finding 3 above).
+- **Review (by Claude at the owner's request):** every expectation read
+  against its rule's quote and page. The ICRC rules without a level in
+  their quote follow the manual's headings: p. 20 "Transtibial prostheses"
+  (PTB, TSB), pp. 67-70 "TT prostheses" (p. 68 alignment errors), pp. 70-73
+  "TF prostheses (quad socket)" (pp. 71-73); pp. 44, 46, 49, 66 and 110
+  are general. VA/DoD recommendation 16 is transfemoral by its own
+  discussion ("sub-I and other transfemoral level sockets"). All three
+  cases right; `review_status` set to "reviewed" (the only line changed).
+- **Bug found, to fix in a separate step:** `cms_power_assist_ankle` has
+  `ambulators_only`, but its quote (CMS p. 11) names no ambulators or
+  K-level, so the statement is hidden for K0 without the source saying
+  so. None of the three cases is K0; a K0 golden case would cover it.
+- **What the reviewed cases hold to (current design, not bugs):**
+  statements whose wording names a time ("Post-transtibial amputation",
+  "a new amputation") are shown whatever the months since amputation
+  (statements never depend on readiness values); "community ambulators"
+  statements are shown for K2 (only K0 is excluded; VA/DoD's definition is
+  shown as context). Changing either design changes golden-01/02.
+- **Seen, not part of this step:** with the network up, loading bge-m3
+  printed "You are sending unauthenticated requests to the HF Hub", so the
+  load makes an optional Hub request despite `local_files_only`; with
+  `HF_HUB_OFFLINE=1` the same run gives identical results. Check against
+  principle 3 (no cloud service at runtime) separately.
+- **Tests:** 319 (16 new, `tests/test_golden_cases.py`): file checks,
+  every kind of difference named, reviewed FAIL vs unreviewed WARN,
+  excluded documents, the skip without the model, exit status.
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).
