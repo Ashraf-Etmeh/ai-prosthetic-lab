@@ -610,6 +610,54 @@ unchanged: the intake route's analysis moved, word for word, into
   decisions on 7 cases logged, report built; e.g. "prior_devices" marked
   Needed 3 times with no source shown, which matches the known library gap.
 
+## Evidence 3a: knowledge-item structure (done 2026-10-10)
+
+Roadmap item 3 (`CLAUDE.md`), first part: the structure only. No clinical
+values; the pages and the review log are unchanged.
+
+- **`CLAUDE.md`:** clinical judgements (evidence layer, evidence tag,
+  confidence, population, limitations) come only from the owner's rule
+  table (`data/knowledge/evidence_rules.csv`) or the owner's own values;
+  code applies them and never infers them.
+- **Model:** `KnowledgeItem` in `knowledge/models.py`, next to
+  `ProtocolChunk`, so any layer can use the shape without importing the
+  guides. Frozen (a change makes a new item, which is checked again) and
+  keyword-only. Allowed values as in the brief; `assigned_by` is a rule id
+  (`R` + digits), "manual" or "none". Two more checks keep every value
+  traceable: a clinical value with `assigned_by` "none" is refused, and so
+  is "rule-assigned" without a rule id.
+- **Items:** `knowledge/items.py` builds one item per guide statement:
+  **59** (26 component: 19 rules, 5 K-level descriptions, 2 cautions; 33
+  fitting), as `SYSTEM_DESCRIPTION.md` counts them. Choices made while
+  building:
+  - **`list_items` added** (not in the brief's field list): 7 statements
+    are a heading followed by a list ("Those who are ready for fitting",
+    the ICRC transtibial suspension methods, VA/DoD upper limb tables 5-6,
+    …). Without it the item would hold only the heading.
+  - **`date`** is the source's year from the catalog (e.g. "2017"), the
+    only date recorded.
+  - **`domain`** is "prosthetics" for both guides.
+  - **`citation`** is the review page's form, "title (year), p. N".
+  - **Context quotes not copied** into the item (scope, confidence and
+    caveats from the same document). They stay in the guides. Putting one
+    into `population` or `limitations` would be a judgement.
+- **Export:** `python -m knowledge.items` → `data/knowledge/items.json`
+  (54 KB; `ensure_ascii=False`, `\n` line ends; no timestamp, so two
+  exports give the same SHA-256). The file is in git; a test fails, naming
+  the command, if it no longer matches the guides. Like the Arabic term
+  sheet, the export never overwrites a file in which a team field is set,
+  or one it can't read (`--force` replaces it).
+- **Tests:** 283 (21 new, `tests/test_knowledge_items.py`). Checked with
+  nine deliberate errors in memory (a grade lower-cased, a confidence
+  filled in by code, the page left out of the citation, list items left
+  out, the K-level cautions left out of the guide, Arabic escaped,
+  confidence values unchecked, team values overwritten, a guide quote
+  changed after export): all nine caught.
+- **Next (3b, needs the owner):** the owner's `evidence_rules.csv` and
+  the code that applies it (`assigned_by` = the rule id, status
+  "rule-assigned"); where the owner's own values are kept; and how a
+  re-export keeps values already set (today it refuses).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

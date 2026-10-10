@@ -1,6 +1,6 @@
 # AI Prosthetic Lab — system description (functional and structural)
 
-State of the working tree on 2026-10-09. Everything below runs and is
+State of the working tree on 2026-10-10. Everything below runs and is
 tested. More history and the reasons behind each decision are in
 `FUTURE_WORK.md`; how to run it is in `README.md`; principles, working
 rules and the roadmap are in `CLAUDE.md`.
@@ -76,7 +76,8 @@ Commands:
 python app.py                  # run the web app
 python -m knowledge.ingest     # extract + chunk + embed all catalogued documents
 python -m knowledge.evaluate   # measure retrieval quality (hit@1 / hit@5)
-python -m unittest             # 219 tests, ~1 s, no model needed
+python -m knowledge.items      # export the knowledge items to data/knowledge/items.json
+python -m unittest             # 283 tests, a few seconds, no model needed
 ```
 
 ---
@@ -279,6 +280,27 @@ shown. Lines are never edited or removed. The 26 lines written while
 building the prototype were moved unchanged to `data/review_log.test.jsonl`;
 `data/review_log.jsonl` started empty on 2026-10-09 for the trial.
 
+### 4.7 Knowledge items (evidence track, roadmap item 3, first part)
+
+`KnowledgeItem` (`knowledge/models.py`) puts each curated statement into the
+knowledge-item structure of the research brief. `knowledge/items.py` builds
+one item per statement of both guides (59: 26 component, 33 fitting), and
+`python -m knowledge.items` exports them to `data/knowledge/items.json`
+(UTF-8, Arabic readable, the same file on every export, in git).
+
+| Fields | Filled from |
+|---|---|
+| `knowledge_id`, `statement`, `list_items`, `topic`, `source_id`, `grade_as_printed` | the guide: statement id, quote and the list it introduces, component or fitting section, document, grade exactly as stored ("" if none) |
+| `citation`, `date`, `source_type` | the catalog: "title (year), p. N" as the review page shows it, the year, the kind of source |
+| `domain` | "prosthetics" (both guides) |
+| `population`, `limitations`, `evidence_layer`, `evidence_tag`, `confidence` | "" / "unassigned": only the owner's rule table (`data/knowledge/evidence_rules.csv`, not written yet) or the owner's own values may set them |
+| `validation_status`, `assigned_by` | "unreviewed", "none" |
+
+The model refuses a value outside the allowed lists, a clinical value with
+`assigned_by` "none", and "rule-assigned" without a rule id. The export never
+overwrites a file in which one of these team fields is set (`--force`
+replaces it). The pages and the review log don't use the items yet.
+
 ---
 
 ## 5. Structure
@@ -303,7 +325,9 @@ knowledge/
   embedding.py             bge-m3 loading (local cache first) and embed_texts()
   retrieval.py             VectorStore, filtered search, one search per missing field
   evaluate.py              hit@1/hit@5 evaluation
-  models.py                ProtocolChunk (a retrieved passage with citation and score)
+  models.py                ProtocolChunk (a retrieved passage with citation and score),
+                           KnowledgeItem (a curated statement with its evidence fields)
+  items.py                 one KnowledgeItem per guide statement; export to data/knowledge/items.json
 reasoning/
   models.py                Gap, Quote, GuidelineStatement, CitedStatement,
                            ComponentSection, FunctionalLevel, ComponentSupport, FittingSupport
@@ -317,9 +341,10 @@ review/
   decision_log.py          validation, log entry building, append/read
   trial_report.py          counts of the reviewers' marks in the log → data/trial/report.csv
   templates/review.html
-tests/                     unittest suite (262 tests) + a tiny fake embedder
+tests/                     unittest suite (283 tests) + a tiny fake embedder
 data/
   sources/                 catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
+  knowledge/items.json     the knowledge items (in git; regenerate after changing a guide)
   extracted/               cleaned text per document (generated)
   vector_store/            vectors.npy, chunks.json, info.json (generated)
   eval/retrieval_queries.json
@@ -360,6 +385,11 @@ ComponentSupport(functional: FunctionalLevel, sections, notes)
 FittingSupport(sections, recorded: [(field path, value)])
 
 CaseRecord(case, retrieved_chunks, gaps, knowledge_warning, components, fitting)
+
+KnowledgeItem(knowledge_id, statement, list_items, domain, topic, source_id,
+              citation, date, source_type, grade_as_printed,            recorded
+              population, limitations, evidence_layer, evidence_tag,    the owner's
+              confidence, validation_status, assigned_by)               (§4.7)
 ```
 
 ### 5.2 Request flow
@@ -403,12 +433,13 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **262 unit tests** (standard `unittest`, fake embedder, no model load):
+- **283 unit tests** (standard `unittest`, fake embedder, no model load):
   schema, catalog, extraction, ingestion, retrieval filters, field guide,
   gap analysis, component and fitting applicability, review log, case
   files across a simulated restart, pages (through Flask's test client,
   English and Arabic, incl. refilled forms and translated errors),
-  translations.
+  translations, knowledge items (allowed values, one item per statement,
+  exported file identical on re-export and in step with the guides).
 - **Quote test** (`tests/test_component_guide.py`): every quote and context
   quote of all 59 statements is checked word for word on its page of
   `data/extracted/`; list items must follow their heading in order; each
@@ -446,15 +477,13 @@ uses a missing key.
 
 ## 8. Status and next steps
 
-- Git: design and fitting committed as `988f13f` (2026-10-09); `main` is
-  4 commits ahead of GitHub (not pushed). The trial-readiness fixes (case
-  files, refilled form, language switch, translated errors, separate test
-  log) and the trial tooling (Arabic term sheet, 15 prepared cases and
-  their loader, the trial report) are done and tested but not yet
-  committed.
+- Git: the trial-readiness fixes and trial tooling are in `053a190`
+  (pushed); the knowledge-item structure (§4.7) is committed on top, not
+  pushed.
 - Roadmap (in `CLAUDE.md`): trial readiness (1 stabilise — done; 2 trial
   tooling — done, then a real prosthetist trial), evidence (3 knowledge-item and
-  evidence fields, 4 golden-case benchmark), product (5 smart search,
+  evidence fields — structure done, the owner's rule table and its values
+  next; 4 golden-case benchmark), product (5 smart search,
   6 split `Case`, 7 orthotics after the trial). An Arabic-reading
   prosthetist should also check the Arabic terms.
 - Possible: Arabic versions of quotes from the WHO implementation manual

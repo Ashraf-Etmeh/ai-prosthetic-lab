@@ -160,6 +160,21 @@ their heading in order, and that each VA/DoD grade is the one printed
 after the recommendation. To add a statement, copy it from
 `data/extracted/`, add a rule, and run the tests.
 
+## Knowledge items
+
+Every statement of both guides is also a *knowledge item*
+(`KnowledgeItem` in `knowledge/models.py`), in the structure of the
+research brief: the statement and its source, plus evidence fields
+(evidence layer, evidence tag, confidence, population, limitations) and a
+review state. Only the owner sets the evidence fields, through a rule table
+(`data/knowledge/evidence_rules.csv`) or by hand; until then they are
+"unassigned" and the item "unreviewed". Export them all (re-run after
+changing a guide):
+
+```
+python -m knowledge.items     # -> data/knowledge/items.json (UTF-8, Arabic readable)
+```
+
 ## Review log
 
 The specialist marks each gap "Needed" or "Not needed for this case", and
@@ -204,13 +219,15 @@ app.py              Flask entry point; registers the intake and review pages
 shared/             Case schema, config (paths, settings, disclaimer), case store
                     (memory + data/cases/), interface text in English and Arabic (i18n.py)
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
-knowledge/          Source catalog, text extraction, ingestion, search, evaluation
+knowledge/          Source catalog, text extraction, ingestion, search, evaluation,
+                    knowledge items (the curated statements with their evidence fields)
 reasoning/          Gap analysis (what is missing, and which source says why),
                     component support (what the sources say per component) and
                     fitting support (readiness, preparatory/definitive, fitting, alignment)
 review/             Specialist review page and decision log (writes data/review_log.jsonl)
 tests/              unittest suite (uses a tiny fake embedder, not the real model)
 data/sources/       Knowledge documents: catalog.json in git, the PDFs kept local
+data/knowledge/     Knowledge items exported from the guides (items.json, in git)
 data/extracted/     Cleaned text per document (generated, not in git)
 data/vector_store/  Chunks and their vectors (generated, not in git)
 data/eval/          Retrieval evaluation queries (in git)
