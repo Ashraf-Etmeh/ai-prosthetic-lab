@@ -12,12 +12,26 @@
 
 None of them is a prescription: see shared/config.py DISCLAIMER. The
 specialist decides.
+
+Since 2026-10-11 (RAG, reasoning/rag.py) the statements and gap citations
+come from the passages the search found, each with a short summary written
+by the AI (summary_en, summary_ar) and backed by a quote that
+reasoning/quote_check.py found word for word in its passage. The
+hand-written statements (origin "guide") are the answer key.
 """
 
 from dataclasses import dataclass, field
 from typing import Optional
 
 from knowledge.models import ProtocolChunk
+
+FUNCTIONAL_LEVEL = "functional_level"  # the section of the K-level statements
+ORIGIN_GUIDE = "guide"  # hand-written: reasoning/component_guide.py, fitting_guide.py
+ORIGIN_RAG = "rag"  # found by the search, summarised by the AI, quote checked
+
+
+def _in_language(english: Optional[str], arabic: Optional[str], lang: str) -> Optional[str]:
+    return arabic if lang == "ar" and arabic else english
 
 
 @dataclass
@@ -27,10 +41,19 @@ class Gap:
     status: str  # "not recorded" or "recorded as unknown"
     why_needed: str  # plain-language reason, pointing at the cited passage
     # chunk_id of the cited passage. Always one of the chunks retrieved for
-    # this field, so the specialist can check it. None: no passage found.
+    # this case's missing fields (without the AI: for this field), so the
+    # specialist can check it. None: no passage found.
     source_protocol_reference: Optional[str] = None
     evidence: Optional[ProtocolChunk] = None  # the cited passage itself
-    excerpt: Optional[str] = None  # its sentences that mention this field's topic
+    # Its words shown as the quote: the AI's quote, checked word for word in
+    # the passage; without the AI, its sentences that mention the field's topic.
+    excerpt: Optional[str] = None
+    # The AI's sentence on why the source says this matters (None: no AI summary).
+    summary_en: Optional[str] = None
+    summary_ar: Optional[str] = None
+
+    def summary(self, lang: str) -> Optional[str]:
+        return _in_language(self.summary_en, self.summary_ar, lang)
 
 
 @dataclass(frozen=True)
@@ -76,6 +99,14 @@ class CitedStatement:
     # The catalog's kind of source (the brief's six), e.g. "protocol" for a
     # guideline, "professional_knowledge" for a training manual.
     source_type: str = "protocol"
+    origin: str = ORIGIN_GUIDE  # ORIGIN_GUIDE or ORIGIN_RAG
+    # RAG only: the AI's sentence, and the passage the quote was found in.
+    summary_en: Optional[str] = None
+    summary_ar: Optional[str] = None
+    chunk_id: Optional[str] = None
+
+    def summary(self, lang: str) -> Optional[str]:
+        return _in_language(self.summary_en, self.summary_ar, lang)
 
     def citation(self, quote: Quote) -> str:
         """E.g. "Lower Limb Prosthetic Workgroup Consensus Document (2017), p. 10"."""
@@ -113,6 +144,16 @@ class ComponentSupport:
     @property
     def statements(self) -> list[CitedStatement]:
         return [cited for section in self.sections for cited in section.statements]
+
+    @property
+    def component_sections(self) -> list[ComponentSection]:
+        """The sections of the components themselves (not the functional level's)."""
+        return [section for section in self.sections if section.component != FUNCTIONAL_LEVEL]
+
+    @property
+    def functional_section(self) -> Optional[ComponentSection]:
+        """RAG: what the sources say about the functional level (None: not searched)."""
+        return next((section for section in self.sections if section.component == FUNCTIONAL_LEVEL), None)
 
 
 @dataclass

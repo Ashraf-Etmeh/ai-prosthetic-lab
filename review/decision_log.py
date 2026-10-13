@@ -18,7 +18,12 @@ object that can be read on its own, holding
 - the language of the review page ("ui_language", "en" or "ar"). Labels
   and explanations are logged in English whichever language was shown;
   the Arabic page shows the same items, translated (shared/i18n.py),
-- the settings that produced the gap list.
+- the settings that produced the gap list,
+- since version 5 (the RAG, 2026-10-11): each statement's origin ("rag" or
+  "guide"), the AI's sentences in English and Arabic, the passage it was
+  found in (id and full text), and "generation": the prompt version, the
+  model, and per part (gaps, components, fitting) whether the AI answered,
+  why not, its token counts and time, and what the quote check removed.
 
 Lines are only ever added. Editing or removing a logged decision is out of
 scope for v1 (FUTURE_WORK.md).
@@ -32,10 +37,14 @@ from pathlib import Path
 from typing import Optional
 
 from reasoning.models import CitedStatement, ComponentSection, ComponentSupport, FittingSupport, Gap, Quote
+from reasoning.rag import Generation
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
+    MIN_QUOTE_WORDS,
     MIN_RELEVANCE_SCORE,
+    RAG_TOP_K,
+    RAG_TOPIC_EXCLUDED_DOCUMENTS,
     RETRIEVAL_DOMAINS,
     RETRIEVAL_LANGUAGES,
     RETRIEVAL_TOP_K,
@@ -51,8 +60,11 @@ STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
 # version 1 entries were all made on the English page. 3 (2026-10-08): adds
 # "components" (functional level and component statements). 4 (2026-10-09):
 # adds "fitting" (design and fitting statements), "source_type" per
-# statement, and "items" for a quote that introduces a list.
-LOG_VERSION = 4
+# statement, and "items" for a quote that introduces a list. 5 (2026-10-11,
+# the RAG): adds "generation", per statement "origin", "summary_en",
+# "summary_ar", "chunk_id" and "passage", per gap "summary_en" and
+# "summary_ar", and the RAG settings.
+LOG_VERSION = 5
 
 # The development server answers requests in threads; one write at a time
 # keeps two decisions from mixing into one line.
@@ -106,8 +118,9 @@ def build_entry(
         "note": note,
         "ui_language": ui_language,
         "gaps": [_gap_entry(gap, gap_judgements.get(gap.field)) for gap in record.gaps],
-        "components": _components_entry(record.components, statement_judgements),
-        "fitting": _fitting_entry(record.fitting, statement_judgements),
+        "components": _components_entry(record.components, statement_judgements, record),
+        "fitting": _fitting_entry(record.fitting, statement_judgements, record),
+        "generation": _generation_entry(record.generation),
         "knowledge_warning": record.knowledge_warning,  # set if no sources were searched
         "settings": {
             "embedding_model": EMBEDDING_MODEL_NAME,
@@ -116,8 +129,35 @@ def build_entry(
             "retrieval_languages": list(RETRIEVAL_LANGUAGES),
             "retrieval_domains": list(RETRIEVAL_DOMAINS),
             "retrieval_top_k": RETRIEVAL_TOP_K,
+            "rag_top_k": RAG_TOP_K,
+            "rag_topic_excluded_documents": list(RAG_TOPIC_EXCLUDED_DOCUMENTS),
+            "min_quote_words": MIN_QUOTE_WORDS,
         },
         "case": record.case.to_dict(),
+    }
+
+
+def _generation_entry(generation: Optional[Generation]) -> Optional[dict]:
+    """What the AI was asked and what came of it; the kept items are in the sections."""
+    if generation is None:
+        return None
+    return {
+        "prompt_version": generation.prompt_version,
+        "writer": generation.writer,  # the model asked, or "offline"
+        "effort": generation.effort,
+        "parts": {
+            name: {
+                "status": part.status,  # "ok", "unavailable" or "no passages"
+                "reason": part.reason,  # why unavailable
+                "model": part.model,  # the model that answered
+                "usage": part.usage,
+                "seconds": part.seconds,
+                "topics": part.topics,
+                "items_kept": len(part.items),
+                "removed": part.removed,  # what the quote check took out, and why
+            }
+            for name, part in generation.parts.items()
+        },
     }
 
 
@@ -143,6 +183,8 @@ def _gap_entry(gap: Gap, judgement: Optional[str]) -> dict:
         "label": gap.label,
         "status": gap.status,
         "why_needed": gap.why_needed,
+        "summary_en": gap.summary_en,  # the AI's sentence; None without the AI
+        "summary_ar": gap.summary_ar,
         "reviewer_judgement": judgement,  # "needed", "not_needed", or None (not marked)
         "source": source,  # None: the gap cited no passage
     }
@@ -160,7 +202,12 @@ def _quoted(cited: CitedStatement) -> dict:
     return {"id": statement.id, "doc_id": statement.doc_id, **_quote(cited, statement.quote)}
 
 
-def _sections_entry(sections: list[ComponentSection], judgements: dict[str, str]) -> list[dict]:
+def _sections_entry(sections: list[ComponentSection], judgements: dict[str, str],
+                    record: Optional[CaseRecord] = None) -> list[dict]:
+    def passage(cited: CitedStatement) -> Optional[str]:
+        chunk = record.passage(cited.chunk_id) if record is not None and cited.chunk_id else None
+        return chunk.text if chunk else None
+
     return [
         {
             "component": section.component,
@@ -171,6 +218,11 @@ def _sections_entry(sections: list[ComponentSection], judgements: dict[str, str]
                     "grade": cited.statement.grade,  # the source's own; None if it gives none
                     "source_type": cited.source_type,  # e.g. "protocol", "professional_knowledge"
                     "context": [_quote(cited, quote) for quote in cited.statement.context],
+                    "origin": cited.origin,  # "rag" (search + AI, quote checked) or "guide" (hand-written)
+                    "summary_en": cited.summary_en,  # the AI's sentence; None for a hand-written statement
+                    "summary_ar": cited.summary_ar,
+                    "chunk_id": cited.chunk_id,  # the passage the quote was found in
+                    "passage": passage(cited),  # its full text, as the AI saw it
                     # "relevant", "not_relevant", or None (not marked)
                     "reviewer_judgement": judgements.get(cited.statement.id),
                 }
@@ -181,7 +233,8 @@ def _sections_entry(sections: list[ComponentSection], judgements: dict[str, str]
     ]
 
 
-def _components_entry(support: Optional[ComponentSupport], judgements: dict[str, str]) -> Optional[dict]:
+def _components_entry(support: Optional[ComponentSupport], judgements: dict[str, str],
+                      record: Optional[CaseRecord] = None) -> Optional[dict]:
     if support is None:
         return None
     functional = support.functional
@@ -193,18 +246,19 @@ def _components_entry(support: Optional[ComponentSupport], judgements: dict[str,
             "cautions": [_quoted(cited) for cited in functional.cautions],
         },
         "notes": list(support.notes),  # why some statements were left out
-        "sections": _sections_entry(support.sections, judgements),
+        "sections": _sections_entry(support.sections, judgements, record),
     }
 
 
-def _fitting_entry(support: Optional[FittingSupport], judgements: dict[str, str]) -> Optional[dict]:
+def _fitting_entry(support: Optional[FittingSupport], judgements: dict[str, str],
+                   record: Optional[CaseRecord] = None) -> Optional[dict]:
     if support is None:
         return None
     return {
         # The intake values shown next to the readiness statements; None: not recorded.
         "recorded": {path: value.value if isinstance(value, Enum) else value
                      for path, value in support.recorded},
-        "sections": _sections_entry(support.sections, judgements),
+        "sections": _sections_entry(support.sections, judgements, record),
     }
 
 

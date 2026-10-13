@@ -3,6 +3,23 @@
   python -m intake.golden_cases                 every data/eval/golden_cases/*.json
   python -m intake.golden_cases FILE ...        only these files
   python -m intake.golden_cases --no-search     statements and functional level only
+  python -m intake.golden_cases --rag           also measure the RAG: calls the Claude API
+                                                (three calls per case: costs money, ask first)
+
+Since the RAG (2026-10-11) the review page's statements come from the search
+and the AI, and the hand-written statements are the answer key. So:
+- the statement, supporting-source, reasoning-path and functional-level
+  checks test the answer key itself: what the hand-written rules
+  (reasoning/component_support.py, fitting_support.py) give for the case;
+- the gap checks test the page's gap list; without --rag the AI is switched
+  off, so the gaps come from the search and topic-word check, as before;
+- --rag measures the RAG against the answer key: how many expected
+  statements a checked RAG quote covers (same document, a run of
+  COVER_WORDS words in common), any statement the case must not show that
+  one covers, what the quote check removed, the gap sources, and the tokens,
+  time and estimated cost. These are measurements (INFO, or WARN for a
+  statement that must not be shown or an AI part that didn't answer): they
+  never fail the run.
 
 Each file holds one fake case in the research brief's benchmark fields:
   id, description, review_status   "unreviewed" (a draft) or "reviewed" (checked by the team)
@@ -43,9 +60,11 @@ a malformed file is ERROR. Exit status 1 if anything is FAIL or ERROR.
 
 import argparse
 import json
+import re
 import sys
+import unicodedata
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -56,6 +75,10 @@ from knowledge.ingest import INFO_FILE
 from knowledge.retrieval import KnowledgeBaseMissing
 from reasoning import component_guide, fitting_guide
 from reasoning.component_guide import K_LEVEL_DESCRIPTIONS
+from reasoning.component_support import component_support
+from reasoning.fitting_support import fitting_support
+from reasoning.models import ORIGIN_RAG, ComponentSupport, FittingSupport, GuidelineStatement
+from reasoning.writer import ClaudeWriter, OfflineWriter, Writer
 from shared.case_schema import Case
 from shared.config import (
     EMBEDDING_MODEL_NAME,
@@ -81,8 +104,16 @@ CRITERIA = ("statements", "gaps", "functional_level")
 RULE_FIELDS = ("levels", "k_levels", "ambulators_only", "unilateral_only", "bilateral_only")
 RULES = {rule.statement.id: rule for rule in (*component_guide.RULES, *fitting_guide.RULES)}
 K_LEVEL_IDS = {statement.id for statement in K_LEVEL_DESCRIPTIONS.values()}
+K_LEVEL_BY_ID = {statement.id: statement for statement in K_LEVEL_DESCRIPTIONS.values()}
 
-PASS, WARN, FAIL, SKIP, ERROR = "PASS", "WARN", "FAIL", "SKIP", "ERROR"
+PASS, WARN, FAIL, SKIP, ERROR, INFO = "PASS", "WARN", "FAIL", "SKIP", "ERROR", "INFO"
+# Without --rag the AI is never called: the gaps come from the search and topic-word check.
+NO_AI = OfflineWriter("golden cases run without the AI (use --rag to measure the RAG)")
+# A RAG quote covers an expected statement when it is from the same document
+# and they share a run of this many words.
+COVER_WORDS = 6
+# Dollars per million tokens (input, output), to estimate a --rag run's cost.
+PRICES = {"claude-opus-5-5": (4.0, 20.0)}
 
 
 @dataclass
@@ -121,6 +152,7 @@ class Finding:
     check: str
     status: str
     lines: list[str]  # the first is the summary; the rest are listed below it
+    numbers: dict = field(default_factory=dict)  # --rag: counts added up over all cases
 
 
 # ---- Reading a case file --------------------------------------------------
@@ -266,22 +298,33 @@ def _difference(check: str, status: str, missing: list[str], unexpected: list[st
                                    *(f"source: {s}" for s in wrong_source)])
 
 
-def check_case(golden: GoldenCase, record: CaseRecord, gaps_skipped: Optional[str] = None) -> list[Finding]:
-    """The findings for one case. gaps_skipped: why the gap checks can't run (None: they can)."""
+def reference(case: Case) -> tuple[ComponentSupport, FittingSupport]:
+    """The answer key for the case: the hand-written statements the rules give."""
+    return component_support(case), fitting_support(case)
+
+
+def check_case(golden: GoldenCase, record: CaseRecord, gaps_skipped: Optional[str] = None,
+               rag: bool = False) -> list[Finding]:
+    """The findings for one case. gaps_skipped: why the gap checks can't run (None: they can).
+
+    The statement and functional-level checks read the answer key (reference());
+    the gap checks read the record. With `rag`, the RAG's measurements follow.
+    """
     mismatch = FAIL if golden.reviewed else WARN
     criteria = golden.data["evaluation_criteria"]
+    components, fitting = reference(golden.case)
     findings = []
 
     if "statements" in criteria:
-        shown = [cited.statement for cited in (*record.components.statements, *record.fitting.statements)]
+        shown = [cited.statement for cited in (*components.statements, *fitting.statements)]
         shown_ids = [statement.id for statement in shown]
         unexpected = [f"{i} (listed in statements_absent)" if i in golden.absent else f"{i} (not listed)"
                       for i in shown_ids if i not in golden.present]
         findings.append(_difference("statements", mismatch,
                                     [i for i in golden.present if i not in shown_ids], unexpected))
         sources = {statement.doc_id for statement in shown}
-        if record.components.functional.description:
-            sources.add(record.components.functional.description.statement.doc_id)
+        if components.functional.description:
+            sources.add(components.functional.description.statement.doc_id)
         expected_sources = golden.data["supporting_sources"]
         findings.append(_difference("supporting sources", mismatch,
                                     [s for s in expected_sources if s not in sources],
@@ -291,7 +334,7 @@ def check_case(golden: GoldenCase, record: CaseRecord, gaps_skipped: Optional[st
                         if problems else Finding("reasoning path", PASS, ["matches the rules and the case"]))
 
     if "functional_level" in criteria:
-        description = record.components.functional.description
+        description = components.functional.description
         actual = description.statement.id if description else None
         expected = golden.data["expected_answer"]["functional_level"]
         findings.append(Finding("functional level", PASS, [f"shown: {actual or 'none'}, as expected"])
@@ -309,12 +352,96 @@ def check_case(golden: GoldenCase, record: CaseRecord, gaps_skipped: Optional[st
                        f"{'cited ' + shown[field].evidence.citation if shown[field].evidence else 'none cited'}"
                        for field, want in expected.items()
                        if field in shown and want is not None and want != (shown[field].evidence is not None)]
+            # The expected sources were set from the search and topic-word check; the AI picks its
+            # own, so with --rag a difference is a measurement, not a failure.
             findings.append(_difference("gaps", mismatch, [f for f in expected if f not in shown],
-                                        [f for f in shown if f not in expected], sources))
+                                        [f for f in shown if f not in expected], () if rag else sources))
+            if rag:
+                cited = sum(1 for gap in record.gaps if gap.evidence)
+                findings.append(Finding("rag gap sources", INFO, [
+                    f"{cited} of {len(record.gaps)} gaps cite a passage; {len(sources)} differ from the "
+                    "golden file (set from the topic-word check)", *(f"source: {s}" for s in sources)],
+                    {"gaps": len(record.gaps), "gaps_cited": cited}))
             excluded = [f"{gap.field}: {gap.evidence.chunk_id}" for gap in record.gaps
                         if gap.evidence and gap.evidence.doc_id in RETRIEVAL_EXCLUDED_DOCUMENTS]
             findings.append(Finding("excluded documents", FAIL, [f"{len(excluded)} gap(s) cite one", *excluded])
                             if excluded else Finding("excluded documents", PASS, ["no gap cites one"]))
+    if rag:
+        findings += rag_findings(golden, record)
+    return findings
+
+
+# ---- Measuring the RAG against the answer key ----------------------------------
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"\w+", unicodedata.normalize("NFKC", text).lower())
+
+
+def shares_a_run(quote: str, statement: str, n: int = COVER_WORDS) -> bool:
+    """Whether the two texts share a run of n words (or all of the shorter one)."""
+    a, b = _words(quote), _words(statement)
+    n = min(n, len(a), len(b))
+    if n == 0:
+        return False
+    runs = {tuple(b[i:i + n]) for i in range(len(b) - n + 1)}
+    return any(tuple(a[i:i + n]) in runs for i in range(len(a) - n + 1))
+
+
+def covering(statement: GuidelineStatement, record: CaseRecord) -> list[str]:
+    """The ids of the RAG statements whose quote covers a hand-written statement."""
+    text = " ".join([statement.quote.text, *statement.quote.items])
+    return [cited.statement.id for cited in record.shown_statements()
+            if cited.origin == ORIGIN_RAG and cited.statement.doc_id == statement.doc_id
+            and shares_a_run(cited.statement.quote.text, text)]
+
+
+def estimated_cost(usage: dict, model: str) -> Optional[float]:
+    price = PRICES.get(model)
+    if price is None:
+        return None
+    return (usage.get("input_tokens", 0) * price[0] + usage.get("output_tokens", 0) * price[1]) / 1_000_000
+
+
+def rag_findings(golden: GoldenCase, record: CaseRecord) -> list[Finding]:
+    """What the RAG gave for the case, measured against the answer key. Never FAIL."""
+    expected = [RULES[i].statement for i in golden.present]
+    level = golden.data["expected_answer"]["functional_level"]
+    if level:
+        expected.append(K_LEVEL_BY_ID[level])
+    covered = {statement.id: covering(statement, record) for statement in expected}
+    missed = [i for i, by in covered.items() if not by]
+    hit = len(expected) - len(missed)
+    findings = [Finding("rag coverage", INFO, [
+        f"{hit} of {len(expected)} expected statements covered by a checked RAG quote"
+        + (f" ({100 * hit // len(expected)}%)" if expected else ""), *(f"not covered: {i}" for i in missed)],
+        {"expected": len(expected), "covered": hit})]
+
+    forbidden = {i: by for i in golden.absent if (by := covering(RULES[i].statement, record))}
+    findings.append(Finding("rag must-not-show", WARN if forbidden else PASS, [
+        f"{len(forbidden)} statement(s) the case must not show are covered" if forbidden
+        else "none of the statements the case must not show is covered",
+        *(f"{i}: by {', '.join(by)}" for i, by in forbidden.items())], {"forbidden_shown": len(forbidden)}))
+
+    rag = [cited for cited in record.shown_statements() if cited.origin == ORIGIN_RAG]
+    used = {i for by in covered.values() for i in by}
+    generation = record.generation
+    parts = generation.parts.values() if generation else []
+    unavailable = [f"{part.kind}: {part.reason}" for part in parts if part.status == "unavailable"]
+    if unavailable:
+        findings.append(Finding("rag parts", WARN, [f"{len(unavailable)} part(s) not answered", *unavailable]))
+    kept = sum(len(part.items) for part in parts)
+    removed = [entry for part in parts for entry in part.removed if entry["dropped"] == "item"]
+    usage = {key: sum(part.usage.get(key, 0) for part in parts) for key in ("input_tokens", "output_tokens")}
+    cost = estimated_cost(usage, generation.writer) if generation else None
+    seconds = max((part.seconds or 0 for part in parts), default=0)
+    findings.append(Finding("rag answer", INFO, [
+        f"{len(rag)} statements shown ({len(rag) - len(used)} match no expected statement); quote check kept "
+        f"{kept}, removed {len(removed)}; {usage['input_tokens']} input + {usage['output_tokens']} output "
+        f"tokens, {seconds:.0f} s" + (f", about ${cost:.2f}" if cost is not None else ""),
+        *(f"removed ({entry['topic']}): {entry['reason']}" for entry in removed)],
+        {"shown": len(rag), "kept": kept, "removed": len(removed), "cost": cost or 0.0, "seconds": seconds,
+         **usage}))
     return findings
 
 
@@ -393,7 +520,7 @@ def _intake_route(retrieve):
         routes.store, routes.retrieve_relevant_chunks = saved
 
 
-def submit_through_form(golden: GoldenCase, retrieve) -> tuple[Finding, Optional[CaseRecord]]:
+def submit_through_form(golden: GoldenCase, retrieve, writer: Writer = NO_AI) -> tuple[Finding, Optional[CaseRecord]]:
     """Submit the question through the intake form in the case's interface language.
 
     The finding says whether the form took it and stored exactly the question
@@ -406,7 +533,9 @@ def submit_through_form(golden: GoldenCase, retrieve) -> tuple[Finding, Optional
     if len(golden.data["question"]["prior_devices"] or []) > MAX_PRIOR_DEVICES:
         return Finding("intake form", mismatch, [f"more than {MAX_PRIOR_DEVICES} prior devices: "
                                                  "the form has no row for them"]), None
-    client = create_app().test_client()
+    app = create_app()
+    app.config["RAG_WRITER"] = writer
+    client = app.test_client()
     client.set_cookie(LANGUAGE_COOKIE, language)
     with _intake_route(retrieve) as case_store:
         response = client.post("/intake", data=intake_form(golden.data["question"], language))
@@ -423,12 +552,17 @@ def submit_through_form(golden: GoldenCase, retrieve) -> tuple[Finding, Optional
 
 
 def _analysis(record: CaseRecord, searched: bool) -> dict[str, list]:
-    """The parts of an analysis a twin must share; the cited passages only when the search ran."""
-    description = record.components.functional.description
+    """The parts of an analysis a twin must share; the cited passages only when the search ran.
+
+    The statements, functional level and notes are the answer key's for the
+    stored case; the gaps are the record's.
+    """
+    components, fitting = reference(record.case)
+    description = components.functional.description
     parts = {
-        "statements": [c.statement.id for c in (*record.components.statements, *record.fitting.statements)],
+        "statements": [c.statement.id for c in (*components.statements, *fitting.statements)],
         "functional level": [description.statement.id if description else None],
-        "notes": list(record.components.notes),
+        "notes": list(components.notes),
         "gaps": [f"{gap.field} ({gap.status})" for gap in record.gaps],
     }
     if searched:
@@ -438,9 +572,11 @@ def _analysis(record: CaseRecord, searched: bool) -> dict[str, list]:
 
 
 def compare_with_twin(golden: GoldenCase, record: CaseRecord, gaps_skipped: Optional[str]) -> Finding:
+    """Compared without the AI: two AI answers may differ from run to run."""
     mismatch = FAIL if golden.reviewed else WARN
     twin = read_golden_case(golden.path.parent / f"{golden.twin_of}.json")
-    twin_record = analyse_case(twin.case, retrieve=_not_searched(gaps_skipped) if gaps_skipped else None)
+    twin_record = analyse_case(twin.case, retrieve=_not_searched(gaps_skipped) if gaps_skipped else None,
+                               writer=NO_AI)
     searched = not gaps_skipped and not record.knowledge_warning and not twin_record.knowledge_warning
     mine, theirs = _analysis(record, searched), _analysis(twin_record, searched)
     differing = [f"{part}: {mine[part]} here, {theirs[part]} in {twin.id}" for part in mine if mine[part] != theirs[part]]
@@ -450,7 +586,9 @@ def compare_with_twin(golden: GoldenCase, record: CaseRecord, gaps_skipped: Opti
     return Finding("twin", PASS, [f"same analysis as {twin.id} ({compared})"])
 
 
-def run_case(path: Path, gaps_skipped: Optional[str]) -> tuple[Optional[GoldenCase], list[Finding]]:
+def run_case(path: Path, gaps_skipped: Optional[str], writer: Writer = NO_AI,
+             rag: bool = False) -> tuple[Optional[GoldenCase], list[Finding]]:
+    """The findings for one case file. With `rag`, `writer` is the AI that is measured."""
     try:
         golden = read_golden_case(path)
     except ValueError as error:
@@ -459,15 +597,17 @@ def run_case(path: Path, gaps_skipped: Optional[str]) -> tuple[Optional[GoldenCa
     findings = []
     try:
         if golden.interface_language == "en":
-            record = analyse_case(golden.case, retrieve=retrieve)
+            record = analyse_case(golden.case, retrieve=retrieve, writer=writer)
         else:
-            form, record = submit_through_form(golden, retrieve)
+            form, record = submit_through_form(golden, retrieve, writer)
             findings.append(form)
             if record is None:
                 return golden, findings  # nothing stored: nothing else to check
-        findings += check_case(golden, record, gaps_skipped)
+        findings += check_case(golden, record, gaps_skipped, rag=rag)
         if golden.twin_of:
-            findings.append(compare_with_twin(golden, record, gaps_skipped))
+            # With the AI, the twin's own gap sources would come from another answer: compare without it.
+            twin_record = record if not rag else analyse_case(record.case, retrieve=retrieve, writer=NO_AI)
+            findings.append(compare_with_twin(golden, twin_record, gaps_skipped))
     except Exception as error:  # the analysis itself failed: report it with the case, go on
         findings.append(Finding("analysis", ERROR, [f"{type(error).__name__}: {error}"]))
     return golden, findings
@@ -496,26 +636,46 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="python -m intake.golden_cases", description=__doc__.splitlines()[0])
     parser.add_argument("files", nargs="*", type=Path, help=f"case files (default: {_shown(GOLDEN_CASES_DIR)}/*.json)")
     parser.add_argument("--no-search", action="store_true", help="skip the gap checks (no embedding model)")
+    parser.add_argument("--rag", action="store_true",
+                        help="also measure the RAG: calls the Claude API, three calls per case (costs money)")
     args = parser.parse_args(argv)
     paths = args.files or sorted(GOLDEN_CASES_DIR.glob("*.json"))
     if not paths:
         sys.exit(f"No golden cases in {_shown(GOLDEN_CASES_DIR)}")
 
     gaps_skipped = "skipped with --no-search" if args.no_search else search_unavailable()
+    if args.rag and gaps_skipped:
+        sys.exit(f"--rag needs the search: {gaps_skipped}")
     if gaps_skipped:
         print(f"Gap checks SKIPPED: {gaps_skipped}")
     else:
         print("Gap checks search the source library; the first case loads the model (10-30 s) ...")
-    totals = dict.fromkeys((PASS, WARN, FAIL, SKIP, ERROR), 0)
+    writer = ClaudeWriter() if args.rag else NO_AI
+    if args.rag:
+        print(f"RAG run: {writer.name}, three calls per case, about a minute per case ...")
+    totals = dict.fromkeys((PASS, WARN, FAIL, SKIP, ERROR, INFO), 0)
+    numbers: dict[str, float] = {}
     for path in paths:
-        golden, findings = run_case(path, gaps_skipped)
+        golden, findings = run_case(path, gaps_skipped, writer=writer, rag=args.rag)
         print(f"\n{describe(golden) if golden else path.name}")
         for finding in findings:
             totals[finding.status] += 1
+            for key, value in finding.numbers.items():
+                numbers[key] = numbers.get(key, 0) + value
             print(f"  {finding.status:5} {finding.check:18} {finding.lines[0]}")
             for line in finding.lines[1:]:
                 print(f"  {'':5} {'':18} - {line}")
+        sys.stdout.flush()
     print(f"\n{len(paths)} case(s): " + ", ".join(f"{count} {status}" for status, count in totals.items()))
+    if args.rag and numbers:
+        n = {key: int(value) if key != "cost" else value for key, value in numbers.items()}
+        expected = n.get("expected", 0)
+        print(f"RAG: {n.get('covered', 0)} of {expected} expected statements covered"
+              + (f" ({100 * n.get('covered', 0) // expected}%)" if expected else "")
+              + f"; {n.get('forbidden_shown', 0)} must-not-show statement(s) covered; "
+              f"{n.get('gaps_cited', 0)} of {n.get('gaps', 0)} gaps cite a passage; quote check kept "
+              f"{n.get('kept', 0)}, removed {n.get('removed', 0)}; {n.get('input_tokens', 0)} input + "
+              f"{n.get('output_tokens', 0)} output tokens, about ${numbers.get('cost', 0):.2f}")
     return 1 if totals[FAIL] or totals[ERROR] else 0
 
 

@@ -10,7 +10,7 @@ from pathlib import Path
 from reasoning.component_support import component_support
 from reasoning.fitting_support import fitting_support
 from reasoning.gap_analysis import analyze_gaps
-from review.decision_log import record_decision
+from review.decision_log import LOG_VERSION, record_decision
 from review.trial_report import build_report, print_summary, read_log, write_csv
 from shared.case_schema import Case
 from shared.store import CaseRecord
@@ -74,7 +74,7 @@ class TrialReportTests(unittest.TestCase):
         self.assertEqual((r.decisions, len(r.cases)), (5, 4))
         self.assertEqual(sum(1 for n in r.cases.values() if n > 1), 1)  # case-tt decided twice
         self.assertEqual(dict(r.decision_counts), {"approve": 2, "edit": 2, "reject": 1})
-        self.assertEqual(dict(r.log_versions), {4: 4, 2: 1})
+        self.assertEqual(dict(r.log_versions), {LOG_VERSION: 4, 2: 1})
 
     def test_gap_marks_split_by_source(self):
         rows = {(f, src): (needed, not_needed, unmarked)

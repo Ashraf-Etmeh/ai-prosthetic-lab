@@ -6,12 +6,13 @@ import unittest
 from dataclasses import asdict
 from pathlib import Path
 
+from intake.routes import analyse_case
 from knowledge.models import ProtocolChunk
-from reasoning.component_support import component_support
-from reasoning.fitting_support import fitting_support
+from knowledge.retrieval import KnowledgeBaseMissing
 from reasoning.gap_analysis import analyze_gaps
 from shared.case_schema import ActivityProfile, Case, PriorDevice, ResidualLimb
-from shared.store import CASE_FILE_VERSION, CaseRecord, CaseStore
+from shared.store import CASE_FILE_VERSION, CaseRecord, CaseStore, record_to_dict
+from tests.helpers import FakeWriter
 
 VOLUME_PASSAGE = ProtocolChunk(
     chunk_id="test_guideline_2024-0007",
@@ -24,14 +25,19 @@ VOLUME_PASSAGE = ProtocolChunk(
     language="en",
     score=0.71,
 )
+KNEE_PASSAGE = ProtocolChunk(
+    chunk_id="lower_limb_amputation_va_dod_cpg_2024-0901",
+    text="For prosthetic ambulators, we suggest prescribing microprocessor knee units over "
+         "non-microprocessor knee units.",
+    source="01_guidelines/test.pdf", title="VA/DoD", year=2024, page=56, end_page=56, language="en", score=0.66,
+)
 
 
 def make_record(**case_fields) -> CaseRecord:
-    """A record as intake builds it."""
+    """A record as intake builds it, with the AI's answer from a fake writer."""
     case = Case(amputation_level="transfemoral", side="left", **case_fields)
-    chunks = {"residual_limb.volume_stability": [VOLUME_PASSAGE]}
-    return CaseRecord(case=case, retrieved_chunks=chunks, gaps=analyze_gaps(case, chunks),
-                      components=component_support(case), fitting=fitting_support(case))
+    chunks = {"residual_limb.volume_stability": [VOLUME_PASSAGE], "knee": [KNEE_PASSAGE]}
+    return analyse_case(case, retrieve=lambda case: chunks, writer=FakeWriter())
 
 
 def statement_ids(record: CaseRecord) -> list[str]:
@@ -62,20 +68,30 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual({path: [asdict(c) for c in chunks] for path, chunks in loaded.retrieved_chunks.items()},
                          {path: [asdict(c) for c in chunks] for path, chunks in record.retrieved_chunks.items()})
         self.assertIsNone(loaded.knowledge_warning)
-        # Component and fitting statements are worked out again from the case.
+        # The AI's answer comes back from the file (no new call), and with it the same sections.
+        self.assertEqual(loaded.generation.to_dict(), record.generation.to_dict())
         self.assertEqual(statement_ids(loaded), statement_ids(record))
+        self.assertTrue(any(i.startswith("rag-knee-") for i in statement_ids(loaded)))
+        knee = next(c for c in loaded.shown_statements() if c.statement.component == "knee")
+        self.assertEqual((knee.summary_en, knee.chunk_id, knee.origin),
+                         ("AI sentence about knee.", KNEE_PASSAGE.chunk_id, "rag"))
         self.assertEqual(loaded.components.functional.k_level, "K2")
         self.assertEqual(dict(loaded.fitting.recorded), dict(record.fitting.recorded))
+        self.assertEqual(loaded.passage(KNEE_PASSAGE.chunk_id), KNEE_PASSAGE)
 
     def test_warning_kept_when_the_library_was_not_searched(self):
         case = Case(amputation_level="transradial", side="right")
-        record = CaseRecord(case=case, gaps=analyze_gaps(case, {}), knowledge_warning="not searched",
-                            components=component_support(case), fitting=fitting_support(case))
+
+        def not_searched(case):
+            raise KnowledgeBaseMissing("not built")
+
+        record = analyse_case(case, retrieve=not_searched, writer=FakeWriter())
         CaseStore(self.folder).save(record)
         loaded = CaseStore(self.folder).get(case.case_id)
-        self.assertEqual(loaded.knowledge_warning, "not searched")
+        self.assertEqual(loaded.knowledge_warning, "The source library was not searched: not built")
         self.assertEqual(loaded.retrieved_chunks, {})
         self.assertTrue(all(g.evidence is None for g in loaded.gaps))
+        self.assertEqual({part.status for part in loaded.generation.parts.values()}, {"no passages"})
 
     def test_one_json_file_per_case_named_by_its_id(self):
         record = make_record()
@@ -83,8 +99,27 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual([p.name for p in self.folder.iterdir()], [f"{record.case.case_id}.json"])
         data = json.loads((self.folder / f"{record.case.case_id}.json").read_text(encoding="utf-8"))
         self.assertEqual(data["case_file_version"], CASE_FILE_VERSION)
-        self.assertEqual(set(data), {"case_file_version", "case", "knowledge_warning", "retrieved_chunks", "gaps"})
+        self.assertEqual(set(data), {"case_file_version", "case", "knowledge_warning", "retrieved_chunks", "gaps",
+                                     "generation"})
         self.assertEqual(set(data["case"]), set(record.case.to_dict()))  # only the case's own fields
+
+    def test_a_version_1_file_still_opens(self):
+        # Written before the RAG (2026-10-11): no "generation", gaps without AI summaries.
+        case = Case(amputation_level="transtibial", side="left")
+        chunks = {"residual_limb.volume_stability": [VOLUME_PASSAGE]}
+        data = record_to_dict(CaseRecord(case=case, retrieved_chunks=chunks, gaps=analyze_gaps(case, chunks)))
+        del data["generation"]
+        for gap in data["gaps"]:
+            del gap["summary_en"], gap["summary_ar"]
+        data["case_file_version"] = 1
+        self.folder.mkdir()
+        (self.folder / f"{case.case_id}.json").write_text(json.dumps(data), encoding="utf-8")
+        loaded = CaseStore(self.folder).get(case.case_id)
+        self.assertEqual(loaded.case.to_dict(), case.to_dict())
+        self.assertEqual(next(g for g in loaded.gaps if g.evidence).excerpt, VOLUME_PASSAGE.text)
+        self.assertIsNone(loaded.generation)
+        self.assertIsNone(loaded.components)  # not available: shown as such on the page
+        self.assertIsNone(loaded.fitting)
 
     def test_saving_again_replaces_the_file(self):
         store = CaseStore(self.folder)

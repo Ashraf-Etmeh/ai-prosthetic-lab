@@ -64,6 +64,10 @@ PROTECTED_FILES = (REAL_TRIAL_LOG, REAL_TEST_LOG, I18N_FILE)
 PROTECTED_DIRS = (DATA / "cases", DATA / "trial")
 VERIFICATION_FILES = {"scripts/verify_prompts_0_2.py", "docs/manual_checks_prompts_0_2.md"}
 BASELINE_TEST_COUNT = 219  # when Prompt 0 ran
+# The Claude API is never called from here (the RAG, 2026-10-11): the app's AI
+# writer is switched off (shared/config.py OFFLINE_ENV), so every page shows
+# the passages found without summaries, and nothing is sent anywhere.
+os.environ["AI_PROSTHETIC_LAB_OFFLINE"] = "1"
 CHILD_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 
@@ -393,13 +397,18 @@ def unit_tests():
 CLAUDE_ITEMS = [  # (what CLAUDE.md must cover, words that must all be in one paragraph or list item)
     ("decision support only: no diagnosing, prescribing, choosing or ranking components, judging readiness",
      ("never makes it", "diagnose", "prescribe", "choose a component", "rank components", "ready for fitting")),
-    ("only the sources' own words, quoted with page", ("only the sources speak", "word for word", "page")),
-    ("no language model and no cloud", ("no language model", "cloud")),
+    # Principles 2-3 and the quote rule reworded by the owner on 2026-10-11
+    # (RAG: retrieval plus Claude summaries, each backed by a checked quote).
+    # Before: "only the sources speak"; "no language model" ... "cloud";
+    # "every new quote gets a word-for-word test".
+    ("every sentence backed by the source's words, quoted with page",
+     ("every sentence is backed by the source's own words", "word for word", "page")),
+    ("search local, one cloud language model for the summaries", ("search stays local", "language model", "claude api")),
     ("fake data only, no patient identifiers", ("fake test data only", "identifiers")),
     ("English/Arabic interface, quotes kept in the source's language",
      ("english and arabic", "quotes", "language of their source")),
     ("rule: tests keep passing", ("all tests keep passing",)),
-    ("rule: word-for-word tests for new quotes", ("every new quote gets a word-for-word test",)),
+    ("rule: every quote checked word for word", ("every quote is checked word for word",)),
     ("rule: Arabic entry for new interface text", ("every new interface text gets its arabic entry",)),
     ("rule: log lines never edited or removed", ("append-only", "never edited or removed")),
     ("rule: LOG_VERSION raised on format changes", ("log_version", "raises")),
@@ -556,6 +565,10 @@ def heading_count(page_text: str, key: str) -> int | None:
 
 @check("0.6")
 def section_4_5_counts():
+    # Since the RAG (2026-10-11) the page's statements come from the search and the AI, and the
+    # hand-written statements are the answer key: section 4.5 counts the answer key, which
+    # component_support() and fitting_support() still give for the stored case. The page headings
+    # are checked against the statements the page shows.
     commit = state.get("design_commit")
     baseline = statement_ids_at(commit, [[n, lv, s, k] for n, lv, s, k, _, _ in SECTION_4_5]) if commit else None
     details, matching = [], 0
@@ -566,8 +579,10 @@ def section_4_5_counts():
             case_id = case_id_from(response)
             record = store.get(case_id)
             page = visible_text(box.client.get(f"/review/{case_id}").get_data(as_text=True))
-            shown = {"fitting": [c.statement.id for c in record.fitting.statements],
-                     "components": [c.statement.id for c in record.components.statements]}
+            shown = {"fitting": [c.statement.id for c in fitting_support(record.case).statements],
+                     "components": [c.statement.id for c in component_support(record.case).statements]}
+            on_record = {"fitting": len(record.fitting.statements),
+                         "components": sum(len(s.statements) for s in record.components.component_sections)}
             on_page = {"fitting": heading_count(page, "fitting.heading"),
                        "components": heading_count(page, "components.heading")}
             problems = []
@@ -576,8 +591,8 @@ def section_4_5_counts():
             if want_components is not None and len(shown["components"]) != want_components:
                 problems.append(f"4.5 says {want_components} component")
             for part in ("fitting", "components"):
-                if on_page[part] != len(shown[part]):
-                    problems.append(f"page heading says {on_page[part]} {part}")
+                if on_page[part] != on_record[part]:
+                    problems.append(f"page heading says {on_page[part]} {part}, the page shows {on_record[part]}")
                 if baseline:
                     old = baseline[name][part]
                     added = [i for i in shown[part] if i not in old]
@@ -592,9 +607,10 @@ def section_4_5_counts():
                            + (f"; {'; '.join(problems)}" if problems else ""))
     same_ids = f"; statement ids identical to {commit[:7]}" if baseline else "; no baseline commit to compare ids"
     report(verdict(matching == len(SECTION_4_5)), "0.6",
-           f"{matching}/{len(SECTION_4_5)} cases through the test client match section 4.5 and their page "
-           f"headings{same_ids if matching == len(SECTION_4_5) else ''}. Inputs: side left unless bilateral, "
-           "K-level only where named, every other field empty, search replaced by no passages", details)
+           f"{matching}/{len(SECTION_4_5)} cases through the test client: answer key matches section 4.5, page "
+           f"headings match the page{same_ids if matching == len(SECTION_4_5) else ''}. Inputs: side left unless "
+           "bilateral, K-level only where named, every other field empty, search replaced by no passages, "
+           "AI switched off", details)
 
 
 # ---- Prompt 1: stabilise ----------------------------------------------------

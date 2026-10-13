@@ -7,6 +7,8 @@ from knowledge.catalog import SOURCE_TYPES, load_catalog
 from reasoning.component_guide import COMPONENT_KEYS, GRADES
 from reasoning.component_support import NOTE_K0, NOTE_K_NOT_RECORDED
 from reasoning.fitting_guide import SECTION_KEYS
+from reasoning.rag import GRADE_PHRASES
+from reasoning.rag_topics import PARTS
 from review.decision_log import DECISIONS
 from shared import case_schema
 from shared.config import PROJECT_ROOT
@@ -95,6 +97,9 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"fitting_section.{key}" for key in SECTION_KEYS}
         expected |= {f"source_type.{source_type}" for source_type in SOURCE_TYPES}
         expected |= {"summary.components", "summary.fitting"}  # review/routes.py judgement_summary
+        # The RAG: 'ai_part.' ~ part.kind for an unavailable part, and any grade a passage may print
+        expected |= {f"ai_part.{part}" for part in PARTS}
+        expected |= {f"grade.{grade}" for grade in GRADE_PHRASES}
         self.assertEqual(expected - set(TEXT), set())
 
 

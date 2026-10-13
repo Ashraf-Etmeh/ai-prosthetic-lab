@@ -1,7 +1,8 @@
 # CLAUDE.md — AI Prosthetic Lab
 
 A working local prototype of a decision-support tool for prosthetics
-specialists (Flask, rule-based, local bge-m3 search, English/Arabic pages).
+specialists (Flask, RAG: local bge-m3 search plus Claude API summaries
+backed by checked quotes, English/Arabic pages).
 Extend it; don't rebuild it. Before changing anything, read
 `SYSTEM_DESCRIPTION.md` (what it does and how it is built), `README.md`
 (how to run it) and `FUTURE_WORK.md` (decisions, measurements, open items).
@@ -12,14 +13,22 @@ Extend it; don't rebuild it. Before changing anything, read
    may diagnose, prescribe, choose a component, rank components, or say
    whether a patient is ready for fitting. Pages show information next to
    what the sources say, and the specialist decides.
-2. **Only the sources speak.** Every reason, statement and grade shown to
-   the user is copied word for word from a catalogued document, with its
-   page. No clinical sentence is written by the code or by Claude. Whether a
-   statement applies to a case follows only from the source's own wording.
-3. **No language model and no cloud service** at runtime. Search uses the
-   local embedding model; reasoning is rules.
+2. **Every sentence is backed by the source's own words.** Every quote and
+   grade shown is copied word for word from a catalogued document, with its
+   page. The summary sentences are written by a language model, labelled as
+   AI, and each carries such a quote, which code checks word for word
+   against its passage before it is shown; a sentence whose quote fails is
+   removed. No clinical sentence is written by the code. Whether a statement
+   applies to a case follows only from the source's own wording.
+3. **Search stays local; one cloud language model writes the summaries.**
+   Retrieval uses the local embedding model. The Claude API, behind one
+   swap point (`reasoning/writer.py`), writes the summary sentences from the
+   retrieved passages; no other cloud service. Without it the app still
+   works and shows the passages without summaries. (Owner's decision
+   2026-10-11, replacing "no language model and no cloud service".)
 4. **Fake test data only.** Never collect or store patient identifiers
-   (name, date of birth, address, record numbers).
+   (name, date of birth, address, record numbers). The case as entered is
+   sent to the Claude API, which makes this doubly important.
 5. **Two interface languages: English and Arabic (right to left).** Quotes
    and citations stay in the language of their source and are never
    translated.
@@ -28,8 +37,10 @@ Extend it; don't rebuild it. Before changing anything, read
 
 - **All tests keep passing** (`python -m unittest`). A change that breaks a
   test is not finished.
-- **Every new quote gets a word-for-word test** against its page in
-  `data/extracted/<doc_id>.txt`. Statements added to
+- **Every quote is checked word for word** against its page in
+  `data/extracted/<doc_id>.txt`. Quotes in the AI summaries are checked at
+  run time by `reasoning/quote_check.py` before they are shown (that check
+  has its own tests). Statements added to
   `reasoning/component_guide.py` or `reasoning/fitting_guide.py` are covered
   by `tests/test_component_guide.py` (quote on its page, list items in
   order, VA/DoD grade as printed); quotes kept anywhere else need an
@@ -59,6 +70,11 @@ Extend it; don't rebuild it. Before changing anything, read
 
 ## Roadmap (in this order, by track)
 
+**RAG (owner's decision, 2026-10-11).** The review page is produced by
+retrieval plus Claude, with checked quotes. The 59 hand-written statements
+no longer produce the page; they are the answer key the RAG is measured
+against (`python -m intake.golden_cases --rag`).
+
 **Trial readiness**
 1. Stabilise the app for a specialist trial (candidates: the known
    limitations in `SYSTEM_DESCRIPTION.md` §7 and `FUTURE_WORK.md`).
@@ -85,5 +101,7 @@ python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
 python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
                               # (python -m knowledge.evidence_rules does the same)
 python -m intake.golden_cases # golden cases vs the app (--no-search: no model needed)
+                              # --rag: live RAG coverage of the hand-written statements
+                              # (calls the Claude API, costs money: ask first)
 python scripts/verify_all.py  # the 0-2 checks and the golden cases (--with-model: real search)
 ```

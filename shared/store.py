@@ -5,13 +5,15 @@ memory and written to data/cases/<case_id>.json, so its review page still
 works after the server restarts: a case that is not in memory is read from
 its file the first time it is asked for.
 
-A file holds the case as entered, the passages retrieved for its gaps, the
-gaps with their quotes and the "source library not searched" warning:
-everything the search produced, which a re-ingested library might not
-produce again. The component and fitting statements are not stored: they
-follow from the case and the hand-written guides alone, so they are worked
-out again when a file is read. What the reviewer saw at each decision is in
-the review log (review/decision_log.py).
+A file holds the case as entered, the passages retrieved for it, the gaps
+with their quotes, the "source library not searched" warning and (version 2,
+since the RAG of 2026-10-11) the AI's answer as kept after the quote check:
+everything the search and the AI produced, which a re-ingested library or a
+second AI call might not produce again. The component and fitting sections
+are worked out again from that answer when a file is read, without calling
+the AI. A version 1 file (before the RAG) opens with its gaps; its component
+and fitting sections are not available. What the reviewer saw at each
+decision is in the review log (review/decision_log.py).
 
 Cases hold no patient identifiers (shared/case_schema.py); the file is named
 after the case's random case_id.
@@ -25,14 +27,15 @@ from pathlib import Path
 from typing import Optional
 
 from knowledge.models import ProtocolChunk
-from reasoning.component_support import component_support
-from reasoning.fitting_support import fitting_support
 from reasoning.models import ComponentSupport, FittingSupport, Gap
+from reasoning.rag import Generation, components_from, fitting_from
 from shared.case_schema import Case
 from shared.config import CASES_DIR
 
 # Raise when the shape of a case file changes, and keep reading older files.
-CASE_FILE_VERSION = 1
+# 2 (2026-10-11): adds "generation", the AI's answer (RAG); the passages
+# retrieved also hold the component, fitting and functional-level topics.
+CASE_FILE_VERSION = 2
 
 # What a case id may look like to be used as a file name (generated ids are
 # 12 hexadecimal characters). Anything else is never looked up on disk.
@@ -42,20 +45,28 @@ _SAFE_CASE_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 @dataclass
 class CaseRecord:
     case: Case
-    # Passages retrieved for each missing field, keyed by dotted field path.
+    # Passages retrieved for the case, keyed by dotted field path (a missing
+    # field) or topic key ("knee", "alignment", ...: reasoning/rag_topics.py).
     retrieved_chunks: dict[str, list[ProtocolChunk]] = field(default_factory=dict)
     gaps: list[Gap] = field(default_factory=list)
     # Set when the source library couldn't be searched, e.g. not built yet.
     knowledge_warning: Optional[str] = None
-    # What the guidelines say about this case's components (None: not run).
+    # What the sources say about this case's components (None: not available).
     components: Optional[ComponentSupport] = None
-    # What the sources say about design and fitting for this case (None: not run).
+    # What the sources say about design and fitting for this case (None: not available).
     fitting: Optional[FittingSupport] = None
+    # The AI's answer, as kept after the quote check (None: made before the RAG).
+    generation: Optional[Generation] = None
 
     def shown_statements(self) -> list:
         """Every component and fitting statement on the review page (CitedStatement)."""
         return [*(self.components.statements if self.components else []),
                 *(self.fitting.statements if self.fitting else [])]
+
+    def passage(self, chunk_id: Optional[str]) -> Optional[ProtocolChunk]:
+        """A retrieved passage by its id (None if it is not among them)."""
+        return next((chunk for chunks in self.retrieved_chunks.values() for chunk in chunks
+                     if chunk.chunk_id == chunk_id), None)
 
 
 def record_to_dict(record: CaseRecord) -> dict:
@@ -66,6 +77,7 @@ def record_to_dict(record: CaseRecord) -> dict:
         "retrieved_chunks": {path: [asdict(chunk) for chunk in chunks]
                              for path, chunks in record.retrieved_chunks.items()},
         "gaps": [asdict(gap) for gap in record.gaps],  # evidence included as a plain dict
+        "generation": record.generation.to_dict() if record.generation else None,
     }
 
 
@@ -75,14 +87,17 @@ def record_from_dict(data: dict) -> CaseRecord:
         Gap(**{**gap, "evidence": ProtocolChunk(**gap["evidence"]) if gap["evidence"] else None})
         for gap in data["gaps"]
     ]
+    generation = Generation.from_dict(data["generation"]) if data.get("generation") else None
     return CaseRecord(
         case=case,
         retrieved_chunks={path: [ProtocolChunk(**chunk) for chunk in chunks]
                           for path, chunks in data["retrieved_chunks"].items()},
         gaps=gaps,
         knowledge_warning=data["knowledge_warning"],
-        components=component_support(case),
-        fitting=fitting_support(case),
+        # Version 1 files hold no AI answer: their sections are not available.
+        components=components_from(case, generation) if generation else None,
+        fitting=fitting_from(case, generation) if generation else None,
+        generation=generation,
     )
 
 

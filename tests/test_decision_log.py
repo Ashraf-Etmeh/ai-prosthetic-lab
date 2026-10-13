@@ -5,15 +5,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from intake.routes import analyse_case
 from knowledge.models import ProtocolChunk
 from reasoning.component_support import component_support
 from reasoning.fitting_support import fitting_support
 from reasoning.gap_analysis import analyze_gaps
-from review.decision_log import InvalidDecision, read_decisions, record_decision
+from review.decision_log import LOG_VERSION, InvalidDecision, read_decisions, record_decision
 from review.routes import judgement_summary
 from shared.case_schema import ActivityProfile, Case, ResidualLimb
-from shared.config import RETRIEVAL_LANGUAGES
+from shared.config import MIN_QUOTE_WORDS, RAG_TOP_K, RETRIEVAL_LANGUAGES
 from shared.store import CaseRecord
+from tests.helpers import FakeWriter, quote_every_topic
 
 VOLUME = "residual_limb.volume_stability"
 WOUND = "residual_limb.wound_status"
@@ -88,7 +90,7 @@ class DecisionLogTests(unittest.TestCase):
     def test_page_language_recorded_but_log_stays_english(self):
         self.assertEqual(self.log()["ui_language"], "en")
         entry = self.log(ui_language="ar")
-        self.assertEqual((entry["log_version"], entry["ui_language"]), (4, "ar"))
+        self.assertEqual((entry["log_version"], entry["ui_language"]), (LOG_VERSION, "ar"))
         volume = self.gap_entry(entry, VOLUME)
         self.assertEqual(volume["label"], "Residual limb volume stability")
         self.assertTrue(volume["why_needed"].startswith("Residual limb volume stability was not recorded"))
@@ -97,6 +99,54 @@ class DecisionLogTests(unittest.TestCase):
         settings = self.log()["settings"]
         self.assertEqual(settings["embedding_model"], "BAAI/bge-m3")
         self.assertEqual(settings["retrieval_languages"], list(RETRIEVAL_LANGUAGES))
+        self.assertEqual((settings["rag_top_k"], settings["min_quote_words"]), (RAG_TOP_K, MIN_QUOTE_WORDS))
+
+    def test_version_5_records_the_ai_answer(self):
+        # The RAG (2026-10-11): what the AI wrote, the passage behind each quote, and what the check removed.
+        case = Case(amputation_level="transfemoral", side="left", case_id="case-rag")
+        knee_passage = ProtocolChunk(
+            chunk_id="lower_limb_amputation_va_dod_cpg_2024-0901",
+            text="For prosthetic ambulators, we suggest prescribing microprocessor knee units over "
+                 "non-microprocessor knee units.", source="01_guidelines/test.pdf", title="VA/DoD", year=2024,
+            page=56, end_page=56, language="en", score=0.66)
+        chunks = {VOLUME: [VOLUME_PASSAGE], "knee": [knee_passage]}
+
+        def answer(user, schema):
+            data = quote_every_topic(user, schema)
+            if "knee" in schema["properties"]["items"]["items"]["properties"]["topic"]["enum"]:
+                data["items"].append({"topic": "knee", "passage_id": knee_passage.chunk_id,
+                                      "quote": "microprocessor knees are best for everyone",
+                                      "sentence_en": "Made up.", "sentence_ar": "مختلق.", "grade": ""})
+            return data
+
+        record = analyse_case(case, retrieve=lambda case: chunks, writer=FakeWriter(answer))
+        knee_id = next(c.statement.id for c in record.components.statements if c.statement.component == "knee")
+        entry = record_decision(record, "approve", path=self.path, statement_judgements={knee_id: "relevant"})
+        self.assertEqual(entry["log_version"], 5)
+        knee = next(s for section in entry["components"]["sections"] for s in section["statements"]
+                    if s["id"] == knee_id)
+        self.assertEqual((knee["origin"], knee["summary_en"], knee["summary_ar"]),
+                         ("rag", "AI sentence about knee.", "جملة الذكاء الاصطناعي عن knee."))
+        self.assertEqual((knee["chunk_id"], knee["passage"]), (knee_passage.chunk_id, knee_passage.text))
+        self.assertEqual(knee["reviewer_judgement"], "relevant")
+        volume = self.gap_entry(entry, VOLUME)
+        self.assertEqual(volume["summary_en"], "AI sentence about residual_limb.volume_stability.")
+        generation = entry["generation"]
+        self.assertEqual(generation["writer"], "fake-model")
+        self.assertEqual(set(generation["parts"]), {"gaps", "components", "fitting"})
+        components = generation["parts"]["components"]
+        self.assertEqual((components["status"], components["model"], components["items_kept"]), ("ok", "fake-model", 1))
+        [removed] = components["removed"]
+        self.assertEqual((removed["quote"], removed["reason"], removed["dropped"]),
+                         ("microprocessor knees are best for everyone",
+                          "quote not found word for word in the passage", "item"))
+        self.assertEqual(generation["parts"]["fitting"]["status"], "no passages")  # nothing found: no call
+        # A line from an earlier version (no "generation") is still read.
+        old = dict(entry, log_version=4)
+        del old["generation"]
+        with self.path.open("a", encoding="utf-8") as log:
+            log.write(json.dumps(old) + "\n")
+        self.assertEqual([e["log_version"] for e in read_decisions("case-rag", path=self.path)], [5, 4])
 
     def test_invalid_decisions_refused_and_nothing_written(self):
         for kwargs in [

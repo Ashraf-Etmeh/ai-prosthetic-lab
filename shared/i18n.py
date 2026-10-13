@@ -44,12 +44,40 @@ TEXT: dict[str, dict[str, str]] = {
     "disclaimer": {
         "en": DISCLAIMER,
         "ar": "هذه أداة آلية لدعم القرار، وليست تقييماً سريرياً ولا تشخيصاً ولا وصفةً. تعرض "
-        "المعلومات الناقصة في بيانات الحالة، وتقتبس ما تقوله الأدلة الإرشادية والأدلة التدريبية "
-        "في مكتبة مصادرها عن مكوّنات الطرف الاصطناعي لهذه الحالة وتصميمه وتركيبه، مع درجة "
-        "التوصية التي يحددها المصدر إن وُجدت. لا تختار المكوّنات ولا ترتّبها. لا تحكم على جاهزية "
-        "المريض للتركيب. كل بند يحتاج إلى مراجعة مختص مؤهل في الأطراف الاصطناعية، والقرار له. "
-        "قد تكون القوائم غير مكتملة: البند غير المدرج فُحص من حيث تعبئته فقط لا من حيث كفاية "
-        "محتواه، ولا يُعرض إلا ما في مكتبة المصادر من بيانات.",
+        "المعلومات الناقصة في بيانات الحالة، وما تقوله الأدلة الإرشادية والأدلة التدريبية في مكتبة "
+        "مصادرها عن مكوّنات الطرف الاصطناعي لهذه الحالة وتصميمه وتركيبه. كل ملخص قصير يكتبه نموذج "
+        "لغوي للذكاء الاصطناعي (Claude) وقد يكون خاطئاً؛ وتحته نص المصدر نفسه، مُتحقَّق منه حرفياً "
+        "مقابل المقطع، مع درجة التوصية التي يحددها المصدر إن وُجدت. قارن كل ملخص باقتباسه. لا تختار "
+        "المكوّنات ولا ترتّبها. لا تحكم على جاهزية المريض للتركيب. كل بند يحتاج إلى مراجعة مختص "
+        "مؤهل في الأطراف الاصطناعية، والقرار له. قد تكون القوائم غير مكتملة: البند غير المدرج فُحص "
+        "من حيث تعبئته فقط لا من حيث كفاية محتواه، ولا يُستخدم إلا ما وجده البحث في مكتبة المصادر.",
+    },
+    # AI summaries (reasoning/rag.py). The reason the AI is unavailable is
+    # shown as it is, in English (a technical message).
+    "ai.label": {"en": "AI summary — check it against the quote below:",
+                 "ar": "ملخص بالذكاء الاصطناعي — قارنه بالاقتباس أدناه:"},
+    "ai.unavailable": {
+        "en": "AI summaries are not available for {part}:",
+        "ar": "ملخصات الذكاء الاصطناعي غير متاحة لقسم {part}. التفاصيل التقنية:",
+    },
+    "ai.unavailable_after": {
+        "en": "The passages the search found are listed without summaries.",
+        "ar": "تُعرض المقاطع التي وجدها البحث دون ملخصات.",
+    },
+    "ai_part.gaps": {"en": "the information gaps", "ar": "المعلومات الناقصة"},
+    "ai_part.components": {"en": "the functional level and components", "ar": "المستوى الوظيفي والمكوّنات"},
+    "ai_part.fitting": {"en": "design and fitting", "ar": "التصميم والتركيب"},
+    "ai.removed": {
+        "en": "{n} AI summary or summaries removed: the quote was not found word for word in the passage.",
+        "ar": "حُذف من ملخصات الذكاء الاصطناعي: {n}، لأن الاقتباس لم يوجد حرفياً في المقطع.",
+    },
+    "ai.passages_found": {
+        "en": "Passages the search found for this section, not summarised ({n})",
+        "ar": "المقاطع التي وجدها البحث لهذا القسم، دون تلخيص ({n})",
+    },
+    "ai.no_passages": {
+        "en": "The search found no passage for this section.",
+        "ar": "لم يجد البحث أي مقطع لهذا القسم.",
     },
     # Intake form
     "intake.page_title": {
@@ -58,12 +86,21 @@ TEXT: dict[str, dict[str, str]] = {
     },
     "intake.heading": {"en": "New Case Intake", "ar": "إدخال حالة جديدة"},
     "intake.banner": {
-        "en": "This tool lists missing intake information and quotes what published guidelines "
-        "and manuals say about the case's prosthetic components, design and fitting. It does not "
-        "diagnose, prescribe or choose components: the specialist decides.",
-        "ar": "تعرض هذه الأداة المعلومات الناقصة في بيانات الحالة، وتقتبس ما تقوله الأدلة "
-        "الإرشادية والأدلة التدريبية المنشورة عن مكوّنات الطرف الاصطناعي للحالة وتصميمه وتركيبه. "
-        "لا تشخّص ولا تصف ولا تختار المكوّنات: القرار للمختص.",
+        "en": "This tool lists missing intake information and shows what published guidelines "
+        "and manuals say about the case's prosthetic components, design and fitting: short AI "
+        "summaries, each with the source's own words quoted below it. It does not diagnose, "
+        "prescribe or choose components: the specialist decides.",
+        "ar": "تعرض هذه الأداة المعلومات الناقصة في بيانات الحالة، وما تقوله الأدلة الإرشادية "
+        "والأدلة التدريبية المنشورة عن مكوّنات الطرف الاصطناعي للحالة وتصميمه وتركيبه: ملخصات "
+        "قصيرة بالذكاء الاصطناعي، تحت كل منها نص المصدر نفسه مقتبساً. لا تشخّص ولا تصف ولا تختار "
+        "المكوّنات: القرار للمختص.",
+    },
+    "intake.ai_note": {
+        "en": "After you submit, the analysis takes about a minute: an AI (Claude) summarises "
+        "the passages the search finds. The case as entered is sent to the Claude API, so enter "
+        "test data only.",
+        "ar": "بعد الإرسال يستغرق التحليل نحو دقيقة: يلخّص الذكاء الاصطناعي (Claude) المقاطع التي "
+        "يجدها البحث. تُرسَل الحالة كما أُدخلت إلى واجهة Claude البرمجية، لذا أدخل بيانات اختبارية فقط.",
     },
     "intake.not_saved": {"en": "Case not saved:", "ar": "لم تُحفظ الحالة:"},
     "intake.amputation": {"en": "Amputation", "ar": "البتر"},
@@ -193,17 +230,33 @@ TEXT: dict[str, dict[str, str]] = {
     },
     "functional.activity": {"en": "Current activity (as recorded)", "ar": "النشاط الحالي (كما سُجِّل)"},
     "functional.goals": {"en": "Functional goals (as recorded)", "ar": "الأهداف الوظيفية (كما سُجِّلت)"},
+    "functional.from_sources": {
+        "en": "What the sources say about the functional level:",
+        "ar": "ما تقوله المصادر عن المستوى الوظيفي:",
+    },
+    "functional.no_statement": {
+        "en": "The passages found say nothing about the functional level for this case.",
+        "ar": "لا تذكر المقاطع التي وُجدت شيئاً عن المستوى الوظيفي لهذه الحالة.",
+    },
+    "review.made_before_ai": {
+        "en": "This case was analysed before the AI summaries were added, so its functional level, "
+        "component and fitting sections are not available. Submit the case again to see them.",
+        "ar": "حُلِّلت هذه الحالة قبل إضافة ملخصات الذكاء الاصطناعي، لذا أقسام المستوى الوظيفي "
+        "والمكوّنات والتركيب غير متاحة لها. أرسل الحالة مجدداً لعرضها.",
+    },
     # Component statements
     "components.heading": {
-        "en": "What the guidelines say about components ({n} statements)",
-        "ar": "ما تقوله الأدلة الإرشادية عن المكوّنات ({n} بيانات)",
+        "en": "What the sources say about components ({n} statements)",
+        "ar": "ما تقوله المصادر عن المكوّنات ({n} بيانات)",
     },
     "components.intro": {
-        "en": "Statements from the guidelines in the source library that apply to this case, "
-        "quoted word for word with each guideline's own grade. They are not ranked and are not "
-        "a prescription: the specialist decides.",
-        "ar": "بيانات من الأدلة الإرشادية في مكتبة المصادر تنطبق على هذه الحالة، مقتبسة حرفياً "
-        "مع درجة التوصية التي يحددها كل دليل. ليست مرتّبة وليست وصفة: القرار للمختص.",
+        "en": "Short summaries written by an AI from the passages the search found in the source "
+        "library, each with the source's own words quoted below it (checked word for word) and "
+        "the source's grade where it prints one. They are not ranked and are not a prescription: "
+        "the specialist decides.",
+        "ar": "ملخصات قصيرة كتبها الذكاء الاصطناعي من المقاطع التي وجدها البحث في مكتبة المصادر، "
+        "تحت كل منها نص المصدر نفسه مقتبساً (مُتحقَّقاً منه حرفياً) مع درجة التوصية إن ذكرها "
+        "المصدر. ليست مرتّبة وليست وصفة: القرار للمختص.",
     },
     "components.k_not_recorded": {
         "en": "Functional level (K-level) is not recorded, so statements that apply only at a "
@@ -218,13 +271,16 @@ TEXT: dict[str, dict[str, str]] = {
         "وثيقة CMS المستوى K0 بعدم القدرة أو الإمكانية على المشي أو الانتقال بأمان.",
     },
     "components.no_statement": {
-        "en": "No statement in the source library covers this component for this case.",
-        "ar": "لا يوجد في مكتبة المصادر بيان يتناول هذا المكوّن لهذه الحالة.",
+        "en": "The passages found in the source library say nothing about this component for this case.",
+        "ar": "لا تذكر المقاطع التي وُجدت في مكتبة المصادر شيئاً عن هذا المكوّن لهذه الحالة.",
     },
     "components.grade": {"en": "Source grade:", "ar": "درجة التوصية في المصدر:"},
     "components.same_source": {"en": "Same source, {pages}", "ar": "المصدر نفسه، {pages}"},
+    "grade.Strong for": {"en": "Strong for", "ar": "قوية لصالح"},
     "grade.Weak for": {"en": "Weak for", "ar": "ضعيفة لصالح"},
     "grade.Neither for nor against": {"en": "Neither for nor against", "ar": "لا لصالح ولا ضد"},
+    "grade.Weak against": {"en": "Weak against", "ar": "ضعيفة ضد"},
+    "grade.Strong against": {"en": "Strong against", "ar": "قوية ضد"},
     "grade.none": {"en": "none given", "ar": "غير محددة"},
     # The brief's six kinds of source (catalog "source_type"), shown with each statement
     "source_type.protocol": {"en": "guideline or protocol", "ar": "دليل إرشادي أو بروتوكول"},
@@ -256,13 +312,15 @@ TEXT: dict[str, dict[str, str]] = {
         "ar": "ما تقوله المصادر عن التصميم والتركيب ({n} بيانات)",
     },
     "fitting.intro": {
-        "en": "Statements from the guidelines and manuals in the source library on readiness for "
-        "fitting, a preparatory or definitive prosthesis, fitting, and alignment, quoted word for "
-        "word. They do not say whether this patient is ready, or how the prosthesis should be "
-        "built or aligned: the specialist decides.",
-        "ar": "بيانات من الأدلة الإرشادية والأدلة التدريبية في مكتبة المصادر عن الجاهزية للتركيب، "
-        "والطرف الاصطناعي التمهيدي أو النهائي، والتركيب، والمحاذاة، مقتبسة حرفياً. لا تحدد ما إذا "
-        "كان هذا المريض جاهزاً، ولا كيف يُصنع الطرف أو تُضبط محاذاته: القرار للمختص.",
+        "en": "Short AI summaries of what the guidelines and manuals in the source library say on "
+        "readiness for fitting, a preparatory or definitive prosthesis, fitting, and alignment, each "
+        "with the source's own words quoted below it (checked word for word). They do not say "
+        "whether this patient is ready, or how the prosthesis should be built or aligned: the "
+        "specialist decides.",
+        "ar": "ملخصات قصيرة بالذكاء الاصطناعي لما تقوله الأدلة الإرشادية والأدلة التدريبية في مكتبة "
+        "المصادر عن الجاهزية للتركيب، والطرف الاصطناعي التمهيدي أو النهائي، والتركيب، والمحاذاة، تحت "
+        "كل منها نص المصدر نفسه مقتبساً (مُتحقَّقاً منه حرفياً). لا تحدد ما إذا كان هذا المريض "
+        "جاهزاً، ولا كيف يُصنع الطرف أو تُضبط محاذاته: القرار للمختص.",
     },
     "fitting.components_above": {
         "en": "Socket, interface and suspension are listed with the components above.",
@@ -275,8 +333,8 @@ TEXT: dict[str, dict[str, str]] = {
     "fitting.none_reported": {"en": "none reported", "ar": "لا يوجد"},
     "fitting.months": {"en": "{n} months", "ar": "عدد الأشهر: {n}"},
     "fitting.no_statement": {
-        "en": "No statement in the source library covers this for this case.",
-        "ar": "لا يوجد في مكتبة المصادر بيان يتناول هذا الجانب لهذه الحالة.",
+        "en": "The passages found in the source library say nothing about this for this case.",
+        "ar": "لا تذكر المقاطع التي وُجدت في مكتبة المصادر شيئاً عن هذا الجانب لهذه الحالة.",
     },
     "fitting_section.readiness": {"en": "Readiness for fitting", "ar": "الجاهزية للتركيب"},
     "fitting_section.prosthesis_stage": {

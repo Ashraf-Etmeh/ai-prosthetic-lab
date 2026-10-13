@@ -21,6 +21,7 @@ from unittest import mock
 from intake import golden_cases, routes
 from intake.golden_cases import (
     FAIL,
+    INFO,
     PASS,
     SKIP,
     WARN,
@@ -30,11 +31,13 @@ from intake.golden_cases import (
     read_golden_case,
     run_case,
     search_unavailable,
+    shares_a_run,
 )
 from intake.routes import analyse_case
 from knowledge.models import ProtocolChunk
 from reasoning.models import Gap
 from shared.config import GOLDEN_CASES_DIR
+from tests.helpers import FakeWriter
 
 
 def _status(path: Path):
@@ -308,8 +311,8 @@ class ArabicInterfaceAndTwinTests(unittest.TestCase):
         record = analyse_case(golden.case, retrieve=no_search)
         chunk = ProtocolChunk("lower_limb_amputation_va_dod_cpg_2024-0101", "pain", "g.pdf", "VA/DoD", 2024, 101)
         record.gaps[1].evidence = chunk  # as if this case had cited a passage its twin did not
-        with mock.patch.object(golden_cases, "analyse_case", side_effect=lambda case, retrieve=None:
-                               analyse_case(case, retrieve=no_search)):
+        with mock.patch.object(golden_cases, "analyse_case", side_effect=lambda case, retrieve=None, writer=None:
+                               analyse_case(case, retrieve=no_search, writer=writer)):
             finding = golden_cases.compare_with_twin(golden, record, gaps_skipped=None)
         self.assertEqual(finding.status, WARN)
         self.assertTrue(any(line.startswith("gap sources:") for line in finding.lines))
@@ -319,6 +322,51 @@ class ArabicInterfaceAndTwinTests(unittest.TestCase):
                        lambda d: d.update(twin_of="golden-99")):
             with self.subTest(change), self.assertRaises(ValueError):
                 read_golden_case(self.arabic_copy(change))
+
+
+class RagMeasureTests(unittest.TestCase):
+    """--rag: the RAG measured against the answer key, with a fake writer (no API calls)."""
+
+    def test_shares_a_run_of_words(self):
+        statement = "For prosthetic ambulators, we suggest prescribing microprocessor knee units over others."
+        self.assertTrue(shares_a_run("we suggest prescribing microprocessor knee units", statement))
+        self.assertTrue(shares_a_run("We suggest PRESCRIBING microprocessor knee units today", statement))
+        self.assertFalse(shares_a_run("we suggest prescribing a knee unit", statement))
+        self.assertFalse(shares_a_run("", statement))
+
+    def test_coverage_and_must_not_show(self):
+        golden = read_golden_case(GOLDEN_CASES_DIR / "golden-02.json")  # transfemoral K2
+        present = golden_cases.RULES["va_dod_ll_17_microprocessor_knee"].statement
+        absent = golden_cases.RULES["icrc_tt_ptb_socket"].statement  # transtibial only
+        self.assertIn(present.id, golden.present)
+        self.assertIn(absent.id, golden.absent)
+
+        def passage(statement, n):
+            return ProtocolChunk(f"{statement.doc_id}-090{n}", statement.quote.text, "x.pdf", "T", 2024,
+                                 statement.quote.page, statement.quote.page)
+
+        passages = {"knee": [passage(present, 1)], "socket": [passage(absent, 2)]}
+        record = analyse_case(golden.case, retrieve=lambda case: passages, writer=FakeWriter())
+        found = by_check(check_case(golden, record, gaps_skipped="test: no search", rag=True))
+        coverage = found["rag coverage"]
+        self.assertEqual(coverage.status, INFO)
+        expected = len(golden.present) + 1  # and the functional level's description
+        self.assertEqual(coverage.numbers, {"expected": expected, "covered": 1})
+        self.assertIn(f"not covered: {golden.data['expected_answer']['functional_level']}", coverage.lines)
+        self.assertNotIn(f"not covered: {present.id}", coverage.lines)
+        must_not = found["rag must-not-show"]
+        self.assertEqual(must_not.status, WARN)
+        self.assertTrue(any(line.startswith(f"{absent.id}: by rag-socket-") for line in must_not.lines))
+        answer = found["rag answer"]
+        self.assertEqual((answer.status, answer.numbers["kept"], answer.numbers["removed"]), (INFO, 2, 0))
+        self.assertIn("1 match no expected statement", answer.lines[0])
+        # The answer key's own checks still pass: the RAG is measured, never failed.
+        self.assertEqual(found["statements"].status, PASS)
+
+    def test_rag_needs_the_search(self):
+        with self.assertRaises(SystemExit) as stop:
+            main([str(GOLDEN_01), "--rag", "--no-search"])
+        self.assertIn("--rag needs the search", str(stop.exception))
 
 
 class SearchAvailabilityTests(unittest.TestCase):

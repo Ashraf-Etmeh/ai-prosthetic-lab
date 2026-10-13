@@ -14,6 +14,7 @@ from knowledge.retrieval import (
     retrieve_relevant_chunks,
     search_text,
 )
+from reasoning.rag_topics import GAPS, topics_for_case
 from shared.case_schema import ActivityProfile, Case, PriorDevice, ResidualLimb
 from shared.field_guide import missing_fields
 from tests.helpers import chunk_record, fake_embed
@@ -106,9 +107,22 @@ class RetrieveRelevantChunksTests(unittest.TestCase):
 
     def test_one_result_list_per_missing_field(self):
         case = Case(amputation_level="transtibial", side="left")
-        retrieved = retrieve_relevant_chunks(case, top_k=2, store=self.store, embed=fake_embed)
+        retrieved = retrieve_relevant_chunks(case, top_k=2, store=self.store, embed=fake_embed, topics=False)
         self.assertEqual(list(retrieved), [m.info.path for m in missing_fields(case)])
         self.assertTrue(all(len(chunks) == 2 for chunks in retrieved.values()))
+
+    def test_and_one_per_rag_topic(self):
+        # The RAG's topics (reasoning/rag_topics.py) are searched in the same call, after the fields.
+        case = Case(amputation_level="transtibial", side="left")
+        retrieved = retrieve_relevant_chunks(case, top_k=1, store=self.store, embed=fake_embed)
+        fields = [m.info.path for m in missing_fields(case)]
+        topics = [t.key for t in topics_for_case(case) if t.part != GAPS]
+        self.assertEqual(list(retrieved), fields + topics)
+        self.assertIn("functional_level", topics)
+        self.assertIn("alignment", topics)
+        self.assertNotIn("knee", topics)  # no knee in a transtibial prosthesis
+        self.assertTrue(all(len(retrieved[path]) == 1 for path in fields))
+        self.assertTrue(all(len(retrieved[key]) == 2 for key in topics))  # RAG_TOP_K, here all 2 chunks
 
     def test_upper_limb_case_never_gets_lower_limb_only_documents(self):
         store = make_store(
@@ -142,10 +156,18 @@ class RetrieveRelevantChunksTests(unittest.TestCase):
             chunk_record("manual-0000", "wound healing before fitting"),
         )
         case = Case(amputation_level="transtibial", side="left")
+        fields = {m.info.path for m in missing_fields(case)}
         with patch("knowledge.retrieval.RETRIEVAL_EXCLUDED_DOCUMENTS", ("manual",)):
             retrieved = retrieve_relevant_chunks(case, top_k=10, store=store, embed=fake_embed)
-        ids = {c.chunk_id for chunks in retrieved.values() for c in chunks}
+        ids = {c.chunk_id for key, chunks in retrieved.items() if key in fields for c in chunks}
         self.assertEqual(ids, {"guideline-0000"})
+        # The RAG's topic search leaves out its own list instead (none by default).
+        topic_ids = {c.chunk_id for key, chunks in retrieved.items() if key not in fields for c in chunks}
+        self.assertEqual(topic_ids, {"guideline-0000", "manual-0000"})
+        with patch("knowledge.retrieval.RETRIEVAL_EXCLUDED_DOCUMENTS", ("manual",)), \
+                patch("knowledge.retrieval.RAG_TOPIC_EXCLUDED_DOCUMENTS", ("manual",)):
+            retrieved = retrieve_relevant_chunks(case, top_k=10, store=store, embed=fake_embed)
+        self.assertEqual({c.chunk_id for chunks in retrieved.values() for c in chunks}, {"guideline-0000"})
 
     def test_complete_case_needs_no_store(self):
         case = Case(
@@ -157,7 +179,11 @@ class RetrieveRelevantChunksTests(unittest.TestCase):
             cognitive_status="intact",
         )
         with patch("knowledge.retrieval.get_store", side_effect=AssertionError("store used")):
-            self.assertEqual(retrieve_relevant_chunks(case, embed=fake_embed), {})
+            self.assertEqual(retrieve_relevant_chunks(case, embed=fake_embed, topics=False), {})
+        # The RAG's topics are searched for every case, complete or not.
+        retrieved = retrieve_relevant_chunks(case, store=self.store, embed=fake_embed)
+        self.assertEqual(set(retrieved), {t.key for t in topics_for_case(case)})
+        self.assertIn("prosthesis_type", retrieved)
 
     def test_missing_store_raises(self):
         case = Case(amputation_level="transtibial", side="left")

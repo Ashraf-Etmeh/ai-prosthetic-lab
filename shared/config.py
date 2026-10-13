@@ -62,19 +62,55 @@ RETRIEVAL_DOMAINS = ("prosthetics",)
 # queries (see FUTURE_WORK.md, design and fitting).
 RETRIEVAL_EXCLUDED_DOCUMENTS = ("prosthetic_gait_analysis_icrc_manual_2014",)
 
+# RAG (owner's decision, 2026-10-11): retrieval plus the Claude API, which
+# writes short summary sentences, each backed by an exact quote that
+# reasoning/quote_check.py verifies before it is shown (reasoning/rag.py).
+# Passages searched per topic (component, fitting section, functional level).
+RAG_TOP_K = 6
+# The topic search leaves out no document: the alignment and transtibial
+# socket text comes from the ICRC manual, which the gap search leaves out.
+# Claude judges what a passage says, so its page-header residue is not cited
+# the way the gap search's topic-word check cited it.
+RAG_TOPIC_EXCLUDED_DOCUMENTS: tuple[str, ...] = ()
+# A quote must have at least this many words, so a sentence can't be
+# "backed" by a few common words that happen to be in the passage.
+MIN_QUOTE_WORDS = 5
+# Items kept per topic (a gap field gets at most one).
+MAX_ITEMS_PER_TOPIC = 4
+# The Claude API. No key here: the SDK reads ANTHROPIC_API_KEY from the
+# environment (or an `ant auth login` profile).
+LLM_MODEL = "claude-opus-5-5"
+LLM_EFFORT = "medium"  # low / medium / high / xhigh / max
+LLM_MAX_TOKENS = 32000
+LLM_TIMEOUT_SECONDS = 300
+# On a refusal by the safety classifiers, the API retries on the model
+# Anthropic recommends for that case (server-side fallbacks); the log
+# records the model that answered.
+LLM_FALLBACKS = True
+# Changes whenever the instructions sent to the model change; logged with
+# every decision, so a reviewer's marks can be traced to the prompt.
+PROMPT_VERSION = "rag-v1"  # first version: 2026-10-11
+# Set (to anything) to switch the Claude API off: the app then shows the
+# passages without summaries. The tests set it, so they never call the API.
+OFFLINE_ENV = "AI_PROSTHETIC_LAB_OFFLINE"
+
 # Shown on every review page. The tool reports missing information and quotes
 # what its sources say about components, design and fitting; it does not make
 # clinical decisions. Revised 2026-10-08 when component statements were added
-# (was: "missing information only"), and 2026-10-09 for design and fitting.
+# (was: "missing information only"), 2026-10-09 for design and fitting, and
+# 2026-10-11 for the AI summaries (RAG).
 DISCLAIMER = (
     "This is automated decision support, not a clinical assessment, diagnosis "
     "or prescription. It lists intake information that appears to be missing "
-    "and quotes what the guidelines and manuals in its source library say "
-    "about this case's prosthetic components, design and fitting, each with "
-    "the source's own grade where it gives one. It does not choose or rank "
-    "components. It does not judge whether the patient is ready for fitting. "
-    "Every item requires review by a qualified prosthetics specialist, who "
-    "makes the decision. The lists may be incomplete: a field that is not "
-    "listed has not been checked for adequacy, only for being filled in, and "
-    "only statements in the source library are shown."
+    "and shows what the guidelines and manuals in its source library say "
+    "about this case's prosthetic components, design and fitting. Each short "
+    "summary is written by an AI language model (Claude) and may be wrong; "
+    "below it is the source's own words, checked word for word against the "
+    "passage, with the source's grade where it gives one. Check each summary "
+    "against its quote. It does not choose or rank components. It does not "
+    "judge whether the patient is ready for fitting. Every item requires "
+    "review by a qualified prosthetics specialist, who makes the decision. "
+    "The lists may be incomplete: a field that is not listed has not been "
+    "checked for adequacy, only for being filled in, and only passages the "
+    "search found in the source library are used."
 )

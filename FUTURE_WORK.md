@@ -200,7 +200,9 @@ items are resolved instead of re-deriving them from scratch.
 
 ## Step 4 (reasoning) decisions and progress
 
-- **Rules, not a language model** (decided 2026-10-06). An LLM API call
+- **Rules, not a language model** (decided 2026-10-06; **replaced
+  2026-10-11** by the owner's decision for a RAG, see "RAG: retrieval plus
+  Claude with checked quotes" below). An LLM API call
   is a cloud service, out of scope for v1, and language models often cite
   sources that don't support their statements: 50-90% of responses not
   fully supported in Wu et al. 2025
@@ -847,6 +849,63 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   wording "clinical judgements come only from the owner".
 - **Tests:** 326 (7 new: reviewed cases, Arabic form, twin).
 
+## RAG: retrieval plus Claude with checked quotes (decided 2026-10-11)
+
+- **The owner's decision (2026-10-11):** the system is to be a RAG, not
+  rule-based. The 2026-10-06 decision "rules, not a language model" is
+  replaced. Chosen, in order:
+  - **Model:** the Claude API (cloud), behind one swap point
+    (`reasoning/writer.py`) so a local model can replace it later.
+    `claude-opus-5-5`, with server-side fallbacks on a refusal.
+  - **Answers:** checked quotes. Claude writes short sentences in English
+    and Arabic; each carries an exact quote from a retrieved passage and the
+    passage id. Code checks every quote word for word
+    (`reasoning/quote_check.py`) and removes any sentence that fails,
+    keeping the reason, so the misquote rate is measured.
+  - **Scope:** the review page's gaps, functional level, components and
+    design and fitting come from retrieval plus Claude. The 59 hand-written
+    statements stop producing the page and become the answer key
+    (`python -m intake.golden_cases --rag`).
+  - **Principle 1 stays:** the model reports what the sources say for the
+    case; it never recommends, chooses, ranks, diagnoses or judges
+    readiness.
+- **Why the 2026-10-06 worry is answered by the quote check:** language
+  models often cite sources that don't support them (Wu et al. 2025:
+  50-90% of responses not fully supported). Here a sentence is shown only
+  with a quote that is verifiably in the cited passage, labelled as AI,
+  next to the quote. That proves the quote is real, not that the sentence
+  says exactly what the quote says; the specialist checks that, as the
+  label asks.
+- **Without the API** (no key, offline, refusal) the page still works: gaps
+  fall back to the retrieval and topic-word check of 2026-10-06, and each
+  section lists the passages found, without summaries.
+- **CLAUDE.md principles 2-4 and the quote rule were reworded the same
+  day**, and `scripts/verify_prompts_0_2.py` check 0.2 looks for the new
+  wording.
+- **Built and tested offline (2026-10-11):** `reasoning/rag_topics.py`,
+  `rag.py`, `writer.py`, `quote_check.py`; one search call for fields and
+  topics; case file version 2 (the AI's answer kept); log version 5; the
+  page's AI label, unavailable banner and passages-only fallback; Arabic
+  texts; `python -m intake.golden_cases --rag`. 368 tests (42 new or
+  rewritten), all offline; `scripts/verify_all.py`: everything passes except
+  0.3 (uncommitted changes). Check 0.6 now compares SYSTEM_DESCRIPTION §4.5
+  with the answer key, and check 1.3 found "name" keys and a date in the
+  case file's AI part (renamed `kind`, version "rag-v1"). The Arabic term
+  sheet was re-exported (225 rows, no corrections lost: there were none).
+- **Measured, no API (2026-10-11): the search limits the RAG.** For the 13
+  golden cases, only 129 of 359 expected hand-written statements (36%) are
+  inside a passage the topic search finds at `RAG_TOP_K` 6 (10: 40%, 15:
+  41%, 20: 47%, 30: 51%, with about 46, 71, 99, 125 and 169 distinct
+  passages per case). Weakest: alignment 10/66, socket 2/23, suspension
+  4/26, fitting 14/54; the four WHO statements are never found (the WHO
+  manual's 408 passages never rank in a topic's top 6). The model can't
+  quote what the search doesn't find, so this is the ceiling for coverage.
+  Options for the owner: more passages per topic (cost grows with input),
+  several queries per topic, or both. Note: queries tuned while looking at
+  the golden cases would make them a weaker test of the search.
+- **Not yet done:** the live run (no API key on this machine yet), so no
+  real coverage, misquote rate, time per case or cost.
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).
@@ -959,5 +1018,6 @@ they're recorded so v1 choices don't block them.
   component support may quote guideline statements word for word with
   their grade; 2026-10-09: the same for design and fitting statements. The
   specialist decides.)
-- Auth, multi-user accounts, deployment config, cloud services.
+- Auth, multi-user accounts, deployment config, cloud services (except
+  the Claude API for the summaries, since 2026-10-11).
 - Editing/removing already-logged review decisions.

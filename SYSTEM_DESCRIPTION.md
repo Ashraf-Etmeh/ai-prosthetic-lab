@@ -1,7 +1,7 @@
 # AI Prosthetic Lab — system description (functional and structural)
 
-State of the working tree on 2026-10-10. Everything below runs and is
-tested. More history and the reasons behind each decision are in
+State of the working tree on 2026-10-11 (the RAG, §4.8). Everything below
+runs and is tested offline; the live Claude API run is still to be measured. More history and the reasons behind each decision are in
 `FUTURE_WORK.md`; how to run it is in `README.md`; principles, working
 rules and the roadmap are in `CLAUDE.md`.
 
@@ -30,9 +30,9 @@ the brief's "evaluate the amputation, choose the components, design and fit":
 
 | Part | What the specialist gets |
 |---|---|
-| Use case 01: information gaps | Which intake facts are missing before evaluation, each with a quoted passage from the source library saying why it matters (or "no source found") |
-| Use case 02: component support | The patient's functional level (K-level) as the source defines it, and, per prosthetic component, the guideline statements that apply to this case |
-| Design and fitting | Statements on readiness for fitting, preparatory vs definitive prosthesis, fitting steps and alignment, shown next to what the case recorded |
+| Use case 01: information gaps | Which intake facts are missing before evaluation, each with an AI sentence on why the source says it matters, over a quote checked word for word (or "no source found") |
+| Use case 02: component support | The patient's recorded functional level and what the sources say about it, and, per prosthetic component, what the passages found say for this case: an AI sentence each over a checked quote |
+| Design and fitting | What the sources say on readiness for fitting, preparatory vs definitive prosthesis, fitting steps and alignment (AI sentences over checked quotes), shown next to what the case recorded |
 
 Orthotics, gait analysis, rehabilitation and follow-up are not started.
 
@@ -42,16 +42,21 @@ Orthotics, gait analysis, rehabilitation and follow-up are not started.
    prescribes, chooses or ranks components, or judges whether a patient is
    ready for fitting. The specialist decides; a disclaimer on every page
    says so.
-2. **Only the sources' own words.** Every reason, statement and grade shown
-   is quoted word for word from a catalogued document, with its page. The
-   system adds no clinical advice of its own. Applicability of a statement
-   comes only from the source's own wording (amputation level, "unilateral",
-   "at the K2 level", "ambulators", "TT"/"TF").
-3. **No language model, no cloud.** Rules plus a local embedding model.
-   An LLM was ruled out because it is a cloud service and because LLMs often
-   cite sources that don't support their statements.
+2. **Every sentence backed by the source's own words.** Every quote and
+   grade shown is word for word from a catalogued document, with its page.
+   The summary sentences are written by a language model, labelled as AI,
+   and each carries a quote that code finds word for word in its passage
+   before it is shown. The instructions forbid advice; who a statement
+   applies to comes only from the source's own wording.
+3. **Search local, one cloud language model (since 2026-10-11).** The
+   owner decided for a RAG: retrieval with the local embedding model, the
+   Claude API for the summaries (`reasoning/writer.py`, one swap point).
+   The 2026-10-06 worry (LLMs often cite sources that don't support them)
+   is met by the quote check and the AI label. Without the API the app
+   shows the passages found.
 4. **Fake data only, no patient identifiers** (no name, date of birth,
-   address or record number). Cases are keyed by a random id.
+   address or record number). Cases are keyed by a random id. The case as
+   entered is sent to the Claude API.
 5. **Bilingual interface (English, Arabic right-to-left).** Quotes and
    citations stay in the source's language.
 
@@ -60,7 +65,10 @@ Orthotics, gait analysis, rehabilitation and follow-up are not started.
 ## 2. Technology and runtime
 
 - Python 3.12+ (developed on 3.14), Flask 3, pypdf 6, numpy,
-  sentence-transformers 6 with torch (GPU used if present, CPU works).
+  sentence-transformers 6 with torch (GPU used if present, CPU works),
+  anthropic 1.13 (the Claude API; key from `ANTHROPIC_API_KEY`).
+- Language model: `claude-opus-5-5`, effort medium, structured output,
+  server-side fallbacks on a refusal; three calls per case, at once.
 - Embedding model: `BAAI/bge-m3` (multilingual, 1,024 numbers per vector,
   ~2.3 GB), pinned to one revision, loaded from the local Hugging Face cache
   (works offline).
@@ -68,7 +76,8 @@ Orthotics, gait analysis, rehabilitation and follow-up are not started.
   memory and saved as one JSON file (`data/cases/`), so it survives a
   restart; review decisions are appended to a JSON-lines file.
 - Single-user, local: `python app.py` serves http://127.0.0.1:5000. The first
-  case takes ~10-30 s (model load), later cases ~0.1-0.2 s.
+  case takes ~10-30 s (model load); with the AI, each case then waits for
+  the three API calls (time not yet measured live).
 
 Commands:
 
@@ -78,7 +87,8 @@ python -m knowledge.ingest     # extract + chunk + embed all catalogued document
 python -m knowledge.evaluate   # measure retrieval quality (hit@1 / hit@5)
 python -m knowledge.items      # knowledge items with the owner's rules applied -> data/knowledge/
 python -m intake.golden_cases  # golden cases vs the app (gap checks need the model)
-python -m unittest             # 326 tests, a few seconds, no model needed
+python -m intake.golden_cases --rag  # also measure the RAG (Claude API: costs money)
+python -m unittest             # 368 tests, a few seconds, no model, no API
 python scripts/verify_all.py   # the 0-2 checks, then the golden cases
 ```
 
@@ -97,12 +107,15 @@ python scripts/verify_all.py   # the 0-2 checks, then the golden cases
    explicit "unknown", so "not asked" and "asked, unknown" stay different.
 2. **Submit** (`POST /intake`). The case is validated (bad input → the form
    again, filled in as sent, with a message naming the field in the page's
-   language, HTTP 400), then analysed: search, gap analysis, component
-   support, fitting support. The result is kept in memory and in
+   language, HTTP 400), then analysed: search (each missing field and each
+   RAG topic), the AI's three answers, the quote check (§4.8). The result is kept in memory and in
    `data/cases/<case_id>.json`, and the browser is sent to the review page.
 3. **Review page** (`GET /review/<case_id>`), top to bottom:
    - disclaimer; a warning if the source library could not be searched;
    - case summary;
+   - every gap and statement from the AI shows "AI summary — check it
+     against the quote below" and the sentence in the page's language, over
+     the checked quote; a banner says why if the AI could not answer;
    - **information gaps**: each with why it is listed, the quoted sentences,
      citation (title, year, page), document language, similarity score,
      chunk id, the full passage, and the other passages considered; the
@@ -181,6 +194,10 @@ score ≥0.58, off-topic ≤0.44, hence the citation threshold 0.50.
 
 ### 4.2 Gap analysis (use case 01, `reasoning/gap_analysis.py`)
 
+Since the RAG (§4.8) the AI picks each gap's passage and quote and writes
+why the source says it matters. The steps below are what the page falls
+back on without the AI.
+
 `shared/field_guide.py` defines 17 fields that can be gaps (15 for an upper
 limb: K-level and contralateral limb don't apply), each with a reviewer
 label, a search query and per-language *topic terms* (regular expressions;
@@ -205,6 +222,10 @@ source.
 
 ### 4.3 Functional level (part of use case 02)
 
+Since the RAG the page shows the recorded K-level, activity and goals and
+what the passages found say about the functional level (§4.8). The CMS
+statements below are the answer key.
+
 From CMS 2017: the description of the recorded K-level (K0-K4), two
 cautions from the same document ("should not be considered a functional
 classification"; research "has failed to connect" medical condition to
@@ -212,9 +233,11 @@ K-level), and all five descriptions for reference. Not shown for upper-limb
 cases (K-levels describe lower-limb prostheses). Notes explain when
 statements are hidden because no K-level is recorded or because K0 is.
 
-### 4.4 Component statements (use case 02)
+### 4.4 Component statements (use case 02): the answer key
 
-Hand-written, **not searched**: `reasoning/component_guide.py` holds 19
+Since the RAG (§4.8) these no longer produce the page: they are the answer
+key the RAG is measured against, and the knowledge items (§4.7) are built
+from them. Hand-written, **not searched**: `reasoning/component_guide.py` holds 19
 rules (plus 5 K-level descriptions and 2 cautions = 26 statements). A rule
 is one statement with: id, component, source document, the source's own
 grade ("Weak for", "Neither for nor against", or none), the quote and page,
@@ -236,9 +259,9 @@ A rule applies to a case only as its source's wording says:
 Where sources disagree (microprocessor knee at K2: VA/DoD "Weak for" for
 ambulators vs CMS "may benefit"), both are shown; nothing is ranked.
 
-### 4.5 Design and fitting (`reasoning/fitting_guide.py`, `fitting_support.py`)
+### 4.5 Design and fitting (`reasoning/fitting_guide.py`, `fitting_support.py`): the answer key
 
-Same mechanism, 33 statements in four sections; socket, interface and
+Like §4.4, the answer key since the RAG. Same mechanism, 33 statements in four sections; socket, interface and
 suspension stay with the components.
 
 | Section | Statements (sources) |
@@ -260,7 +283,11 @@ or hip disarticulation, partial foot, Syme 16 fitting; upper limb 7.
 ### 4.6 Review log (pathway step 06, `review/decision_log.py`)
 
 Each decision appends one self-contained JSON line (UTF-8, Arabic kept
-readable), log version 4:
+readable), log version 5 (version 5, 2026-10-11, adds per statement
+`origin`, `summary_en`, `summary_ar`, `chunk_id`, `passage`; per gap
+`summary_en`, `summary_ar`; `generation` {prompt_version, writer, effort,
+parts {gaps, components, fitting: status, reason, model, usage, seconds,
+topics, items_kept, removed}}; the RAG settings). Version 4:
 
 ```
 log_version, logged_at (UTC), case_id, decision, note, ui_language,
@@ -318,6 +345,42 @@ a review, a filled-in cell of the sheet); `--force` does. The pages and the
 review log don't use the items yet (step 3e will show "Evidence layer: not
 rated by the source" where a rule left the layer unassigned).
 
+### 4.8 The RAG: search, AI summaries, quote check (since 2026-10-11)
+
+The owner's decision: the review page is produced by retrieval plus a
+language model, not by rules (FUTURE_WORK.md, "RAG").
+
+| Step | Where | What happens |
+|---|---|---|
+| Topics | `reasoning/rag_topics.py` | gaps: each missing field (field guide query); components: functional level (lower limb) and each component of `COMPONENTS` for the level (pylon: any lower limb); fitting: each section of `SECTIONS`. Queries name the level, side and K-level |
+| Search | `knowledge/retrieval.py` | one embed call; fields: top 5, ICRC manual left out; topics: top `RAG_TOP_K` = 6, nothing left out (`RAG_TOPIC_EXCLUDED_DOCUMENTS`) |
+| Ask | `reasoning/rag.py`, `writer.py` | three calls at once (gaps; functional level and components; fitting), each with `SYSTEM_PROMPT` (`PROMPT_VERSION` rag-v1), the case without its id and time, the topics with passages, the passages with their ids; only topics with passages are asked; a part with none makes no call ("no passages") |
+| Answer | structured output | `{"items": [{topic, passage_id, quote, sentence_en, sentence_ar, grade}]}`; topic and passage id limited to those given; grade one of five VA/DoD phrases or "" |
+| Check | `reasoning/quote_check.py` | quote in the passage word for word (NFKC; whitespace, quotation marks and dashes as printed), ≥ `MIN_QUOTE_WORDS` = 5, Arabic sentence present, no repeat, ≤ 1 per gap field and ≤ `MAX_ITEMS_PER_TOPIC` = 4 per section; grade kept only if printed within 300 characters after the quote; the passage's own words are shown, the page looked up in `data/extracted/` |
+| Show | `reasoning/rag.py` → `models.py` | items become `Gap` (gaps) and `CitedStatement` (origin "rag", id `rag-<topic>-<10 hex>`, the same in every case for the same topic and quote) in the existing sections, so the page, marks, log and trial report work unchanged |
+| Without the AI | | no key, offline, refusal, cut off, unreadable: the part is "unavailable" with the reason (banner); gaps fall back to §4.2; sections list the passages found |
+
+The tests never call the API (`tests/__init__.py` sets
+`AI_PROSTHETIC_LAB_OFFLINE`; `tests/helpers.py` FakeWriter answers from the
+passages it is given). The case file (version 2) keeps the AI's answer, so
+a review page after a restart needs no new call.
+
+**Measured so far (2026-10-11, no API):** how many of the answer key's
+statements are inside a passage the search finds for the case's topics, over
+the 13 golden cases. That is the most the RAG can cover:
+
+| Passages per topic (`RAG_TOP_K`) | 6 (now) | 10 | 15 | 20 | 30 |
+|---|---|---|---|---|---|
+| Expected statements inside a retrieved passage | 129/359 (36%) | 144 (40%) | 148 (41%) | 168 (47%) | 183 (51%) |
+| Distinct topic passages per case | ~46 | ~71 | ~99 | ~125 | ~169 |
+
+At 6: functional level 8/8, foot and ankle 23/30, knee 6/9, readiness 28/69,
+preparatory or definitive 18/47, fitting 14/54, alignment 10/66, socket
+2/23, suspension 4/26. The four WHO statements were never found (the WHO
+manual is searched, 408 passages, but never ranks in the top 6). Not yet
+measured: the live answers (coverage, misquote rate, time, cost; `python -m
+intake.golden_cases --rag`).
+
 ---
 
 ## 5. Structure
@@ -330,9 +393,9 @@ shared/
   config.py                paths, model, chunk and search settings, threshold, disclaimer
   i18n.py                  all interface text in English and Arabic
   arabic_terms.py          Arabic term sheet: export for a prosthetist, apply corrections back
-  store.py                 CaseRecord store: memory + one JSON file per case in data/cases/
+  store.py                 CaseRecord store: memory + one JSON file per case in data/cases/ (version 2: with the AI's answer)
 intake/
-  routes.py                GET/POST /intake: form → Case → analyse_case() → store
+  routes.py                GET/POST /intake: form → Case → analyse_case() (search, AI, quote check) → store
   load_trial_cases.py      loads the prepared trial cases (data/trial/cases/) via analyse_case()
   golden_cases.py          runs the golden cases through analyse_case(), reports differences
   templates/intake_form.html
@@ -341,7 +404,7 @@ knowledge/
   extract.py               PDF/txt → cleaned text per page
   ingest.py                chunking, embedding, vector store files
   embedding.py             bge-m3 loading (local cache first) and embed_texts()
-  retrieval.py             VectorStore, filtered search, one search per missing field
+  retrieval.py             VectorStore, filtered search, one search per missing field and per RAG topic
   evaluate.py              hit@1/hit@5 evaluation
   models.py                ProtocolChunk (a retrieved passage with citation and score),
                            KnowledgeItem (a curated statement with its evidence fields)
@@ -350,17 +413,21 @@ knowledge/
 reasoning/
   models.py                Gap, Quote, GuidelineStatement, CitedStatement,
                            ComponentSection, FunctionalLevel, ComponentSupport, FittingSupport
-  gap_analysis.py          use case 01
-  component_guide.py       hand-written component rules + K-level statements
+  rag_topics.py            the RAG's topics per case and their search queries
+  rag.py                   the RAG: prompts, schema, three parts at once, item check, page shapes
+  writer.py                the one place that calls a language model (ClaudeWriter, OfflineWriter)
+  quote_check.py           a quote word for word in its passage; its page in data/extracted/
+  gap_analysis.py          use case 01 without the AI (the fallback), and the gap explanations
+  component_guide.py       hand-written component rules + K-level statements (the answer key)
   component_support.py     picks component statements for a case; applies(); cite()
-  fitting_guide.py         hand-written design and fitting rules
+  fitting_guide.py         hand-written design and fitting rules (the answer key)
   fitting_support.py       picks fitting statements; recorded readiness values
 review/
   routes.py                GET /review/<id>, POST /review/<id>/decision
   decision_log.py          validation, log entry building, append/read
   trial_report.py          counts of the reviewers' marks in the log → data/trial/report.csv
   templates/review.html
-tests/                     unittest suite (326 tests) + a tiny fake embedder
+tests/                     unittest suite (368 tests) + a tiny fake embedder and a fake AI writer
 scripts/                   verify_prompts_0_2.py (checks for prompts 0-2), verify_all.py (that + golden cases)
 data/
   sources/                 catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
@@ -395,17 +462,24 @@ Case
   -> unrecorded_fields(), unknown_fields(): dotted paths, skipping fields
      that don't apply (K-level and contralateral limb for upper limb)
 
-Gap(field, label, status, why_needed, source_protocol_reference, evidence: ProtocolChunk, excerpt)
+Gap(field, label, status, why_needed, source_protocol_reference, evidence: ProtocolChunk, excerpt,
+    summary_en, summary_ar)
 
 Quote(page, text, end_page=None, items=())          words exactly as printed; items = a list it introduces
 GuidelineStatement(id, component, doc_id, grade, quote, context: tuple[Quote])
 Rule(statement, levels, k_levels=None, ambulators_only, unilateral_only, bilateral_only)
-CitedStatement(statement, title, year, language, source_type)   ready to show and log
+CitedStatement(statement, title, year, language, source_type,    ready to show and log
+               origin ("guide"/"rag"), summary_en, summary_ar, chunk_id)
 ComponentSection(component, statements: [CitedStatement])
 ComponentSupport(functional: FunctionalLevel, sections, notes)
 FittingSupport(sections, recorded: [(field path, value)])
 
-CaseRecord(case, retrieved_chunks, gaps, knowledge_warning, components, fitting)
+CaseRecord(case, retrieved_chunks, gaps, knowledge_warning, components, fitting, generation)
+
+Generation(prompt_version, writer, effort, parts {gaps, components, fitting: Part})
+Part(kind, status "ok"/"unavailable"/"no passages", reason, model, usage, seconds, topics,
+     items: [Item], removed: [{topic, passage_id, quote, reason, dropped}])
+Item(id, topic, chunk_id, doc_id, quote, page, end_page, sentence_en, sentence_ar, grade)
 
 KnowledgeItem(knowledge_id, statement, list_items, domain, topic, source_id,
               citation, date, source_type, grade_as_printed,            recorded
@@ -418,9 +492,9 @@ KnowledgeItem(knowledge_id, statement, list_items, domain, topic, source_id,
 ```
 POST /intake
   → _case_from_form (validation; errors → 400 + form)
-  → retrieve_relevant_chunks(case)      (if no vector store: gaps still listed, with a warning)
-  → analyze_gaps(case, chunks)
-  → component_support(case), fitting_support(case)
+  → retrieve_relevant_chunks(case)      fields and RAG topics (no vector store: a warning, no passages)
+  → generate(case, chunks, writer)      three AI calls at once; each item quote-checked
+  → gaps_from(), components_from(), fitting_from()   (without the AI: analyze_gaps, passages listed)
   → store.save(CaseRecord) → 302 /review/<case_id>
 
 POST /review/<id>/decision
@@ -437,7 +511,12 @@ POST /review/<id>/decision
 | `MIN_RELEVANCE_SCORE` | 0.50 |
 | `RETRIEVAL_LANGUAGES` | en, ar |
 | `RETRIEVAL_DOMAINS` | prosthetics |
-| `RETRIEVAL_EXCLUDED_DOCUMENTS` | the ICRC gait-analysis manual |
+| `RETRIEVAL_EXCLUDED_DOCUMENTS` | the ICRC gait-analysis manual (gap search only) |
+| `RAG_TOP_K` / `RAG_TOPIC_EXCLUDED_DOCUMENTS` | 6 / none |
+| `MIN_QUOTE_WORDS` / `MAX_ITEMS_PER_TOPIC` | 5 / 4 (gap fields: 1) |
+| `LLM_MODEL` / `LLM_EFFORT` / `LLM_FALLBACKS` | `claude-opus-5-5` / medium / on |
+| `PROMPT_VERSION` | rag-v1 |
+| `OFFLINE_ENV` | `AI_PROSTHETIC_LAB_OFFLINE`: set, the AI is never called |
 | `SOURCES_NOT_INGESTED` | registry, AI-safety/regulation references, datasets |
 
 ### 5.4 Languages
@@ -454,7 +533,11 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **326 unit tests** (standard `unittest`, fake embedder, no model load):
+- **368 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+  model load, never the API): the RAG (topics, prompt rules, schema, every
+  reason an item is removed, parts, fallback, the Claude call with its SDK
+  client replaced), the quote check (a changed word, a comma, "...", a short
+  quote refused; quotation marks and Arabic handled; page lookup), and
   schema, catalog, extraction, ingestion, retrieval filters, field guide,
   gap analysis, component and fitting applicability, review log, case
   files across a simulated restart, pages (through Flask's test client,
@@ -500,6 +583,15 @@ uses a missing key.
   topic check proves a passage *mentions* a topic, not that it says the
   information is needed.
 - No Arabic clinical source, so no Arabic citations.
+- RAG (2026-10-11): the search finds only 36% of the answer key's statements
+  for the golden cases (§4.8), so the AI can't cover more; the live coverage,
+  misquote rate, time per case and cost are not yet measured.
+- The quote check proves a quote is in its passage, not that the AI's
+  sentence says only what the quote says; the label asks the specialist to
+  check. The AI's Arabic sentences have not been read by an Arabic-reading
+  prosthetist.
+- With the AI, the app depends on the Claude API (internet, a key, cost) and
+  the case as entered leaves the machine.
 - Library gaps: upper-limb terminal devices and partial-hand prostheses;
   alignment and transtibial socket text come from one training manual
   (ICRC, written for its own polypropylene technology).
@@ -512,8 +604,13 @@ uses a missing key.
 ## 8. Status and next steps
 
 - Git: the trial-readiness fixes and trial tooling are in `053a190`
-  (pushed); the knowledge items and the owner's evidence rules (§4.7) are
-  committed on top, not pushed.
+  (pushed); the knowledge items and the owner's evidence rules (§4.7) and
+  the golden cases are committed on top, not pushed. The RAG (§4.8,
+  2026-10-11) is in the working tree, not committed.
+- RAG next: a live run on one case (needs an API key), then the golden
+  cases with `--rag`, after the owner's decision on the search's 36%
+  ceiling (§4.8). Evidence values (3e) apply to the hand-written statements;
+  showing them next to a RAG statement that covers one is not built.
 - Roadmap (in `CLAUDE.md`): trial readiness (1 stabilise — done; 2 trial
   tooling — done, then a real prosthetist trial), evidence (3 knowledge-item and
   evidence fields — structure and the first rule pass done; the owner's own

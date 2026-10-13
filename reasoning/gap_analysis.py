@@ -1,8 +1,13 @@
-"""Gap analysis: case + retrieved passages -> list of information gaps.
+"""Gap analysis without the AI: case + retrieved passages -> list of information gaps.
 
-Rules, not a language model: a model call would be a cloud service (out of
-scope for v1), and language models often cite sources that don't support
-what they say (Wu et al. 2025, data/sources/04_ai_safety_regulation).
+Since the RAG (2026-10-11, reasoning/rag.py) the AI picks the passage and
+quote for each gap. This module is what the page falls back on when the AI
+can't answer (no key, offline, refused), and explain_gap() words every gap's
+opening sentence. It was the only gap analysis from 2026-10-06, chosen then
+because a model call was a cloud service and language models often cite
+sources that don't support what they say (Wu et al. 2025,
+data/sources/04_ai_safety_regulation); the RAG answers that with a quote
+check (reasoning/quote_check.py).
 
 For each missing field (shared/field_guide.py: empty, or recorded as
 unknown), in the field guide's order:

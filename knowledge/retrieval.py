@@ -27,6 +27,8 @@ from shared.case_schema import Case
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
+    RAG_TOP_K,
+    RAG_TOPIC_EXCLUDED_DOCUMENTS,
     RETRIEVAL_DOMAINS,
     RETRIEVAL_EXCLUDED_DOCUMENTS,
     RETRIEVAL_LANGUAGES,
@@ -158,24 +160,37 @@ def retrieve_relevant_chunks(
     top_k: int = RETRIEVAL_TOP_K,
     store: Optional[VectorStore] = None,
     embed: Callable[[list[str]], np.ndarray] = embed_texts,
+    topics: bool = True,
 ) -> dict[str, list[ProtocolChunk]]:
-    """For each missing field of the case: the top_k passages, best first.
+    """The passages for the case, best first, keyed by what they were searched for.
 
-    Keys are dotted field paths, e.g. "residual_limb.volume_stability".
+    - For each missing field: the top_k passages. Keys are dotted field
+      paths, e.g. "residual_limb.volume_stability".
+    - With `topics` (the RAG, reasoning/rag_topics.py): for the functional
+      level, each component and each fitting section, the RAG_TOP_K
+      passages. Keys are the topic keys, e.g. "knee", "alignment"; they
+      never clash with a field path. RAG_TOPIC_EXCLUDED_DOCUMENTS is left
+      out here instead of RETRIEVAL_EXCLUDED_DOCUMENTS.
     Documents only about the other limb are left out: an upper-limb case
-    never cites a lower-limb-only guideline.
+    never cites a lower-limb-only guideline. One call to the model embeds
+    all the queries.
     Raises KnowledgeBaseMissing if the vector store hasn't been built.
     """
+    from reasoning.rag_topics import GAPS, topics_for_case  # here: the knowledge layer doesn't need it otherwise
+
     missing = missing_fields(case)
-    if not missing:
+    searches = [(field.info.path, build_query(case, field.info), top_k, RETRIEVAL_EXCLUDED_DOCUMENTS)
+                for field in missing]
+    if topics:
+        searches += [(topic.key, topic.query, RAG_TOP_K, RAG_TOPIC_EXCLUDED_DOCUMENTS)
+                     for topic in topics_for_case(case) if topic.part != GAPS]
+    if not searches:
         return {}
     store = store if store is not None else get_store()
     limb = "lower" if case.is_lower_limb else "upper"
-    query_vectors = embed([build_query(case, field.info) for field in missing])
+    query_vectors = embed([query for _, query, _, _ in searches])
     return {
-        field.info.path: store.search(
-            vector, top_k, domains=RETRIEVAL_DOMAINS, languages=RETRIEVAL_LANGUAGES, limb=limb,
-            exclude=RETRIEVAL_EXCLUDED_DOCUMENTS,
-        )
-        for field, vector in zip(missing, query_vectors)
+        key: store.search(vector, k, domains=RETRIEVAL_DOMAINS, languages=RETRIEVAL_LANGUAGES, limb=limb,
+                          exclude=exclude)
+        for (key, _, k, exclude), vector in zip(searches, query_vectors)
     }

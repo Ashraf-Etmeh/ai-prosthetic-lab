@@ -35,6 +35,8 @@
     .gap-judgement { margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; }
     .logged { font-size: 0.85rem; padding-inline-start: 1.2rem; }
     .lang-switch { text-align: end; font-size: 0.85rem; }
+    .ai { background: #f3f0fa; border-inline-start: 3px solid #a99bd4; padding: 0.3rem 0.7rem; margin: 0.4rem 0; }
+    .ai-label { display: block; font-size: 0.72rem; color: #5b4b8a; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -48,6 +50,11 @@
   {# The warning itself is English (it names a command to run); other languages introduce it. #}
   <div class="warning">{% if lang != "en" %}{{ t('review.not_searched') }} {% endif %}<span lang="en" dir="ltr">{{ knowledge_warning }}</span></div>
   {% endif %}
+
+  {# Where the AI could not answer: why (a technical message, in English), and what is shown instead. #}
+  {% if generation %}{% for part in generation.unavailable %}
+  <div class="warning">{{ t('ai.unavailable', part=t('ai_part.' ~ part.kind)) }} <span lang="en" dir="ltr">{{ part.reason }}</span> {{ t('ai.unavailable_after') }}</div>
+  {% endfor %}{% endif %}
 
   {% if saved %}
   {% set last = logged[-1][0] %}
@@ -79,6 +86,9 @@
 
   <form method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
   <h2>{{ t('review.gaps_heading', n=gaps | length) }}</h2>
+  {% if generation and generation.part('gaps').removed_items %}
+  <p class="gap-source">{{ t('ai.removed', n=generation.part('gaps').removed_items) }}</p>
+  {% endif %}
   {% for gap in gaps %}
   <div class="gap">
     <div class="gap-head">
@@ -87,6 +97,8 @@
       <span class="gap-field" dir="ltr">{{ gap.field }}</span>
     </div>
     <p>{{ explain(gap) }}</p>
+    {% set summary = gap.summary(lang) %}
+    {% if summary %}<p class="ai"><span class="ai-label">{{ t('ai.label') }}</span>{{ summary }}</p>{% endif %}
     {% if gap.evidence %}
     <blockquote dir="auto" lang="{{ gap.evidence.language }}">{{ gap.excerpt }}</blockquote>
     <div class="gap-source">
@@ -137,7 +149,8 @@
   <blockquote class="context" dir="auto" lang="{{ cited.language }}">{{ quote_body(quote) }}</blockquote>
   <div class="gap-source">{{ t('components.same_source', pages=quote.pages) }}</div>
   {% endmacro %}
-  {# One component or fitting statement: grade, kind of source, quote, context, the reviewer's mark. #}
+  {# One component or fitting statement: grade, kind of source, the AI's summary (RAG), quote,
+     context, the full passage (RAG), the reviewer's mark. #}
   {% macro statement_block(cited) %}
   {% set statement = cited.statement %}
   <div class="gap">
@@ -146,8 +159,18 @@
       <span class="gap-status">{{ t('source_type.' ~ cited.source_type) }}</span>
       <span class="gap-field" dir="ltr">{{ statement.id }}</span>
     </div>
+    {% set summary = cited.summary(lang) %}
+    {% if summary %}<p class="ai"><span class="ai-label">{{ t('ai.label') }}</span>{{ summary }}</p>{% endif %}
     {{ quoted(cited, statement.quote) }}
     {% for quote in statement.context %}{{ context_quote(cited, quote) }}{% endfor %}
+    {% set chunk = passage(cited.chunk_id) if cited.chunk_id else none %}
+    {% if chunk %}
+    <div class="gap-source"><code dir="ltr">{{ chunk.chunk_id }}</code></div>
+    <details>
+      <summary>{{ t('review.full_passage') }}</summary>
+      <p dir="auto" lang="{{ chunk.language }}">{{ chunk.text }}</p>
+    </details>
+    {% endif %}
     {% set name = statement_prefix ~ statement.id %}
     {% set chosen = form.get(name, "") %}
     <div class="gap-judgement">
@@ -157,6 +180,27 @@
     </div>
   </div>
   {% endmacro %}
+  {# A section without statements: why, and, where the AI could not answer, the passages the search found. #}
+  {% macro empty_section(part, key, no_statement_key) %}
+  {% if ai_status.get(part) == "unavailable" %}
+  {% set found = chunks.get(key, []) %}
+  {% if found %}
+  <details>
+    <summary>{{ t('ai.passages_found', n=found | length) }}</summary>
+    {% for chunk in found %}
+    <blockquote dir="auto" lang="{{ chunk.language }}">{{ chunk.text }}</blockquote>
+    <div class="gap-source"><div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>{{ t('doclang.' ~ chunk.language) }} · {{ t('review.similarity', score="%.2f" | format(chunk.score)) }} · <code dir="ltr">{{ chunk.chunk_id }}</code></div>
+    {% endfor %}
+  </details>
+  {% else %}
+  <p class="gap-source no-source">{{ t('ai.no_passages') }}</p>
+  {% endif %}
+  {% else %}
+  <p class="gap-source no-source">{{ t(no_statement_key) }}</p>
+  {% endif %}
+  {% endmacro %}
+  {# How many summaries the quote check removed from a part, if any. #}
+  {% macro removed_note(part) %}{% if generation and generation.part(part).removed_items %}<p class="gap-source">{{ t('ai.removed', n=generation.part(part).removed_items) }}</p>{% endif %}{% endmacro %}
   {# An intake value as recorded: a choice in the page's language, typed text as typed. #}
   {% macro recorded(path, value) %}{% if value is none %}{{ t('status.not recorded') }}{% elif path == "months_since_amputation" %}{{ t('fitting.months', n="%g" | format(value)) }}{% elif value.value is defined %}{{ value_label(value) }}{% elif value is string %}<bdi>{{ value }}</bdi>{% elif value is number %}{{ value }}{% elif value %}<bdi>{{ value | join(", ") }}</bdi>{% else %}{{ t('fitting.none_reported') }}{% endif %}{% endmacro %}
 
@@ -170,12 +214,23 @@
     <p class="gap-source">{{ t('functional.description') }}</p>
     {{ quoted(functional.description, functional.description.statement.quote) }}
     {% endif %}
+    {% if functional.cautions %}
     <p class="gap-source">{{ t('functional.cautions') }}</p>
     {% for cited in functional.cautions %}{{ quoted(cited, cited.statement.quote, "context") }}{% endfor %}
+    {% endif %}
+    {% if functional.all_levels %}
     <details>
       <summary>{{ t('functional.all_levels') }}</summary>
       {% for cited in functional.all_levels %}{{ quoted(cited, cited.statement.quote, "context") }}{% endfor %}
     </details>
+    {% endif %}
+    {% set functional_section = components.functional_section %}
+    {% if functional_section %}
+    <p class="gap-source">{{ t('functional.from_sources') }}</p>
+    {% for cited in functional_section.statements %}{{ statement_block(cited) }}
+    {% else %}{{ empty_section('components', 'functional_level', 'functional.no_statement') }}
+    {% endfor %}
+    {% endif %}
     {% else %}
     <p class="gap-source">{{ t('functional.upper_limb') }}</p>
     {% endif %}
@@ -185,23 +240,27 @@
     </dl>
   </div>
 
-  <h2 id="components">{{ t('components.heading', n=components.statements | length) }}</h2>
+  {% set component_sections = components.component_sections %}
+  <h2 id="components">{{ t('components.heading', n=component_sections | sum(attribute='statements', start=[]) | length) }}</h2>
   <div class="banner">{{ t('components.intro') }}</div>
+  {{ removed_note('components') }}
   {% for note in components.notes %}
   <p class="gap-source no-source">{{ t(note) }}</p>
   {% endfor %}
-  {% for section in components.sections %}
+  {% for section in component_sections %}
   <h3>{{ t('component.' ~ section.component) }}</h3>
   {% for cited in section.statements %}{{ statement_block(cited) }}
-  {% else %}
-  <p class="gap-source no-source">{{ t('components.no_statement') }}</p>
+  {% else %}{{ empty_section('components', section.component, 'components.no_statement') }}
   {% endfor %}
   {% endfor %}
+  {% elif not generation %}
+  <p class="gap-source no-source">{{ t('review.made_before_ai') }}</p>
   {% endif %}
 
   {% if fitting %}
   <h2 id="fitting">{{ t('fitting.heading', n=fitting.statements | length) }}</h2>
   <div class="banner">{{ t('fitting.intro') }}</div>
+  {{ removed_note('fitting') }}
   <p class="gap-source">{{ t('fitting.components_above') }}</p>
   {% for section in fitting.sections %}
   <h3>{{ t('fitting_section.' ~ section.component) }}</h3>
@@ -216,8 +275,7 @@
   </div>
   {% endif %}
   {% for cited in section.statements %}{{ statement_block(cited) }}
-  {% else %}
-  <p class="gap-source no-source">{{ t('fitting.no_statement') }}</p>
+  {% else %}{{ empty_section('fitting', section.component, 'fitting.no_statement') }}
   {% endfor %}
   {% endfor %}
   {% endif %}

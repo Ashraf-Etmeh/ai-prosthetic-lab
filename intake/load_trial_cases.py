@@ -6,9 +6,14 @@
 Each file holds one fake case in the shape of Case.to_dict() (no patient
 identifiers), with a fixed id that matches its file name, e.g.
 trial-01.json -> "trial-01". The case is analysed exactly as a submitted
-intake form is (intake/routes.py analyse_case: search, gaps, components,
-fitting) and saved to data/cases/, so its review page is
+intake form is (intake/routes.py analyse_case: search, AI summaries, gaps,
+components, fitting) and saved to data/cases/, so its review page is
 http://127.0.0.1:5000/review/trial-01.
+
+Since the RAG (2026-10-11) this calls the Claude API for every case (three
+calls each; it costs money, and the cases are sent to the API). With the
+environment variable AI_PROSTHETIC_LAB_OFFLINE set, it doesn't: the pages
+then show the passages found without summaries.
 
 Loading again analyses the case again and replaces its saved analysis; the
 review log is never touched. Run it while the app is stopped, or restart the

@@ -15,6 +15,7 @@ from knowledge.models import ProtocolChunk
 from knowledge.retrieval import KnowledgeBaseMissing
 from review.decision_log import read_decisions
 from shared.store import store
+from tests.helpers import FakeWriter
 
 
 def visible_text(page: str) -> str:
@@ -50,9 +51,34 @@ VOLUME_PASSAGE = ProtocolChunk(
 )
 
 
+def _passage(chunk_id: str, text: str, page: int, score: float = 0.66) -> ProtocolChunk:
+    """A passage of a catalogued document (so its title and kind of source are known)."""
+    return ProtocolChunk(chunk_id=chunk_id, text=text, source="01_guidelines/test.pdf", title="Search title",
+                         year=2024, page=page, end_page=page, language="en", score=score)
+
+
+KNEE_PASSAGE = _passage(
+    "lower_limb_amputation_va_dod_cpg_2024-0901",
+    "For prosthetic ambulators, we suggest prescribing microprocessor knee units over non-microprocessor "
+    "knee units. Weak for Reviewed, New-added", 56)
+K_LEVEL_PASSAGE = _passage(
+    "lower_limb_prosthesis_cms_consensus_2017-0901",
+    "Level 2: Has the ability or potential for ambulation with the ability to traverse low level "
+    "environmental barriers such as curbs, stairs or uneven surfaces.", 5)
+READINESS_PASSAGE = _passage(
+    "prosthetic_gait_analysis_icrc_manual_2014-0901",
+    "Those who are ready for fitting are free of pain and infection and have no oedema.", 49)
+PROSTHESIS_TYPE_PASSAGE = _passage(
+    "upper_limb_amputation_va_dod_cpg_2022-0901",
+    "For patients with a major unilateral upper limb amputation, we suggest use of a body-powered or "
+    "externally powered prosthesis.", 40)
+
+
 def fake_retrieval(case):
     """Stands in for the real search, so tests never load the 2.3 GB model."""
-    return {"residual_limb.volume_stability": [VOLUME_PASSAGE]}
+    return {"residual_limb.volume_stability": [VOLUME_PASSAGE], "knee": [KNEE_PASSAGE],
+            "functional_level": [K_LEVEL_PASSAGE], "readiness": [READINESS_PASSAGE],
+            "prosthesis_type": [PROSTHESIS_TYPE_PASSAGE]}
 
 
 class OptionalListTests(unittest.TestCase):
@@ -77,6 +103,10 @@ class RouteTestCase(unittest.TestCase):
     def setUp(self):
         app = create_app()
         app.testing = True
+        # The AI: a fake that quotes the passages it is given (tests/helpers.py), never the Claude API.
+        self.writer = FakeWriter()
+        app.config["RAG_WRITER"] = self.writer
+        self.app = app
         self.client = app.test_client()
         retrieval = patch("intake.routes.retrieve_relevant_chunks", side_effect=fake_retrieval)
         retrieval.start()
@@ -213,15 +243,21 @@ class RestartTests(RouteTestCase):
 
     def test_decision_after_a_restart(self):
         case_id = self.post_intake().headers["Location"].rsplit("/", 1)[-1]
+        readiness = store.get(case_id).fitting.sections[0].statements[0].statement.id
+        calls = len(self.writer.calls)
         self.restart()
         resp = self.client.post(f"/review/{case_id}/decision", follow_redirects=True, data={
             "decision": "approve", "gap:residual_limb.volume_stability": "needed",
-            "opt:icrc_ready_for_fitting": "relevant"})
+            f"opt:{readiness}": "relevant"})
         self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(self.writer.calls), calls)  # the AI's answer came from the case file, not a new call
         [entry] = read_decisions(case_id, path=self.log_path)
         self.assertEqual(entry["case"]["case_id"], case_id)
         volume = next(g for g in entry["gaps"] if g["field"] == "residual_limb.volume_stability")
         self.assertEqual(volume["source"]["citation"], "Test Guideline (2024), p. 14")
+        self.assertEqual(volume["summary_en"], "AI sentence about residual_limb.volume_stability.")
+        marks = {s["id"]: s["reviewer_judgement"] for section in entry["fitting"]["sections"] for s in section["statements"]}
+        self.assertEqual(marks[readiness], "relevant")
 
     def test_case_never_saved_is_still_404(self):
         self.restart()
@@ -449,84 +485,122 @@ class ReviewRouteTests(RouteTestCase):
 
 
 class ComponentRouteTests(RouteTestCase):
-    """The functional-level and component sections of the review page."""
+    """The functional-level and component sections of the review page (the RAG)."""
 
     def review(self, **fields) -> str:
         resp = self.post_intake(**fields)
         return visible_text(self.client.get(resp.headers["Location"]).get_data(as_text=True))
 
-    def test_transfemoral_k2(self):
+    def knee_id(self) -> str:
+        return next(c.statement.id for c in store.all()[-1].components.statements if c.statement.component == "knee")
+
+    def test_transfemoral_k2_shows_ai_summaries_over_checked_quotes(self):
         page = self.review(amputation_level="transfemoral", k_level="K2", functional_goals="walk to church")
         components = store.all()[-1].components
         self.assertIn("Recorded K-level: K2", page)
-        self.assertIn("Level 2: Has the ability or potential for ambulation", page)
-        self.assertIn("Lower Limb Prosthetic Workgroup Consensus Document (2017), p. 5", page)
-        self.assertIn("instead it is a description of the intended use of the prosthesis.", page)  # caution
         self.assertIn("walk to church", page)
-        self.assertIn(f"What the guidelines say about components ({len(components.statements)} statements)",
-                      page)
+        self.assertRegex(page, r"(?s)What the sources say about the functional level:.*AI summary — check it "
+                               r"against the quote below:AI sentence about functional_level\.\s+Level 2: Has the "
+                               r"ability or potential for\s+Lower Limb Prosthetic Workgroup Consensus Document "
+                               r"\(2017\), p\. 5")
+        self.assertIn(f"What the sources say about components ({len(components.component_sections[0].statements)} "
+                      "statements)", page)
         self.assertIn("It does not choose or rank components.", page)
-        self.assertIn("Knee unit", page)
-        self.assertIn("For prosthetic ambulators, we suggest prescribing microprocessor knee units", page)
-        self.assertRegex(page, r"Source grade: Weak for\s+guideline or protocol")
-        self.assertIn("(2024), p. 56", page)
-        # A context quote shows only its page: it is from the same document.
-        self.assertRegex(page, r"the quality of the evidence was very low\.\s+Same source, p\. 56")
-        self.assertIn("may benefit from MPK technology", page)  # CMS, K2 only
-        self.assertRegex(page, r"Source grade: none given\s+guideline or protocol\s+cms_k2_microprocessor_knee")
-        # The ICRC manual is shown as what it is: a manual, not a guideline.
-        self.assertRegex(page, r"Source grade: none given\s+professional knowledge \(manual\)\s+"
-                               r"icrc_tf_hip_flexion_contracture_knee")
-        self.assertIn("Pylon", page)
+        # The AI's sentence, labelled, then the passage's own words and the catalog's citation.
+        self.assertRegex(page, r"Knee unit\s+Source grade: none given\s+guideline or protocol\s+rag-knee-[0-9a-f]{10}"
+                               r"\s+AI summary — check it against the quote below:AI sentence about knee\.\s+"
+                               r"For prosthetic ambulators, we suggest prescribing microprocessor knee\s+"
+                               r"VA/DoD [^\n]*\(2024\), p\. 56")
+        self.assertIn("lower_limb_amputation_va_dod_cpg_2024-0901", page)  # the passage id, and the full passage
+        self.assertIn("over non-microprocessor knee units. Weak for Reviewed, New-added", page)
         raw = self.client.get(f"/review/{store.all()[-1].case.case_id}").get_data(as_text=True)
-        self.assertIn('name="opt:va_dod_ll_17_microprocessor_knee" value="relevant"', raw)
+        self.assertIn(f'name="opt:{self.knee_id()}" value="relevant"', raw)
+        self.assertNotIn("va_dod_ll_17_microprocessor_knee", raw)  # the hand-written statements are the answer key now
 
-    def test_transtibial_without_k_level(self):
-        page = self.review()
-        self.assertIn("Recorded K-level: not recorded", page)
-        self.assertIn("Functional level (K-level) is not recorded, so statements that apply only", page)
-        self.assertNotIn("Knee unit", page)
+    def test_what_the_model_was_asked(self):
+        self.review(amputation_level="transfemoral", k_level="K2")
+
+        def topics(schema):
+            return schema["properties"]["items"]["items"]["properties"]["topic"]["enum"]
+
+        system, user, schema = next(call for call in self.writer.calls if "knee" in topics(call[2]))
+        self.assertIn("never advise", system)
+        self.assertIn('"amputation_level": "transfemoral"', user)
+        self.assertNotIn("case_id", user)  # nothing generated, nothing identifying
+        self.assertIn('<passage id="lower_limb_amputation_va_dod_cpg_2024-0901"', user)
+        self.assertEqual(set(topics(schema)), {"functional_level", "knee"})  # only topics with passages are asked
 
     def test_section_without_statement_says_so(self):
-        # K0: every foot and ankle statement speaks of ambulators.
-        page = self.review(k_level="K0")
-        self.assertRegex(page, r"Foot and ankle\s+No statement in the source library covers this "
+        page = self.review(amputation_level="transfemoral", k_level="K3")
+        self.assertRegex(page, r"Foot and ankle\s+The passages found in the source library say nothing about this "
                                r"component for this case\.")
+
+    def test_without_the_ai_the_passages_are_listed_and_the_reason_shown(self):
+        self.app.config["RAG_WRITER"] = FakeWriter(error="no Claude API key: set ANTHROPIC_API_KEY")
+        page = self.review(amputation_level="transfemoral", k_level="K2")
+        for part in ("the information gaps", "the functional level and components", "design and fitting"):
+            self.assertIn(f"AI summaries are not available for {part}: no Claude API key: set ANTHROPIC_API_KEY "
+                          "The passages the search found are listed without summaries.", page)
+        self.assertRegex(page, r"Knee unit\s+Passages the search found for this section, not summarised \(1\)\s+"
+                               r"For prosthetic ambulators, we suggest")
+        self.assertNotIn("AI summary", page)
+        # The gaps fall back to the search and topic-word check.
+        gap = next(g for g in store.all()[-1].gaps if g.field == "residual_limb.volume_stability")
+        self.assertEqual(gap.excerpt, VOLUME_PASSAGE.text)
+        self.assertIsNone(gap.summary_en)
+
+    def test_a_misquote_is_removed_and_counted(self):
+        def answer(user, schema):
+            topics = schema["properties"]["items"]["items"]["properties"]["topic"]["enum"]
+            if "knee" not in topics:
+                return {"items": []}
+            return {"items": [{"topic": "knee", "passage_id": KNEE_PASSAGE.chunk_id,
+                               "quote": "we strongly recommend microprocessor knee units for everyone",
+                               "sentence_en": "Made up.", "sentence_ar": "مختلق.", "grade": "Strong for"}]}
+        self.app.config["RAG_WRITER"] = FakeWriter(answer)
+        page = self.review(amputation_level="transfemoral", k_level="K2")
+        self.assertIn("1 AI summary or summaries removed: the quote was not found word for word in the passage.", page)
+        self.assertNotIn("Made up.", page)
+        self.assertRegex(page, r"Knee unit\s+The passages found in the source library say nothing")
+        [removed] = store.all()[-1].generation.part("components").removed
+        self.assertEqual(removed["reason"], "quote not found word for word in the passage")
 
     def test_upper_limb(self):
         page = self.review(amputation_level="transradial")
         self.assertIn("K-levels describe the intended use of a lower-limb prosthesis", page)
-        self.assertIn("Type of prosthesis", page)
-        self.assertIn("we suggest use of a body-powered or externally powered prosthesis", page)
+        self.assertRegex(page, r"(?s)Type of prosthesis\s+.*AI sentence about prosthesis_type\.\s+For patients with "
+                               r"a major unilateral upper limb")
         self.assertNotIn("Recorded K-level", page)
+        self.assertNotIn("Knee unit", page)
 
     def test_statement_judgements_logged(self):
         self.post_intake(amputation_level="transfemoral", k_level="K3")
-        case_id = store.all()[-1].case.case_id
+        record = store.all()[-1]
+        case_id, knee = record.case.case_id, self.knee_id()
+        functional = record.components.functional_section.statements[0].statement.id
         resp = self.client.post(f"/review/{case_id}/decision", follow_redirects=True, data={
-            "decision": "approve",
-            "opt:va_dod_ll_17_microprocessor_knee": "relevant",
-            "opt:cms_elevated_vacuum": "not_relevant",
-            "opt:cms_interface_material": "",  # left on "not marked"
-        })
+            "decision": "approve", f"opt:{knee}": "relevant", f"opt:{functional}": "not_relevant"})
         self.assertEqual(resp.status_code, 200)
         [entry] = read_decisions(case_id, path=self.log_path)
-        marks = {s["id"]: s["reviewer_judgement"]
-                 for section in entry["components"]["sections"] for s in section["statements"]}
-        self.assertEqual(marks["va_dod_ll_17_microprocessor_knee"], "relevant")
-        self.assertEqual(marks["cms_elevated_vacuum"], "not_relevant")
-        self.assertIsNone(marks["cms_interface_material"])
-        self.assertIn(f"; components: 1 relevant, 1 not relevant, {len(marks) - 2} not marked",
-                      visible_text(resp.get_data(as_text=True)))
+        statements = {s["id"]: s for section in entry["components"]["sections"] for s in section["statements"]}
+        self.assertEqual(statements[knee]["reviewer_judgement"], "relevant")
+        self.assertEqual(statements[functional]["reviewer_judgement"], "not_relevant")
+        self.assertEqual(statements[knee]["origin"], "rag")
+        self.assertEqual(statements[knee]["summary_en"], "AI sentence about knee.")
+        self.assertEqual(statements[knee]["chunk_id"], KNEE_PASSAGE.chunk_id)
+        self.assertEqual(statements[knee]["passage"], KNEE_PASSAGE.text)
+        self.assertEqual(statements[knee]["quote"], "For prosthetic ambulators, we suggest prescribing microprocessor knee")
+        self.assertEqual(entry["generation"]["parts"]["components"]["status"], "ok")
+        self.assertEqual(entry["generation"]["parts"]["components"]["model"], "fake-model")
+        self.assertIn("; components: 1 relevant, 1 not relevant", visible_text(resp.get_data(as_text=True)))
 
     def test_bad_statement_judgements_refused(self):
         self.post_intake(amputation_level="transfemoral", k_level="K3")
         case_id = store.all()[-1].case.case_id
         for data, message in [
             ({"opt:made_up_statement": "relevant"}, "is not one of the statements shown"),
-            ({"opt:cms_k2_microprocessor_knee": "relevant"}, "is not one of the statements shown"),  # K2 only
-            ({"opt:icrc_tt_foot_angle": "relevant"}, "is not one of the statements shown"),  # transtibial only
-            ({"opt:cms_elevated_vacuum": "maybe"}, "Unknown judgement 'maybe'"),
+            ({"opt:va_dod_ll_17_microprocessor_knee": "relevant"}, "is not one of the statements shown"),  # hand-written
+            ({f"opt:{self.knee_id()}": "maybe"}, "Unknown judgement 'maybe'"),
         ]:
             with self.subTest(**data):
                 resp = self.client.post(f"/review/{case_id}/decision", data={"decision": "approve", **data})
@@ -536,16 +610,14 @@ class ComponentRouteTests(RouteTestCase):
 
     def test_refused_form_keeps_statement_choices(self):
         self.post_intake(amputation_level="transfemoral", k_level="K3")
-        case_id = store.all()[-1].case.case_id
-        resp = self.client.post(f"/review/{case_id}/decision",
-                                data={"decision": "edit", "opt:cms_elevated_vacuum": "not_relevant"})
+        case_id, knee = store.all()[-1].case.case_id, self.knee_id()
+        resp = self.client.post(f"/review/{case_id}/decision", data={"decision": "edit", f"opt:{knee}": "not_relevant"})
         self.assertEqual(resp.status_code, 400)
-        self.assertIn('name="opt:cms_elevated_vacuum" value="not_relevant" checked',
-                      resp.get_data(as_text=True))
+        self.assertIn(f'name="opt:{knee}" value="not_relevant" checked', resp.get_data(as_text=True))
 
 
 class FittingRouteTests(RouteTestCase):
-    """The design and fitting section of the review page."""
+    """The design and fitting section of the review page (the RAG)."""
 
     def review(self, **fields) -> str:
         resp = self.post_intake(**fields)
@@ -554,26 +626,20 @@ class FittingRouteTests(RouteTestCase):
     def test_transtibial(self):
         page = self.review()
         fitting = store.all()[-1].fitting
-        self.assertIn(f"What the sources say about design and fitting ({len(fitting.statements)} statements)",
-                      page)
+        self.assertIn(f"What the sources say about design and fitting ({len(fitting.statements)} statements)", page)
         self.assertIn("They do not say whether this patient is ready", page)
         self.assertIn("Socket, interface and suspension are listed with the components above.", page)
         for heading in ("Readiness for fitting", "Preparatory or definitive prosthesis",
                         "Fitting, check-out and follow-up", "Alignment"):
             self.assertIn(heading, page)
-        # A list quote: heading, items, citation.
-        self.assertRegex(page, r"Those who are ready for fitting\s*Free of pain and infection;\s*No oedema;")
-        self.assertIn("Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual "
-                      "(2014), p. 49", page)
-        self.assertIn("There is no evidence found by the Workgroup to define best practices regarding the "
-                      "prescription of a preparatory versus a definitive prosthesis", page)
-        self.assertIn("Excessive dorsiflexion of the prosthetic foot", page)  # TT alignment
-        self.assertNotIn("Excessive friction in the knee", page)  # TF only
-        self.assertNotIn("stubbies", page)  # bilateral TF only
-        self.assertNotIn("diagnostic socket fitting", page)  # upper limb only
+        self.assertRegex(page, r"AI sentence about readiness\.\s+Those who are ready for fitting are free\s+"
+                               r"Prosthetic Gait Analysis for Physiotherapists[^\n]*\(2014\), p\. 49")
+        self.assertIn("professional knowledge (manual)", page)  # shown as what it is: a manual
+        self.assertRegex(page, r"Alignment\s+The passages found in the source library say nothing about this")
         raw = self.client.get(f"/review/{store.all()[-1].case.case_id}").get_data(as_text=True)
-        self.assertIn("<li>No oedema;</li>", raw)
-        self.assertIn('name="opt:icrc_ready_for_fitting" value="relevant"', raw)
+        readiness = fitting.sections[0].statements[0].statement.id
+        self.assertTrue(readiness.startswith("rag-readiness-"))
+        self.assertIn(f'name="opt:{readiness}" value="relevant"', raw)
 
     def test_recorded_values_shown_as_entered(self):
         page = self.review(wound_status="open", volume_stability="fluctuating", skin_condition="adherent scar",
@@ -585,40 +651,30 @@ class FittingRouteTests(RouteTestCase):
         self.assertRegex(page, r"Comorbidities\s*none reported")
         self.assertRegex(page, r"Cognitive status\s*not recorded")
 
-    def test_bilateral_transfemoral_gets_stubbies(self):
-        page = self.review(amputation_level="transfemoral", side="bilateral")
-        self.assertIn("Bilateral TF amputees can temporally be fitted with shortened prostheses", page)
-        self.assertIn("Excessive friction in the knee", page)
-        self.assertNotIn("stubbies", self.review(amputation_level="transfemoral"))
-
-    def test_upper_limb(self):
+    def test_upper_limb_gets_every_fitting_section(self):
         page = self.review(amputation_level="transradial")
-        self.assertIn("for a diagnostic socket fitting to occur.", page)
-        self.assertRegex(page, r"Comprehensive prescription for an upper limb prosthesis should include:\s*"
-                               r"Design \(e\.g\., preparatory versus definitive\)")
-        self.assertIn("Individual customization is required for fit and alignment", page)  # WHO, any level
-        self.assertNotIn("ICRC", page)  # a lower-limb manual
+        for heading in ("Readiness for fitting", "Preparatory or definitive prosthesis",
+                        "Fitting, check-out and follow-up", "Alignment"):
+            self.assertIn(heading, page)
 
     def test_fitting_judgements_logged(self):
         self.post_intake(amputation_level="transfemoral")
-        case_id = store.all()[-1].case.case_id
+        record = store.all()[-1]
+        case_id = record.case.case_id
+        readiness = record.fitting.sections[0].statements[0].statement.id
+        knee = next(c.statement.id for c in record.components.statements if c.statement.component == "knee")
         resp = self.client.post(f"/review/{case_id}/decision", follow_redirects=True, data={
-            "decision": "approve",
-            "opt:icrc_needs_preparatory_treatment": "relevant",
-            "opt:icrc_tf_knee_axis": "not_relevant",
-            "opt:va_dod_ll_17_microprocessor_knee": "relevant",  # a component statement, same form
+            "decision": "approve", f"opt:{readiness}": "relevant",
+            f"opt:{knee}": "relevant",  # a component statement, same form
         })
         self.assertEqual(resp.status_code, 200)
         [entry] = read_decisions(case_id, path=self.log_path)
         marks = {s["id"]: s["reviewer_judgement"]
                  for section in entry["fitting"]["sections"] for s in section["statements"]}
-        self.assertEqual(marks["icrc_needs_preparatory_treatment"], "relevant")
-        self.assertEqual(marks["icrc_tf_knee_axis"], "not_relevant")
-        self.assertNotIn("va_dod_ll_17_microprocessor_knee", marks)
-        self.assertIn(f"; design and fitting: 1 relevant, 1 not relevant, {len(marks) - 2} not marked",
-                      visible_text(resp.get_data(as_text=True)))
+        self.assertEqual(marks, {readiness: "relevant"})
+        self.assertIn("; design and fitting: 1 relevant", visible_text(resp.get_data(as_text=True)))
 
-    def test_arabic_headings_quotes_in_english(self):
+    def test_arabic_headings_and_ai_sentence_quotes_in_english(self):
         self.client.set_cookie("lang", "ar")
         page = self.review(comorbidities="لا يوجد")
         self.assertIn("ما تقوله المصادر عن التصميم والتركيب", page)
@@ -626,7 +682,9 @@ class FittingRouteTests(RouteTestCase):
         self.assertIn("المحاذاة", page)
         self.assertRegex(page, r"الأمراض المصاحبة\s*لا يوجد")
         self.assertIn("معرفة مهنية (دليل تدريبي)", page)
+        self.assertIn("ملخص بالذكاء الاصطناعي — قارنه بالاقتباس أدناه:جملة الذكاء الاصطناعي عن readiness.", page)
         self.assertIn("Those who are ready for fitting", page)  # the source's own words
+        self.assertNotIn("AI sentence about readiness", page)
         self.assertNotIn("Readiness for fitting", page)
 
 
@@ -671,12 +729,21 @@ class ArabicPageTests(RouteTestCase):
         page = self.review_page(amputation_level="transfemoral", k_level="K3")
         self.assertIn("المستوى الوظيفي والأهداف", page)
         self.assertIn("المستوى الوظيفي المسجَّل (K): K3", page)
-        self.assertIn("ما تقوله الأدلة الإرشادية عن المكوّنات", page)
+        self.assertIn("ما تقوله المصادر عن المستوى الوظيفي:", page)
+        self.assertIn("ما تقوله المصادر عن المكوّنات", page)
         self.assertIn("وحدة الركبة", page)
-        self.assertRegex(page, r"درجة التوصية في المصدر: ضعيفة لصالح\s+دليل إرشادي أو بروتوكول")
-        self.assertIn("For prosthetic ambulators, we suggest prescribing microprocessor knee units", page)
+        self.assertRegex(page, r"درجة التوصية في المصدر: غير محددة\s+دليل إرشادي أو بروتوكول")
+        self.assertIn("جملة الذكاء الاصطناعي عن knee.", page)  # the AI's Arabic sentence
+        self.assertIn("For prosthetic ambulators, we suggest prescribing microprocessor knee", page)  # the quote
+        self.assertNotIn("AI sentence about knee", page)
         self.assertNotIn("Knee unit", page)
         self.assertNotIn("Source grade", page)
+
+    def test_ai_unavailable_explained_in_arabic(self):
+        self.app.config["RAG_WRITER"] = FakeWriter(error="the Claude API could not be reached (offline?)")
+        page = self.review_page(amputation_level="transfemoral")
+        self.assertIn("ملخصات الذكاء الاصطناعي غير متاحة لقسم المستوى الوظيفي والمكوّنات. التفاصيل التقنية: "
+                      "the Claude API could not be reached (offline?) تُعرض المقاطع التي وجدها البحث دون ملخصات.", page)
 
     def test_arabic_case_values(self):
         page = self.review_page(etiology="trauma", device_1_description="PTB socket",

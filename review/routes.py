@@ -1,4 +1,9 @@
-"""Review: page showing case + gap list, with approve/edit/reject buttons.
+"""Review: page showing case + gap list + what the sources say, with approve/edit/reject buttons.
+
+Since the RAG (2026-10-11) every statement and gap citation shows the AI's
+short summary, labelled as AI, above the source's own words (checked word
+for word, reasoning/quote_check.py). Where the AI could not answer, a banner
+says why and the passages found are listed without summaries.
 
 GET  /review/<case_id>            -> show case + gap list, and the decisions
                                      already logged for this case
@@ -79,6 +84,11 @@ def _render_review(record: CaseRecord, error: Optional[str] = None, form=None):
         error=error,
         components=record.components,
         fitting=record.fitting,
+        # The AI's answer per part: "ok", "unavailable" or "no passages" (empty: made before the RAG).
+        generation=record.generation,
+        ai_status={name: part.status for name, part in record.generation.parts.items()}
+        if record.generation else {},
+        passage=record.passage,  # a retrieved passage by its id, for the full text under a statement
         form=form or {},  # what was submitted, so a refused form keeps its choices
         gap_prefix=GAP_FIELD_PREFIX,
         statement_prefix=STATEMENT_FIELD_PREFIX,
