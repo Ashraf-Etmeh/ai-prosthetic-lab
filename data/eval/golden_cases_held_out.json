@@ -1,0 +1,10 @@
+{
+ "about": "The golden cases in data/eval/golden_cases_held_out/, set aside on 2026-10-13 to measure whether tuning on the development cases (data/eval/golden_cases/) carries over. Never edited to fit the app, never tuned on, run only with python -m intake.golden_cases --held-out when the owner asks. sha256 is intake/golden_cases.py content_hash: the hash of the file's JSON content, so line endings and layout don't change it. tests/test_golden_cases.py fails if a case differs from its hash, and --held-out then runs nothing. A change the owner decides on (e.g. after the team reviews a case) gets its new sha256, frozen_on and a note saying why.",
+ "cases": {
+  "golden-06": {"sha256": "ec803d22820822ed7e1e1de3a229072882e8b2454000ff70778b02ef1936a829", "frozen_on": "2026-10-13", "note": "hip disarticulation, right, K2; unreviewed"},
+  "golden-07": {"sha256": "8a46f3f50f0f989e16485c143ba9501cac6df7ca1a1cbeeecae88f0b24a18f0a", "frozen_on": "2026-10-13", "note": "partial foot, right, K-level recorded as unknown; unreviewed"},
+  "golden-08": {"sha256": "dd8e11975c70dd82b99d1aa7051d482e28e2774d368152b35562f46d5a862eeb", "frozen_on": "2026-10-13", "note": "Syme, left, K3; unreviewed"},
+  "golden-10": {"sha256": "8ae73a59683f97c18dc8d30a602f1fd962f623b478c3bb976fce0f1f5ce64cac", "frozen_on": "2026-10-13", "note": "transtibial, right, no K-level recorded; unreviewed"},
+  "golden-11": {"sha256": "4d948a25393444353e760416f7c0c65683436d412e8372ab1bedbd50fe60e70c", "frozen_on": "2026-10-13", "note": "transhumeral, bilateral; unreviewed"}
+ }
+}

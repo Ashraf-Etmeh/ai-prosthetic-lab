@@ -16,6 +16,7 @@ typed stays in the form (intake/routes.py).
 from flask import Flask, abort, g, redirect, request, url_for
 
 from intake.routes import bp as intake_bp
+from knowledge.catalog import attributions
 from review.routes import bp as review_bp
 from shared.i18n import (
     LANGUAGES,
@@ -53,6 +54,8 @@ def create_app() -> Flask:
             "t": lambda key, **params: t(key, lang, **params),
             "field_label": lambda path: field_label(path, lang),
             "value_label": lambda member: value_label(member, lang),
+            # (authors, licence) of a licensed source document, or None (knowledge/catalog.py).
+            "attribution": lambda doc_id: attributions().get(doc_id),
         }
 
     @app.route("/")

@@ -1,0 +1,303 @@
+
+===== checks for prompts 0-2: python scripts/verify_prompts_0_2.py --with-model
+Verifying Prompts 0-2 in C:\Users\LEGION\my-projects\prosthetic prototype\ai-prosthetic-lab
+
+PASS   0.1   python -m unittest: OK; 368 tests (baseline 219), 16.2 s with start-up
+PASS   0.2   CLAUDE.md covers 11/11 principles and rules; roadmap 1-7 in order
+             found   line  12: decision support only: no diagnosing, prescribing, choosing or ranking components, judging readiness -- 1. **It supports the specialist's decision; it never makes it.** No ou
+             found   line  16: every sentence backed by the source's words, quoted with page -- 2. **Every sentence is backed by the source's own words.** Every quote
+             found   line  23: search local, one cloud language model for the summaries -- 3. **Search stays local; one cloud language model writes the summaries
+             found   line  29: fake data only, no patient identifiers -- 4. **Fake test data only.** Never collect or store patient identifiers
+             found   line  32: English/Arabic interface, quotes kept in the source's language -- 5. **Two interface languages: English and Arabic (right to left).** Qu
+             found   line  38: rule: tests keep passing -- - **All tests keep passing** (`python -m unittest`). A change that bre
+             found   line  40: rule: every quote checked word for word -- - **Every quote is checked word for word** against its page in
+             found   line  50: rule: Arabic entry for new interface text -- - **Every new interface text gets its Arabic entry** in `shared/i18n.p
+             found   line  53: rule: log lines never edited or removed -- - **The review log is append-only.** Lines in `data/review_log.jsonl` 
+             found   line  53: rule: LOG_VERSION raised on format changes -- - **The review log is append-only.** Lines in `data/review_log.jsonl` 
+             found   line  57: rule: clinical judgements only from the owner -- - **Clinical judgements come only from the owner.** A knowledge item's
+             found   line  71: roadmap items [1, 2, 3, 4, 5, 6, 7] in order:
+                       1. Stabilise the app for a specialist trial (candidates: the known
+                       2. Trial tooling, then a trial with a real prosthetist, measured through the
+                       3. Knowledge-item and evidence fields (their clinical values are filled in
+                       4. A golden-case benchmark.
+                       5. Smart search, use case 05 (can build on `knowledge/retrieval.py`).
+                       6. Split `Case` into a shared core plus one section per domain.
+                       7. Orthotics, use case 03 — only after the trial results are in.
+FAIL   0.3   git status: 16 other change(s), first: ?? data/eval/baseline/2026-10-13/01_unittest.log
+             ?? data/eval/baseline/2026-10-13/01_unittest.log
+             ?? data/eval/baseline/2026-10-13/02_knowledge_evaluate.log
+             ?? data/eval/baseline/2026-10-13/03_verify_all_with_model.log
+             ?? data/eval/baseline/2026-10-13/04_e2e.log
+             ?? data/eval/baseline/2026-10-13/04_e2e/cases/60831d33c276.json
+             ?? data/eval/baseline/2026-10-13/04_e2e/cases/96d265c27a4a.json
+             ?? data/eval/baseline/2026-10-13/04_e2e/review_log.e2e.jsonl
+             ?? data/eval/baseline/2026-10-13/04_e2e/review_page.html
+             ?? data/eval/baseline/2026-10-13/04_e2e/summary.json
+             ?? data/eval/baseline/2026-10-13/SUMMARY.md
+             ?? data/eval/baseline/2026-10-13/e2e_one_case.py
+             ?? data/eval/baseline/2026-10-13/environment.txt
+             ?? data/eval/baseline/2026-10-13/rerun/01_unittest.log
+             ?? data/eval/baseline/2026-10-13/rerun/02_knowledge_evaluate.log
+             ?? data/eval/baseline/2026-10-13/rerun/03_verify_all_with_model.log
+             ?? data/eval/baseline/2026-10-13/rerun/started.txt
+PASS   0.4   988f13f 2026-10-09 Add design and fitting support (prosthetics stage C): 24 files, incl. reasoning/fitting_guide.py, reasoning/fitting_support.py, tests/test_fitting_support.py, tests/test_component_guide.py, review/templates/review.html
+             M  FUTURE_WORK.md
+             M  README.md
+             M  data/sources/catalog.json
+             M  intake/routes.py
+             M  knowledge/evaluate.py
+             M  knowledge/retrieval.py
+             M  reasoning/component_guide.py
+             M  reasoning/component_support.py
+             A  reasoning/fitting_guide.py
+             A  reasoning/fitting_support.py
+             M  reasoning/models.py
+             M  review/decision_log.py
+             M  review/routes.py
+             M  review/templates/review.html
+             M  shared/config.py
+             M  shared/i18n.py
+             M  shared/store.py
+             M  tests/test_component_guide.py
+             M  tests/test_component_support.py
+             M  tests/test_decision_log.py
+             A  tests/test_fitting_support.py
+             M  tests/test_i18n.py
+             M  tests/test_retrieval.py
+             M  tests/test_routes.py
+FAIL   0.5   main (a8cf888) is 0 commit(s) ahead of origin/main (a8cf888), 0 behind; so everything on main has been pushed (local tracking ref, not fetched)
+             origin/main is a8cf888 committed 2026-10-13 01:06:18 -0700: Save current project progress
+             origin/main reflog: a8cf888 refs/remotes/origin/main@{2026-10-13 01:06:35 -0700}: update by push
+             origin/main reflog: 053a190 refs/remotes/origin/main@{2026-10-09 09:25:47 -0700}: update by push
+             origin/main reflog: 667ce07 refs/remotes/origin/main@{2026-10-08 03:51:43 -0700}: update by push
+PASS   0.6   13/13 cases through the test client: answer key matches section 4.5, page headings match the page; statement ids identical to 988f13f. Inputs: side left unless bilateral, K-level only where named, every other field empty, search replaced by no passages, AI switched off
+             ok   transtibial                        level=transtibial, side=left, K-level=not recorded -> 22 fitting + 11 component (4.5: 22 + 11)
+             ok   transfemoral K2                    level=transfemoral, side=left, K-level=K2 -> 23 fitting + 14 component (4.5: 23 + 14)
+             ok   bilateral transfemoral             level=transfemoral, side=bilateral, K-level=not recorded -> 24 fitting + 12 component (4.5: 24 + 12)
+             ok   knee disarticulation               level=knee_disarticulation, side=left, K-level=not recorded -> 16 fitting + 9 component (4.5: 16 + not given)
+             ok   hip disarticulation                level=hip_disarticulation, side=left, K-level=not recorded -> 16 fitting + 9 component (4.5: 16 + not given)
+             ok   partial foot                       level=partial_foot, side=left, K-level=not recorded -> 16 fitting + 8 component (4.5: 16 + not given)
+             ok   Syme                               level=syme, side=left, K-level=not recorded -> 16 fitting + 8 component (4.5: 16 + not given)
+             ok   upper limb: partial hand           level=partial_hand, side=left, K-level=not recorded -> 7 fitting + 1 component (4.5: 7 + not given)
+             ok   upper limb: wrist disarticulation  level=wrist_disarticulation, side=left, K-level=not recorded -> 7 fitting + 2 component (4.5: 7 + not given)
+             ok   upper limb: transradial            level=transradial, side=left, K-level=not recorded -> 7 fitting + 2 component (4.5: 7 + not given)
+             ok   upper limb: elbow disarticulation  level=elbow_disarticulation, side=left, K-level=not recorded -> 7 fitting + 2 component (4.5: 7 + not given)
+             ok   upper limb: transhumeral           level=transhumeral, side=left, K-level=not recorded -> 7 fitting + 2 component (4.5: 7 + not given)
+             ok   upper limb: shoulder disarticulation level=shoulder_disarticulation, side=left, K-level=not recorded -> 7 fitting + 2 component (4.5: 7 + not given)
+PASS   1.1   368 tests (> 219); persistence 11 (11 new); form refill (and language switch) 6 (6 new); translated errors 4 (3 new) since 988f13f
+             persistence:
+               new  test_routes.RestartTests.test_case_never_saved_is_still_404
+               new  test_routes.RestartTests.test_decision_after_a_restart
+               new  test_routes.RestartTests.test_review_page_after_a_restart
+               new  test_store.PersistenceTests.test_a_version_1_file_still_opens
+               new  test_store.PersistenceTests.test_case_survives_a_restart
+               new  test_store.PersistenceTests.test_id_that_is_not_a_file_name_refused
+               new  test_store.PersistenceTests.test_memory_only_store_writes_nothing
+               new  test_store.PersistenceTests.test_one_json_file_per_case_named_by_its_id
+               new  test_store.PersistenceTests.test_saving_again_replaces_the_file
+               new  test_store.PersistenceTests.test_unknown_and_unsafe_ids_not_found
+               new  test_store.PersistenceTests.test_warning_kept_when_the_library_was_not_searched
+             form refill (and language switch):
+               new  test_routes.FormKeptTests.test_checkbox_and_unknown_choice
+               new  test_routes.FormKeptTests.test_enter_sends_the_case_not_the_language_button
+               new  test_routes.FormKeptTests.test_form_kept_after_an_error
+               new  test_routes.FormKeptTests.test_language_switch_keeps_the_input
+               new  test_routes.FormKeptTests.test_typed_text_is_escaped
+               new  test_routes.FormKeptTests.test_unknown_language_refused
+             translated errors:
+               old  test_routes.ArabicPageTests.test_intake_errors_in_arabic
+               new  test_routes.ArabicPageTests.test_number_error_in_arabic
+               new  test_routes.IntakeErrorTests.test_errors_in_both_languages
+               new  test_routes.IntakeErrorTests.test_unexpected_error_shown_without_python_wording
+PASS   1.2   case saved as <temp>/cases/23aca15c8286.json (yes); a new process (pid 19568, fresh app and store) answered GET /review/23aca15c8286 with 200; same case (yes, 15 fields); page identical byte for byte (yes)
+PASS   1.3   saved case file: 106 keys and their values scanned, 0 identifier-like (name, birth date, address, record/MRN, phone, email; English and Arabic labels); intake form: 0 of 33 input names identifier-like
+             top-level keys: case_file_version, case, knowledge_warning, retrieved_chunks, gaps, generation
+             case fields: amputation_level, side, case_id, created_at, age_years, body_weight_kg, etiology, months_since_amputation, residual_limb, activity, prior_devices, comorbidities, contralateral_limb_status, cognitive_status, intake_notes
+             form inputs: activity_description, age_years, amputation_level, body_weight_kg, cognitive_status, comorbidities, contralateral_limb_status, device_1_current, device_1_description, device_1_issues, device_1_years, device_2_current, device_2_description, device_2_issues, device_2_years, device_3_current, device_3_description, device_3_issues, device_3_years, etiology, functional_goals, intake_notes, k_level, length_description, months_since_amputation, no_prior_devices, pain, sensation, side, skin_condition, switch_language, volume_stability, wound_status
+PASS   1.4   .gitignore line 24: data/cases/; git check-ignore: .gitignore:24:data/cases/	data/cases/verify-probe.json
+PASS   1.5   invalid age and invalid body weight: 400, every other value kept; 0 cases saved
+             age_years='abc': 400, 22/22 other values back in the form, the bad value too (yes)
+             body_weight_kg='heavy': 400, 22/22 other values back in the form, the bad value too (yes)
+PASS   1.6   the same invalid values with the Arabic cookie: an Arabic message, no Latin letters in it; no Python wording (invalid literal, could not convert, ValueError, Traceback, ...) on any page (English checked too)
+             [ar] age_years='abc': 400  لم تُحفظ الحالة: العمر (بالسنوات): أدخل عدداً صحيحاً.
+             [ar] body_weight_kg='heavy': 400  لم تُحفظ الحالة: وزن الجسم (كغ): أدخل رقماً.
+             [en] age_years='abc': 400  Case not saved: Age (years): enter a whole number.
+             [en] body_weight_kg='heavy': 400  Case not saved: Body weight (kg): enter a number.
+PASS   1.7   server-side: POST /intake with switch_language=ar -> 200, Arabic right-to-left form, 5/5 typed values kept (an invalid age too), cookie lang=ar, no error, 0 cases saved; switching back to English kept them
+             How: the language control on the intake page is a submit button of the intake form
+               (<button type="submit" form="intake-form" name="switch_language" value="ar"
+            formnovalidate lang="ar">),
+               so clicking it posts whatever has been typed. intake/routes.py submit_form() sees switch_language,
+               sets g.lang, draws the same form from request.form in the other language, sets the cookie and
+               neither checks nor saves anything. A hidden default submit button placed first keeps Enter
+               submitting the case. No JavaScript; the browser's part is checked by hand (1.7b).
+MANUAL 1.7b  clicking the language button in a real browser keeps unsent input: docs/manual_checks_prompts_0_2.md, check 3
+FAIL   1.8   copy of review_log.test.jsonl: 26 lines, 26 parse as JSON (v1: 17, v2: 5, v3: 2, v4: 2); copy of review_log.jsonl: 1 lines (5387 bytes). After 1 decision: review log 2 line, test log 26 lines (unchanged); real files unchanged
+PASS   2.1   data/trial/arabic_terms.csv: 225 rows, shared/i18n.py has 225 text keys (173 TEXT + 17 field labels + 35 choices); same keys (0 missing, 0 extra, 0 duplicated); columns as expected; last two empty in 225/225; English and Arabic as in i18n.py in 225/225; UTF-8 BOM: yes
+             columns: key | English | Arabic | where it appears | corrected Arabic | comment
+PASS   2.2   one 'corrected Arabic' cell (review.approve: اعتماد -> موافقة) applied to a copy of i18n.py: apply returned 1, 1 of 398 texts changed (TEXT[review.approve][ar]), file diff -1 +1 lines. Untouched sheet: apply returned None, "No corrected Arabic in the sheet; nothing to change.", file byte-identical: yes
+             -    "review.approve": {"en": "Approve", "ar": "اعتماد"},
+             +    "review.approve": {"en": "Approve", "ar": "موافقة"},
+PASS   2.3   15 trial cases, all load with Case.from_dict and run through the analysis (15/15; search replaced by no passages), 0 identifier-like keys or values; 12/12 amputation levels
+             lower limb 9: bilateral 2, left 4, right 3; K-levels K0 1, K1 2, K2 2, K3 2, K4 1, unknown 1
+             upper limb 6: bilateral 1, left 3, right 2
+             partly filled (at least one field not recorded): 15/15; fields not recorded per case: 3-17 (01:3, 02:4, 03:17, 04:11, 05:5, 06:9, 07:10, 08:11, 09:10, 10:9, 11:10, 12:6, 13:15, 14:12, 15:12)
+             gaps per case 1-15, statements per case 0-0
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 36111.61it/s]
+PASS   2.3m  15 trial cases analysed with the real search in 15 s: 117 gaps, 93 cite a source; 0 warnings
+             trial-01: 1 gaps, 1 with a source
+             trial-02: 2 gaps, 2 with a source
+             trial-03: 15 gaps, 13 with a source
+             trial-04: 10 gaps, 8 with a source
+             trial-05: 3 gaps, 2 with a source
+             trial-06: 7 gaps, 4 with a source
+             trial-07: 10 gaps, 9 with a source
+             trial-08: 9 gaps, 8 with a source
+             trial-09: 8 gaps, 6 with a source
+             trial-10: 7 gaps, 5 with a source
+             trial-11: 8 gaps, 7 with a source
+             trial-12: 4 gaps, 3 with a source
+             trial-13: 13 gaps, 10 with a source
+             trial-14: 10 gaps, 8 with a source
+             trial-15: 10 gaps, 7 with a source
+PASS   2.4   the load command (intake.load_trial_cases.main) saved 15/15 cases to a temporary folder (it says so); after a simulated app start, 15/15 review pages return 200 with their case id
+             trial-01  transtibial               left      K: K3       1 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-01
+             trial-02  transtibial               right     K: K2       2 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-02
+             trial-03  transfemoral              left      K: K2      15 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-03
+             trial-04  transfemoral              bilateral K: K1      10 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-04
+             trial-05  knee_disarticulation      right     K: K4       3 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-05
+             trial-06  hip_disarticulation       left      K: K0       7 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-06
+             trial-07  partial_foot              right     K: unknown 10 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-07
+             trial-08  syme                      left      K: K3       9 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-08
+             trial-09  transtibial               bilateral K: K1       8 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-09
+             trial-10  partial_hand              left      K: -        7 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-10
+             trial-11  wrist_disarticulation     bilateral K: -        8 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-11
+             trial-12  transradial               right     K: -        4 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-12
+             trial-13  elbow_disarticulation     left      K: -       13 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-13
+             trial-14  transhumeral              right     K: -       10 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-14
+             trial-15  shoulder_disarticulation  left      K: -       10 gaps ( 0 with a source)  http://127.0.0.1:5000/review/trial-15
+PASS   2.5   fake log of 3 decisions on 3 cases (written by the app's logger); 443 expected numbers compared with the report object, its CSV and its printed summary: 0 differ; no-source list residual_limb.wound_status x1 (verify-b); Arabic edit note kept word for word
+PASS   2.6   python -m review.trial_report on an empty and on a missing log: a clear message, zero counts, no traceback
+             empty log: exit 0, prints No decisions logged yet., CSV decisions [['approve', '0'], ['edit', '0'], ['reject', '0']], traceback: no
+             missing log: exit 0, prints No decisions logged yet., CSV decisions [['approve', '0'], ['edit', '0'], ['reject', '0']], traceback: no
+PASS   2.7   the report command on a temporary log opened 50 files, 1 named review_log* (only the log given); review_log.test.jsonl opened: no; review/trial_report.py names a test log: no; default --log: data/review_log.jsonl
+PASS   S.1   protected paths: 22 fingerprinted, 0 changed ( absent before and after); 0 write attempts refused
+
+PASS 20, FAIL 3, SKIP 0, MANUAL 1
+Failed: 0.3, 0.5, 1.8
+
+===== golden cases: python -m intake.golden_cases
+Gap checks search the source library; the first case loads the model (10-30 s) ...
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 32910.03it/s]
+
+golden-01  [reviewed]  transtibial, left, K3
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k3_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-02  [reviewed]  transfemoral, right, K2
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k2_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-03  [reviewed]  transradial, left
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: none, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-04  [unreviewed]  transfemoral, bilateral, K1
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k1_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-05  [unreviewed]  knee_disarticulation, left, K4
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k4_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-06  [unreviewed]  hip_disarticulation, right, K2
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k2_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-07  [unreviewed]  partial_foot, right, unknown
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: none, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-08  [unreviewed]  syme, left, K3
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k3_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-09  [unreviewed]  transfemoral, left, K0
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k0_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-10  [unreviewed]  transtibial, right, no K-level
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: none, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-11  [unreviewed]  transhumeral, bilateral
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: none, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-12  [unreviewed]  transtibial, left, no K-level
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: none, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+
+golden-13  [unreviewed]  transtibial, left, K3, ar interface, twin of golden-01
+  PASS  intake form        submitted in 'ar', stored as the question
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k3_description, as expected
+  PASS  gaps               as expected
+  PASS  excluded documents no gap cites one
+  PASS  twin               same analysis as golden-01 (statements, functional level, notes, gaps, gap sources)
+
+13 case(s): 80 PASS, 0 WARN, 0 FAIL, 0 SKIP, 0 ERROR, 0 INFO
+
+===== Summary
+  checks for prompts 0-2   FAILED (exit 1)
+  golden cases             OK

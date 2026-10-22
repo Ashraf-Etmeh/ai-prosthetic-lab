@@ -11,9 +11,11 @@ from markupsafe import escape
 
 from app import create_app
 from intake.routes import _optional_list
+from knowledge.catalog import attributions
 from knowledge.models import ProtocolChunk
 from knowledge.retrieval import KnowledgeBaseMissing
 from review.decision_log import read_decisions
+from shared.config import PROMPT_VERSION
 from shared.store import store
 from tests.helpers import FakeWriter
 
@@ -526,14 +528,49 @@ class ComponentRouteTests(RouteTestCase):
         system, user, schema = next(call for call in self.writer.calls if "knee" in topics(call[2]))
         self.assertIn("never advise", system)
         self.assertIn('"amputation_level": "transfemoral"', user)
+        self.assertIn('"functional_level_recorded": "K2"', user)
         self.assertNotIn("case_id", user)  # nothing generated, nothing identifying
+        for typed in ("test case", "intact"):  # the intake notes and cognitive status as typed are not sent
+            self.assertNotIn(typed, user)
         self.assertIn('<passage id="lower_limb_amputation_va_dod_cpg_2024-0901"', user)
         self.assertEqual(set(topics(schema)), {"functional_level", "knee"})  # only topics with passages are asked
 
-    def test_section_without_statement_says_so(self):
+    def test_section_without_passages_says_the_search_found_none(self):
+        # Never "the sources say nothing": only what code knows (here, no passage was found).
         page = self.review(amputation_level="transfemoral", k_level="K3")
-        self.assertRegex(page, r"Foot and ankle\s+The passages found in the source library say nothing about this "
-                               r"component for this case\.")
+        self.assertRegex(page, r"Foot and ankle\s+The search found no passage for this section\.")
+        self.assertNotIn("say nothing", page)
+
+    def test_section_the_ai_left_empty_lists_the_passages(self):
+        self.app.config["RAG_WRITER"] = FakeWriter({"items": []})  # answers, but reports nothing
+        page = self.review(amputation_level="transfemoral", k_level="K2")
+        self.assertRegex(page, r"Knee unit\s+No AI summary for this section: the AI reported nothing from the "
+                               r"passages the search found\. Check them below\.\s+Passages the search found for "
+                               r"this section, not summarised \(1\)\s+For prosthetic ambulators, we suggest")
+
+    def test_the_model_that_answered_is_named(self):
+        page = self.review(amputation_level="transfemoral", k_level="K2")
+        self.assertIn(f"AI summaries on this page were written by fake-model (prompt version {PROMPT_VERSION}).",
+                      page)
+        self.assertIn("Research prototype, not validated for clinical use.", page)  # the disclaimer
+
+    def test_a_licensed_source_is_credited_under_its_citation(self):
+        licensed = _passage("phantom_limb_pain_review_2020-0901",
+                            "Prosthetic socket fit affects residual limb pain and the comfort of daily wear.", 4)
+        with patch("intake.routes.retrieve_relevant_chunks",
+                   side_effect=lambda case: {**fake_retrieval(case), "socket": [licensed]}):
+            page = self.review(amputation_level="transfemoral", k_level="K2")
+        authors, licence = attributions()["phantom_limb_pain_review_2020"]
+        self.assertEqual(licence, "CC BY 4.0")
+        self.assertIn(f"{authors}; licence: {licence}", page)
+        # A US federal work records no licence: nothing is added under the knee statement's citation.
+        self.assertRegex(page, r"VA/DoD [^\n]*\(2024\), p\. 56\s+\S")
+        self.assertNotRegex(page, r"VA/DoD [^\n]*\(2024\), p\. 56\s+[^\n]*licence:")
+
+    def test_no_model_named_without_the_ai(self):
+        self.app.config["RAG_WRITER"] = FakeWriter(error="offline")
+        page = self.review(amputation_level="transfemoral", k_level="K2")
+        self.assertNotIn("were written by", page)
 
     def test_without_the_ai_the_passages_are_listed_and_the_reason_shown(self):
         self.app.config["RAG_WRITER"] = FakeWriter(error="no Claude API key: set ANTHROPIC_API_KEY")
@@ -559,9 +596,13 @@ class ComponentRouteTests(RouteTestCase):
                                "sentence_en": "Made up.", "sentence_ar": "مختلق.", "grade": "Strong for"}]}
         self.app.config["RAG_WRITER"] = FakeWriter(answer)
         page = self.review(amputation_level="transfemoral", k_level="K2")
-        self.assertIn("1 AI summary or summaries removed: the quote was not found word for word in the passage.", page)
+        self.assertIn("1 AI summary or summaries removed by the checks (for example, a quote not found word for "
+                      "word in its passage); each reason is kept in the log.", page)
         self.assertNotIn("Made up.", page)
-        self.assertRegex(page, r"Knee unit\s+The passages found in the source library say nothing")
+        self.assertRegex(page, r"Knee unit\s+No AI summary for this section: the checks removed the AI's 1 summary "
+                               r"or summaries for it \(each reason is kept in the log\)\. Check the passages the "
+                               r"search found below\.\s+Passages the search found for this section, not "
+                               r"summarised \(1\)\s+For prosthetic ambulators, we suggest")
         [removed] = store.all()[-1].generation.part("components").removed
         self.assertEqual(removed["reason"], "quote not found word for word in the passage")
 
@@ -635,7 +676,7 @@ class FittingRouteTests(RouteTestCase):
         self.assertRegex(page, r"AI sentence about readiness\.\s+Those who are ready for fitting are free\s+"
                                r"Prosthetic Gait Analysis for Physiotherapists[^\n]*\(2014\), p\. 49")
         self.assertIn("professional knowledge (manual)", page)  # shown as what it is: a manual
-        self.assertRegex(page, r"Alignment\s+The passages found in the source library say nothing about this")
+        self.assertRegex(page, r"Alignment\s+The search found no passage for this section\.")
         raw = self.client.get(f"/review/{store.all()[-1].case.case_id}").get_data(as_text=True)
         readiness = fitting.sections[0].statements[0].statement.id
         self.assertTrue(readiness.startswith("rag-readiness-"))

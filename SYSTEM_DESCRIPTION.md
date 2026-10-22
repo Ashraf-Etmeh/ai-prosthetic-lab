@@ -1,7 +1,8 @@
 # AI Prosthetic Lab — system description (functional and structural)
 
 State of the working tree on 2026-10-11 (the RAG, §4.8). Everything below
-runs and is tested offline; the live Claude API run is still to be measured. More history and the reasons behind each decision are in
+runs and is tested offline; the live run of the AI writer (Gemini's free
+tier since 2026-10-13, or the Claude API) is still to be measured. More history and the reasons behind each decision are in
 `FUTURE_WORK.md`; how to run it is in `README.md`; principles, working
 rules and the roadmap are in `CLAUDE.md`.
 
@@ -34,7 +35,10 @@ the brief's "evaluate the amputation, choose the components, design and fit":
 | Use case 02: component support | The patient's recorded functional level and what the sources say about it, and, per prosthetic component, what the passages found say for this case: an AI sentence each over a checked quote |
 | Design and fitting | What the sources say on readiness for fitting, preparatory vs definitive prosthesis, fitting steps and alignment (AI sentences over checked quotes), shown next to what the case recorded |
 
-Orthotics, gait analysis, rehabilitation and follow-up are not started.
+Orthotics was started on 2026-10-16 (owner's decision, before the trial;
+stroke AFO first): so far only the case model is shared between domains
+(§5, `CaseCore`), and nothing orthotic is shown yet. Gait analysis,
+rehabilitation and follow-up are not started.
 
 ### Non-negotiable principles
 
@@ -49,14 +53,17 @@ Orthotics, gait analysis, rehabilitation and follow-up are not started.
    before it is shown. The instructions forbid advice; who a statement
    applies to comes only from the source's own wording.
 3. **Search local, one cloud language model (since 2026-10-11).** The
-   owner decided for a RAG: retrieval with the local embedding model, the
-   Claude API for the summaries (`reasoning/writer.py`, one swap point).
+   owner decided for a RAG: retrieval with the local embedding model, one
+   cloud model for the summaries (`reasoning/writer.py`, one swap point):
+   the Gemini API's free tier since 2026-10-13, or the Claude API
+   (`LLM_PROVIDER`).
    The 2026-10-06 worry (LLMs often cite sources that don't support them)
    is met by the quote check and the AI label. Without the API the app
    shows the passages found.
 4. **Fake data only, no patient identifiers** (no name, date of birth,
    address or record number). Cases are keyed by a random id. The case as
-   entered is sent to the Claude API.
+   entered is sent to the cloud model (on Gemini's free tier Google uses it
+   to improve its products, and human reviewers may read it).
 5. **Bilingual interface (English, Arabic right-to-left).** Quotes and
    citations stay in the source's language.
 
@@ -66,9 +73,14 @@ Orthotics, gait analysis, rehabilitation and follow-up are not started.
 
 - Python 3.12+ (developed on 3.14), Flask 3, pypdf 6, numpy,
   sentence-transformers 6 with torch (GPU used if present, CPU works),
-  anthropic 1.13 (the Claude API; key from `ANTHROPIC_API_KEY`).
-- Language model: `claude-opus-5-5`, effort medium, structured output,
-  server-side fallbacks on a refusal; three calls per case, at once.
+  anthropic 1.13 (only for the Claude API; key from `ANTHROPIC_API_KEY`).
+- Language model (`LLM_PROVIDER`, three calls per case, at once):
+  - `gemini` (default since 2026-10-13): `gemini-3.8-flash` on the Gemini
+    API's free tier, through its REST endpoint with Python's own HTTP client
+    (no SDK); key from `GEMINI_API_KEY`; structured output
+    (`responseJsonSchema`); 429/500/503 tried twice more.
+  - `claude`: `claude-opus-5-5`, effort medium, structured output,
+    server-side fallbacks on a refusal.
 - Embedding model: `BAAI/bge-m3` (multilingual, 1,024 numbers per vector,
   ~2.3 GB), pinned to one revision, loaded from the local Hugging Face cache
   (works offline).
@@ -86,9 +98,10 @@ python app.py                  # run the web app
 python -m knowledge.ingest     # extract + chunk + embed all catalogued documents
 python -m knowledge.evaluate   # measure retrieval quality (hit@1 / hit@5)
 python -m knowledge.items      # knowledge items with the owner's rules applied -> data/knowledge/
-python -m intake.golden_cases  # golden cases vs the app (gap checks need the model)
-python -m intake.golden_cases --rag  # also measure the RAG (Claude API: costs money)
-python -m unittest             # 368 tests, a few seconds, no model, no API
+python -m intake.golden_cases  # development golden cases vs the app (gap checks need the model)
+python -m intake.golden_cases --rag  # also measure the RAG (cloud model: free-tier quota or money)
+python -m intake.golden_cases --held-out  # the frozen held-out cases (only when the owner asks)
+python -m unittest             # 379 tests, a few seconds, no model, no API
 python scripts/verify_all.py   # the 0-2 checks, then the golden cases
 ```
 
@@ -111,24 +124,36 @@ python scripts/verify_all.py   # the 0-2 checks, then the golden cases
    RAG topic), the AI's three answers, the quote check (§4.8). The result is kept in memory and in
    `data/cases/<case_id>.json`, and the browser is sent to the review page.
 3. **Review page** (`GET /review/<case_id>`), top to bottom:
-   - disclaimer; a warning if the source library could not be searched;
+   - disclaimer (it opens "Research prototype, not validated for clinical
+     use"); the model that wrote the AI summaries, as the provider reported
+     it, with the prompt version; a warning if the source library could not
+     be searched;
    - case summary;
    - every gap and statement from the AI shows "AI summary — check it
      against the quote below" and the sentence in the page's language, over
      the checked quote; a banner says why if the AI could not answer;
+   - under every citation of a source whose licence is recorded in the
+     catalog (Creative Commons), its authors and licence;
    - **information gaps**: each with why it is listed, the quoted sentences,
      citation (title, year, page), document language, similarity score,
      chunk id, the full passage, and the other passages considered; the
      reviewer marks each "Needed" / "Not needed for this case";
-   - **functional level and goals**: the source's description of the
-     recorded K-level, what the same source says K-levels are *not*, all
-     five descriptions for reference, and the recorded activity and goals;
+   - **functional level and goals**: the recorded K-level, what the
+     passages found say about it (AI summaries over checked quotes), and the
+     recorded activity and goals. Since the RAG (2026-10-11) the hand-written
+     CMS descriptions and its two cautions (K-levels "should not be
+     considered a functional classification"; research "has failed to
+     connect" medical condition to K-level) are no longer shown here; they
+     appear only if the search finds them and the AI reports them (once in
+     the 7 lower-limb development cases, 2026-10-16: FUTURE_WORK);
    - **component statements** per component (knee, foot and ankle, pylon,
      socket, interface, suspension; upper limb: type of prosthesis, control
      and fit). Each shows the source's grade, the kind of source, the quote,
      extra quotes from the same document (scope, confidence, caveats) and a
-     "Relevant / Not relevant for this case" mark. A component with nothing
-     in the library says so;
+     "Relevant / Not relevant for this case" mark. A section without an AI
+     summary says why, as code knows it (the search found no passage, the AI
+     reported nothing, or the checks removed what it gave), never what the
+     sources do or don't say, and lists the passages the search found;
    - **design and fitting** (§4.5), marked the same way;
    - **decision**: note + Approve / Edit (note required) / Reject;
    - the decisions already logged for this case, with mark counts.
@@ -352,9 +377,9 @@ language model, not by rules (FUTURE_WORK.md, "RAG").
 
 | Step | Where | What happens |
 |---|---|---|
-| Topics | `reasoning/rag_topics.py` | gaps: each missing field (field guide query); components: functional level (lower limb) and each component of `COMPONENTS` for the level (pylon: any lower limb); fitting: each section of `SECTIONS`. Queries name the level, side and K-level |
+| Topics | `reasoning/rag_topics.py` | gaps: each missing field (field guide query); components: functional level (lower limb) and each component of `COMPONENTS` for the level (pylon: any lower limb); fitting: each section of `SECTIONS`. Queries name the level and limb, "bilateral" for a bilateral case (left or right is never named), and the recorded K-level |
 | Search | `knowledge/retrieval.py` | one embed call; fields: top 5, ICRC manual left out; topics: top `RAG_TOP_K` = 6, nothing left out (`RAG_TOPIC_EXCLUDED_DOCUMENTS`) |
-| Ask | `reasoning/rag.py`, `writer.py` | three calls at once (gaps; functional level and components; fitting), each with `SYSTEM_PROMPT` (`PROMPT_VERSION` rag-v1), the case without its id and time, the topics with passages, the passages with their ids; only topics with passages are asked; a part with none makes no call ("no passages") |
+| Ask | `reasoning/rag.py`, `writer.py` | three calls at once (gaps; functional level and components; fitting), each with `SYSTEM_PROMPT` (`PROMPT_VERSION` rag-v2), the case's amputation level, limb, side and recorded K-level only (`case_for_prompt`; nothing typed at intake; rag-v1 sent the whole case), the topics with passages, the passages with their ids; only topics with passages are asked; a part with none makes no call ("no passages") |
 | Answer | structured output | `{"items": [{topic, passage_id, quote, sentence_en, sentence_ar, grade}]}`; topic and passage id limited to those given; grade one of five VA/DoD phrases or "" |
 | Check | `reasoning/quote_check.py` | quote in the passage word for word (NFKC; whitespace, quotation marks and dashes as printed), ≥ `MIN_QUOTE_WORDS` = 5, Arabic sentence present, no repeat, ≤ 1 per gap field and ≤ `MAX_ITEMS_PER_TOPIC` = 4 per section; grade kept only if printed within 300 characters after the quote; the passage's own words are shown, the page looked up in `data/extracted/` |
 | Show | `reasoning/rag.py` → `models.py` | items become `Gap` (gaps) and `CitedStatement` (origin "rag", id `rag-<topic>-<10 hex>`, the same in every case for the same topic and quote) in the existing sections, so the page, marks, log and trial report work unchanged |
@@ -367,7 +392,8 @@ a review page after a restart needs no new call.
 
 **Measured so far (2026-10-11, no API):** how many of the answer key's
 statements are inside a passage the search finds for the case's topics, over
-the 13 golden cases. That is the most the RAG can cover:
+the 13 golden cases (before 5 were held out on 2026-10-13; measurements for
+tuning now use the 8 development cases). That is the most the RAG can cover:
 
 | Passages per topic (`RAG_TOP_K`) | 6 (now) | 10 | 15 | 20 | 30 |
 |---|---|---|---|---|---|
@@ -388,7 +414,7 @@ intake.golden_cases --rag`).
 ```
 app.py                     Flask app: registers blueprints, language route, template helpers
 shared/
-  case_schema.py           Case data model, enums, validation, to_dict/from_dict
+  case_schema.py           CaseCore (shared by every domain) + Case (prosthetics), enums, validation, to_dict/case_from_dict
   field_guide.py           the 17 gap fields: label, search query, topic terms (en/de/ar)
   config.py                paths, model, chunk and search settings, threshold, disclaimer
   i18n.py                  all interface text in English and Arabic
@@ -415,7 +441,7 @@ reasoning/
                            ComponentSection, FunctionalLevel, ComponentSupport, FittingSupport
   rag_topics.py            the RAG's topics per case and their search queries
   rag.py                   the RAG: prompts, schema, three parts at once, item check, page shapes
-  writer.py                the one place that calls a language model (ClaudeWriter, OfflineWriter)
+  writer.py                the one place that calls a language model (GeminiWriter, ClaudeWriter, OfflineWriter)
   quote_check.py           a quote word for word in its passage; its page in data/extracted/
   gap_analysis.py          use case 01 without the AI (the fallback), and the gap explanations
   component_guide.py       hand-written component rules + K-level statements (the answer key)
@@ -427,7 +453,7 @@ review/
   decision_log.py          validation, log entry building, append/read
   trial_report.py          counts of the reviewers' marks in the log → data/trial/report.csv
   templates/review.html
-tests/                     unittest suite (368 tests) + a tiny fake embedder and a fake AI writer
+tests/                     unittest suite (379 tests) + a tiny fake embedder and a fake AI writer
 scripts/                   verify_prompts_0_2.py (checks for prompts 0-2), verify_all.py (that + golden cases)
 data/
   sources/                 catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
@@ -435,7 +461,9 @@ data/
                            (in git; regenerate after changing a guide or the rule table)
   extracted/               cleaned text per document (generated)
   vector_store/            vectors.npy, chunks.json, info.json (generated)
-  eval/retrieval_queries.json, eval/golden_cases/golden-NN.json
+  eval/retrieval_queries.json, eval/golden_cases/golden-NN.json (development),
+                           eval/golden_cases_held_out/golden-NN.json (held out, frozen by
+                           eval/golden_cases_held_out.json)
   cases/                   one JSON file per case (local only)
   trial/                   arabic_terms.csv, cases/trial-NN.json (in git); report.csv (local only)
   review_log.jsonl         decisions (local only); review_log.test.jsonl: earlier test lines
@@ -515,7 +543,7 @@ POST /review/<id>/decision
 | `RAG_TOP_K` / `RAG_TOPIC_EXCLUDED_DOCUMENTS` | 6 / none |
 | `MIN_QUOTE_WORDS` / `MAX_ITEMS_PER_TOPIC` | 5 / 4 (gap fields: 1) |
 | `LLM_MODEL` / `LLM_EFFORT` / `LLM_FALLBACKS` | `claude-opus-5-5` / medium / on |
-| `PROMPT_VERSION` | rag-v1 |
+| `PROMPT_VERSION` | rag-v2 (2026-10-16; rag-v1 sent the whole case) |
 | `OFFLINE_ENV` | `AI_PROSTHETIC_LAB_OFFLINE`: set, the AI is never called |
 | `SOURCES_NOT_INGESTED` | registry, AI-safety/regulation references, datasets |
 
@@ -536,7 +564,8 @@ uses a missing key.
 - **368 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
-  client replaced), the quote check (a changed word, a comma, "...", a short
+  client replaced, the Gemini call with its HTTP call replaced: request,
+  key in a header, unusable answers, errors, retries), the quote check (a changed word, a comma, "...", a short
   quote refused; quotation marks and Arabic handled; page lookup), and
   schema, catalog, extraction, ingestion, retrieval filters, field guide,
   gap analysis, component and fitting applicability, review log, case
@@ -564,6 +593,10 @@ uses a missing key.
   transfemoral K2, transradial) and also run in `python -m unittest`; ten
   are unreviewed drafts. Gap checks need the model and are skipped without
   it; a difference fails a reviewed case and warns for an unreviewed one.
+  Since 2026-10-13, 5 of the 13 are held out (`data/eval/golden_cases_held_out/`:
+  golden-06, -07, -08, -10, -11): frozen by content hash (a test fails if one
+  changes), never tuned on, run only with `--held-out` when the owner asks.
+  The default run and all tuning use the other 8.
 - **Live run checks** with the real model over HTTP. Latest (2026-10-09):
   13 English and 2 Arabic cases, 1,514 page checks, 0 failed (every
   applicable statement on the page word for word, statements for other
@@ -590,8 +623,12 @@ uses a missing key.
   sentence says only what the quote says; the label asks the specialist to
   check. The AI's Arabic sentences have not been read by an Arabic-reading
   prosthetist.
-- With the AI, the app depends on the Claude API (internet, a key, cost) and
-  the case as entered leaves the machine.
+- With the AI, the app depends on a cloud API (internet, a key; Gemini's
+  free tier: daily limits Google doesn't publish, and Google may use and
+  people may read what is sent; Claude: cost), and the passages plus the
+  case's amputation level, side and recorded K-level leave the machine
+  (nothing typed at intake, since 2026-10-16). The Gemini path is tested offline only; its first
+  live answer is still to be checked.
 - Library gaps: upper-limb terminal devices and partial-hand prostheses;
   alignment and transtibial socket text come from one training manual
   (ICRC, written for its own polypropylene technology).
@@ -616,11 +653,13 @@ uses a missing key.
   evidence fields — structure and the first rule pass done; the owner's own
   values and showing them on the review page (3e) next; 4 golden-case
   benchmark — runner and 13 cases, 3 reviewed), product (5 smart search,
-  6 split `Case`, 7 orthotics after the trial). An Arabic-reading
-  prosthetist should also check the Arabic terms.
+  6 split `Case` — core done 2026-10-17, 7 orthotics — started 2026-10-16
+  by the owner's decision, before the trial, stroke AFO first). An
+  Arabic-reading prosthetist should also check the Arabic terms.
 - Possible: Arabic versions of quotes from the WHO implementation manual
   (it has an Arabic edition in the library); fixing the smaller limitations.
-- Later domains need a split of `Case` into a shared core plus one section
-  per domain; follow-up needs a pseudonymous link between visits; gait data
+- `Case` is split into a shared core (`CaseCore`) plus the prosthetics
+  case; the orthotic case adds its own section once the owner has set its
+  fields. Follow-up needs a pseudonymous link between visits; gait data
   needs its own upload path and regulatory advice (it falls outside
   non-device decision support under FDA CDS guidance, Criterion 1).

@@ -3,8 +3,22 @@
   python -m intake.golden_cases                 every data/eval/golden_cases/*.json
   python -m intake.golden_cases FILE ...        only these files
   python -m intake.golden_cases --no-search     statements and functional level only
-  python -m intake.golden_cases --rag           also measure the RAG: calls the Claude API
-                                                (three calls per case: costs money, ask first)
+  python -m intake.golden_cases --rag           also measure the RAG: calls the AI writer's API
+                                                (shared/config.py LLM_PROVIDER; three calls per
+                                                case: free-tier quota or money, ask first)
+  python -m intake.golden_cases --held-out      the frozen held-out cases instead (only when
+                                                the owner asks; combines with the options above)
+
+Held-out cases (2026-10-13). The development cases in data/eval/golden_cases/
+are run by default and may be looked at while tuning the search, the topics
+or the prompt. The cases in data/eval/golden_cases_held_out/ are set aside to
+measure whether that tuning carries over to cases it never saw: they are
+frozen (each one's content hash in data/eval/golden_cases_held_out.json,
+checked by the tests and before every --held-out run), never edited to fit
+the app, and run only with --held-out. A held-out file can't be named
+without --held-out, and --held-out runs nothing if a case differs from its
+frozen hash. A change the owner decides on gets a new hash, date and note
+in the manifest.
 
 Since the RAG (2026-10-11) the review page's statements come from the search
 and the AI, and the hand-written statements are the answer key. So:
@@ -16,7 +30,8 @@ and the AI, and the hand-written statements are the answer key. So:
 - --rag measures the RAG against the answer key: how many expected
   statements a checked RAG quote covers (same document, a run of
   COVER_WORDS words in common), any statement the case must not show that
-  one covers, what the quote check removed, the gap sources, and the tokens,
+  one covers, what the quote check removed, the gap sources, the kept items
+  the sentence checks flag (reasoning/sentence_checks.py), and the tokens,
   time and estimated cost. These are measurements (INFO, or WARN for a
   statement that must not be shown or an AI part that didn't answer): they
   never fail the run.
@@ -59,6 +74,7 @@ a malformed file is ERROR. Exit status 1 if anything is FAIL or ERROR.
 """
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -78,12 +94,15 @@ from reasoning.component_guide import K_LEVEL_DESCRIPTIONS
 from reasoning.component_support import component_support
 from reasoning.fitting_support import fitting_support
 from reasoning.models import ORIGIN_RAG, ComponentSupport, FittingSupport, GuidelineStatement
-from reasoning.writer import ClaudeWriter, OfflineWriter, Writer
+from reasoning.sentence_checks import item_flags
+from reasoning.writer import OfflineWriter, Writer, provider_writer
 from shared.case_schema import Case
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
     GOLDEN_CASES_DIR,
+    GOLDEN_HELD_OUT_DIR,
+    GOLDEN_HELD_OUT_MANIFEST,
     PROJECT_ROOT,
     RETRIEVAL_EXCLUDED_DOCUMENTS,
     VECTOR_STORE_DIR,
@@ -113,6 +132,7 @@ NO_AI = OfflineWriter("golden cases run without the AI (use --rag to measure the
 # and they share a run of this many words.
 COVER_WORDS = 6
 # Dollars per million tokens (input, output), to estimate a --rag run's cost.
+# Not listed: Gemini on the free tier, which charges nothing.
 PRICES = {"claude-opus-5-5": (4.0, 20.0)}
 
 
@@ -442,6 +462,13 @@ def rag_findings(golden: GoldenCase, record: CaseRecord) -> list[Finding]:
         *(f"removed ({entry['topic']}): {entry['reason']}" for entry in removed)],
         {"shown": len(rag), "kept": kept, "removed": len(removed), "cost": cost or 0.0, "seconds": seconds,
          **usage}))
+
+    # reasoning/sentence_checks.py: counted for calibration, never removed (the item stays on the page).
+    flagged = [(item, flag) for part in parts for item in part.items for flag in item_flags(item)]
+    items_flagged = len({item.id for item, _ in flagged})
+    findings.append(Finding("rag sentence flags", INFO, [
+        f"{items_flagged} of {kept} kept items flagged by the sentence checks (measurement only: nothing removed)",
+        *(f"{item.id}: {flag.kind}: {flag.detail}" for item, flag in flagged)], {"flagged": items_flagged}))
     return findings
 
 
@@ -620,6 +647,62 @@ def _shown(path: Path) -> str:
         return str(path)
 
 
+# ---- Held-out cases ---------------------------------------------------------
+
+
+def content_hash(path: Path) -> str:
+    """SHA-256 of the case file's JSON content: line endings and layout don't change it."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    canonical = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def frozen_problems() -> list[str]:
+    """Where the held-out folder differs from its manifest: changed, missing or unlisted cases."""
+    folder, manifest = GOLDEN_HELD_OUT_DIR, GOLDEN_HELD_OUT_MANIFEST
+    if not manifest.is_file():
+        return [f"{_shown(manifest)} is missing"]
+    frozen = json.loads(manifest.read_text(encoding="utf-8"))["cases"]
+    files = {path.stem: path for path in folder.glob("*.json")}
+    problems = [f"{case_id}: frozen in {_shown(manifest)}, but not in {_shown(folder)}/"
+                for case_id in sorted(set(frozen) - set(files))]
+    problems += [f"{case_id}: in {_shown(folder)}/, but not frozen in {_shown(manifest)}"
+                 for case_id in sorted(set(files) - set(frozen))]
+    for case_id in sorted(set(files) & set(frozen)):
+        try:
+            changed = content_hash(files[case_id]) != frozen[case_id]["sha256"]
+        except ValueError:
+            changed = True  # no longer JSON
+        if changed:
+            problems.append(f"{case_id}: changed since it was frozen on {frozen[case_id]['frozen_on']}")
+    return problems
+
+
+def case_paths(files: list[Path], held_out: bool) -> list[Path]:
+    """The case files to run: the development cases, or with held_out the frozen held-out ones.
+
+    Exits with the reason, running nothing, if a held-out file is named
+    without held_out, another file with it, or a held-out case differs from
+    its frozen hash.
+    """
+    named_held_out = [path for path in files if path.resolve().parent == GOLDEN_HELD_OUT_DIR.resolve()]
+    if not held_out:
+        if named_held_out:
+            sys.exit(f"Held-out case(s) {', '.join(path.stem for path in named_held_out)}: "
+                     "run them with --held-out (only when the owner asks)")
+        return files or sorted(GOLDEN_CASES_DIR.glob("*.json"))
+    others = [path for path in files if path not in named_held_out]
+    if others:
+        sys.exit(f"--held-out runs only the cases in {_shown(GOLDEN_HELD_OUT_DIR)}/, "
+                 f"not {', '.join(map(str, others))}")
+    problems = frozen_problems()
+    if problems:
+        sys.exit("The held-out cases are not as frozen; nothing was run:\n  " + "\n  ".join(problems)
+                 + "\nHeld-out cases are never edited to fit the app. If the owner decides a change is "
+                 f"needed, record its new hash (content_hash), date and reason in {_shown(GOLDEN_HELD_OUT_MANIFEST)}.")
+    return files or sorted(GOLDEN_HELD_OUT_DIR.glob("*.json"))
+
+
 def describe(golden: GoldenCase) -> str:
     case = golden.case
     k_level = f", {case.activity.k_level.value}" if case.activity.k_level else ", no K-level"
@@ -637,11 +720,18 @@ def main(argv=None) -> int:
     parser.add_argument("files", nargs="*", type=Path, help=f"case files (default: {_shown(GOLDEN_CASES_DIR)}/*.json)")
     parser.add_argument("--no-search", action="store_true", help="skip the gap checks (no embedding model)")
     parser.add_argument("--rag", action="store_true",
-                        help="also measure the RAG: calls the Claude API, three calls per case (costs money)")
+                        help="also measure the RAG: calls the AI writer's API (LLM_PROVIDER), three calls "
+                             "per case (free-tier quota or money)")
+    parser.add_argument("--held-out", action="store_true",
+                        help=f"run the frozen held-out cases ({_shown(GOLDEN_HELD_OUT_DIR)}/) instead: "
+                             "only when the owner asks, never to tune on")
     args = parser.parse_args(argv)
-    paths = args.files or sorted(GOLDEN_CASES_DIR.glob("*.json"))
+    paths = case_paths(args.files, args.held_out)
     if not paths:
-        sys.exit(f"No golden cases in {_shown(GOLDEN_CASES_DIR)}")
+        sys.exit(f"No golden cases in {_shown(GOLDEN_HELD_OUT_DIR if args.held_out else GOLDEN_CASES_DIR)}")
+    if args.held_out:
+        print(f"HELD-OUT run: {len(paths)} frozen case(s), as frozen. Record the result in FUTURE_WORK.md "
+              "and tune nothing on it.")
 
     gaps_skipped = "skipped with --no-search" if args.no_search else search_unavailable()
     if args.rag and gaps_skipped:
@@ -650,7 +740,7 @@ def main(argv=None) -> int:
         print(f"Gap checks SKIPPED: {gaps_skipped}")
     else:
         print("Gap checks search the source library; the first case loads the model (10-30 s) ...")
-    writer = ClaudeWriter() if args.rag else NO_AI
+    writer = provider_writer() if args.rag else NO_AI
     if args.rag:
         print(f"RAG run: {writer.name}, three calls per case, about a minute per case ...")
     totals = dict.fromkeys((PASS, WARN, FAIL, SKIP, ERROR, INFO), 0)
@@ -675,7 +765,8 @@ def main(argv=None) -> int:
               + f"; {n.get('forbidden_shown', 0)} must-not-show statement(s) covered; "
               f"{n.get('gaps_cited', 0)} of {n.get('gaps', 0)} gaps cite a passage; quote check kept "
               f"{n.get('kept', 0)}, removed {n.get('removed', 0)}; {n.get('input_tokens', 0)} input + "
-              f"{n.get('output_tokens', 0)} output tokens, about ${numbers.get('cost', 0):.2f}")
+              f"{n.get('output_tokens', 0)} output tokens, about ${numbers.get('cost', 0):.2f}; "
+              f"{n.get('flagged', 0)} kept items flagged by the sentence checks")
     return 1 if totals[FAIL] or totals[ERROR] else 0
 
 

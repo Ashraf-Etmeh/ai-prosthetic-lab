@@ -14,8 +14,9 @@ apply to. The pylon has no levels there (it was listed only when a statement
 applied); here it is searched for every lower-limb case and listed only when
 the model reports something.
 
-The search text names the case's amputation level, side and K-level, so the
-passages found are the ones closest to this case. It decides nothing: the
+The search text names the case's amputation level and limb, "bilateral" for
+a bilateral case (left and right are not named), and the recorded K-level, so
+the passages found are the ones closest to this case. It decides nothing: the
 model reports what the passages say, and the specialist decides.
 """
 

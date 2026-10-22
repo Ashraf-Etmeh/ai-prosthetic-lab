@@ -4,6 +4,8 @@ Every golden case marked "reviewed" runs here (statements, supporting
 sources, reasoning path, functional level, and for an Arabic or twin case
 the intake form and the twin), so a regression fails the normal test run.
 Unreviewed cases stay out: only `python -m intake.golden_cases` checks them.
+The held-out cases are hashed against their freeze and read for shape, never
+analysed: what the app gives for them is seen only in a --held-out run.
 
 No embedding model: the search is replaced (analyse_case's `retrieve`), and
 gap sources come from fake passages.
@@ -25,7 +27,10 @@ from intake.golden_cases import (
     PASS,
     SKIP,
     WARN,
+    case_paths,
     check_case,
+    content_hash,
+    frozen_problems,
     intake_form,
     main,
     read_golden_case,
@@ -36,7 +41,7 @@ from intake.golden_cases import (
 from intake.routes import analyse_case
 from knowledge.models import ProtocolChunk
 from reasoning.models import Gap
-from shared.config import GOLDEN_CASES_DIR
+from shared.config import GOLDEN_CASES_DIR, GOLDEN_HELD_OUT_DIR
 from tests.helpers import FakeWriter
 
 
@@ -50,6 +55,7 @@ def _status(path: Path):
 # Only the reviewed cases: an unreviewed case is a draft, checked by the runner alone.
 REVIEWED = [path for path in sorted(GOLDEN_CASES_DIR.glob("*.json")) if _status(path) == "reviewed"]
 GOLDEN_01 = GOLDEN_CASES_DIR / "golden-01.json"  # reviewed; the fixtures below start from it
+HELD_OUT = sorted(GOLDEN_HELD_OUT_DIR.glob("*.json"))
 
 
 def no_search(case):
@@ -86,6 +92,48 @@ class ReviewedCaseTests(unittest.TestCase):
                 for finding in checked.values():
                     self.assertEqual(finding.status, PASS, f"{finding.check}: {finding.lines}")
                 self.assertEqual(by_check(findings)["gaps"].status, SKIP)
+
+
+class HeldOutTests(unittest.TestCase):
+    """The held-out cases: frozen, apart from the development cases, run only with --held-out."""
+
+    def test_the_held_out_cases_are_as_frozen(self):
+        self.assertTrue(HELD_OUT)
+        self.assertEqual(frozen_problems(), [])
+
+    def test_the_held_out_cases_still_read(self):
+        # Shape only (a renamed rule or field would make a frozen case unreadable); never analysed here.
+        for path in HELD_OUT:
+            with self.subTest(path.name):
+                self.assertEqual(read_golden_case(path).id, path.stem)
+
+    def test_no_case_is_in_both_sets(self):
+        development = {path.stem for path in GOLDEN_CASES_DIR.glob("*.json")}
+        self.assertTrue(development)
+        self.assertEqual(development & {path.stem for path in HELD_OUT}, set())
+
+    def test_each_run_takes_its_own_set(self):
+        self.assertEqual(case_paths([], held_out=False), sorted(GOLDEN_CASES_DIR.glob("*.json")))
+        self.assertEqual(case_paths([], held_out=True), HELD_OUT)
+
+    def test_a_held_out_case_only_with_the_flag(self):
+        with self.assertRaises(SystemExit) as stop:
+            case_paths([HELD_OUT[0]], held_out=False)
+        self.assertIn("run them with --held-out", str(stop.exception))
+        with self.assertRaises(SystemExit) as stop:
+            case_paths([GOLDEN_01], held_out=True)
+        self.assertIn("--held-out runs only the cases in", str(stop.exception))
+
+    def test_the_hash_follows_the_content_not_the_layout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data = json.loads(GOLDEN_01.read_text(encoding="utf-8"))
+            one, two, three = (Path(tmp) / f"{n}.json" for n in ("one", "two", "three"))
+            one.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+            two.write_text(json.dumps(data, indent=4).replace("\n", "\r\n"), encoding="utf-8")
+            data["expected_answer"]["gaps"].pop()
+            three.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+            self.assertEqual(content_hash(one), content_hash(two))
+            self.assertNotEqual(content_hash(one), content_hash(three))
 
 
 class ReadingTests(unittest.TestCase):
@@ -360,6 +408,9 @@ class RagMeasureTests(unittest.TestCase):
         answer = found["rag answer"]
         self.assertEqual((answer.status, answer.numbers["kept"], answer.numbers["removed"]), (INFO, 2, 0))
         self.assertIn("1 match no expected statement", answer.lines[0])
+        flags = found["rag sentence flags"]  # the fake writer's sentences name no number, code, level or advice
+        self.assertEqual((flags.status, flags.numbers), (INFO, {"flagged": 0}))
+        self.assertIn("0 of 2 kept items flagged", flags.lines[0])
         # The answer key's own checks still pass: the RAG is measured, never failed.
         self.assertEqual(found["statements"].status, PASS)
 
@@ -415,6 +466,47 @@ class CommandTests(unittest.TestCase):
             status, text = self.run_main([str(broken), "--no-search"])
             self.assertEqual(status, 1)
             self.assertIn("ERROR case file", text)
+
+    def frozen_copy(self) -> tuple[Path, Path]:
+        """A temporary held-out folder with golden-03 frozen in it: the real held-out cases aren't run here."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        folder = Path(tmp.name) / "held_out"
+        folder.mkdir()
+        case = folder / "golden-03.json"
+        case.write_text((GOLDEN_CASES_DIR / "golden-03.json").read_text(encoding="utf-8"), encoding="utf-8")
+        manifest = Path(tmp.name) / "held_out.json"
+        manifest.write_text(json.dumps({"cases": {"golden-03": {"sha256": content_hash(case),
+                                                                "frozen_on": "2026-10-13"}}}), encoding="utf-8")
+        for name, value in (("GOLDEN_HELD_OUT_DIR", folder), ("GOLDEN_HELD_OUT_MANIFEST", manifest)):
+            patcher = mock.patch.object(golden_cases, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        return folder, case
+
+    def test_held_out_run_only_as_frozen(self):
+        folder, case = self.frozen_copy()
+        status, text = self.run_main(["--held-out", "--no-search"])
+        self.assertEqual(status, 0)
+        self.assertIn("HELD-OUT run: 1 frozen case(s)", text)
+        self.assertIn("golden-03  [reviewed]", text)
+        data = json.loads(case.read_text(encoding="utf-8"))
+        case.write_text(json.dumps(data, indent=4), encoding="utf-8")  # layout only: still as frozen
+        self.assertEqual(self.run_main(["--held-out", "--no-search"])[0], 0)
+
+        data["expected_answer"]["gaps"].pop()
+        case.write_text(json.dumps(data), encoding="utf-8")
+        (folder / "golden-98.json").write_text("{}", encoding="utf-8")
+        with self.assertRaises(SystemExit) as stop:
+            self.run_main(["--held-out", "--no-search"])
+        message = str(stop.exception)
+        self.assertIn("nothing was run", message)
+        self.assertIn("golden-03: changed since it was frozen on 2026-10-13", message)
+        self.assertIn("golden-98: in ", message)
+        case.unlink()
+        with self.assertRaises(SystemExit) as stop:
+            self.run_main(["--held-out", "--no-search"])
+        self.assertIn("golden-03: frozen in ", str(stop.exception))
 
 
 if __name__ == "__main__":

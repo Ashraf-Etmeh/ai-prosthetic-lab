@@ -783,7 +783,9 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   printed "You are sending unauthenticated requests to the HF Hub", so the
   load makes an optional Hub request despite `local_files_only`; with
   `HF_HUB_OFFLINE=1` the same run gives identical results. Check against
-  principle 3 (no cloud service at runtime) separately.
+  principle 3 (no cloud service at runtime) separately. *Fixed 2026-10-16*
+  (`knowledge/embedding.py hub_offline()`; see "Independent blueprint
+  reviewed" below).
 - **Tests:** 319 (16 new, `tests/test_golden_cases.py`): file checks,
   every kind of difference named, reviewed FAIL vs unreviewed WARN,
   excluded documents, the skip without the model, exit status.
@@ -900,11 +902,341 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   4/26, fitting 14/54; the four WHO statements are never found (the WHO
   manual's 408 passages never rank in a topic's top 6). The model can't
   quote what the search doesn't find, so this is the ceiling for coverage.
+  *Corrected 2026-10-16:* the WHO manual does rank in topic top 6s (p. 97
+  for the fitting topic in every development case, p. 28 for the upper-limb
+  case); what never arrives is pp. 100-102, where its four answer-key
+  statements are. The 129/359 rule was not recorded; `python -m
+  intake.retrieval_misses` now measures it in code and matches it (see
+  "Independent blueprint reviewed" below).
   Options for the owner: more passages per topic (cost grows with input),
   several queries per topic, or both. Note: queries tuned while looking at
   the golden cases would make them a weaker test of the search.
 - **Not yet done:** the live run (no API key on this machine yet), so no
   real coverage, misquote rate, time per case or cost.
+
+## Evidence 4c: held-out golden cases (done 2026-10-13)
+
+- **Why:** the next RAG work tunes the search (topic queries, `RAG_TOP_K`)
+  and the prompt against the golden cases' coverage, and tuning on them
+  would make them a weaker test (the note above). Five cases are set aside
+  and frozen before the first live `--rag` run, to measure whether the
+  tuning carries over to cases it never saw.
+- **Split** (moved with `git mv`, contents unchanged):
+
+  | Set | Cases | Covers |
+  |---|---|---|
+  | Development (8), `data/eval/golden_cases/` | 01, 02, 03, 04, 05, 09, 12, 13 | TT, TF, TR, KD; K0-K4 and not recorded; lower-limb bilateral; the 17-gap case; the Arabic form |
+  | Held out (5), `data/eval/golden_cases_held_out/` | 06, 07, 08, 10, 11 | hip disarticulation K2, partial foot K unknown, Syme K3, TT right no K-level, transhumeral bilateral |
+
+  Kept for development: the three reviewed cases (the unittest guard runs
+  them on every test run), golden-13 with its twin golden-01, golden-09
+  (its expectation must change when the power-ankle bug is fixed, and a
+  frozen file can't), golden-12 (the gap search for every field), golden-04
+  (the only lower-limb bilateral case) and golden-05 (the only K4 case).
+  Trade-off: hip disarticulation, partial foot, Syme, "K-level recorded as
+  unknown" and upper-limb bilateral are now only in the held-out set, so it
+  is partly a test on levels the tuning never saw.
+- **Already seen of the five before the freeze:** their answer-key and gap
+  checks (all PASS in 4b and in the baseline of 2026-10-13); the 2026-10-11
+  search ceiling (129/359) was measured over all 13 together. The RAG has
+  never run on them. Ceiling and coverage figures for tuning are reported
+  over the 8 development cases from now on.
+- **Freeze:** `data/eval/golden_cases_held_out.json` holds each case's
+  SHA-256 of its JSON content (`content_hash`: line endings and layout
+  don't count, since git converts line endings on this machine), with the
+  date and a note. `tests/test_golden_cases.py` checks every case against
+  it, checks that no id is in both sets, and reads each held-out file for
+  shape only (never analysed in the tests). All five are unreviewed: if the
+  team reviews them, the change of `review_status` (and any corrected
+  expectation) changes the hash, and the owner records the new hash, date
+  and reason in the manifest.
+- **Runner:** `python -m intake.golden_cases` runs the development cases
+  only. `--held-out` runs the held-out cases instead (with `--no-search` or
+  `--rag` as usual) after checking the freeze, and runs nothing if a case
+  changed, is missing or isn't listed. A held-out file named without
+  `--held-out`, or another file with it, is refused. `verify_all.py` runs
+  the development cases. CLAUDE.md: held-out runs only when the owner asks,
+  each one recorded here.
+- **Development run with the real search (2026-10-13):** 8 cases, 50 PASS,
+  0 WARN/FAIL/SKIP/ERROR. Held-out runs so far: none.
+- **Tests:** 375 (7 new: the freeze, shape, disjoint sets, which run takes
+  which set, the refusals, the hash ignoring layout, a `--held-out` run on a
+  frozen temporary copy of golden-03).
+
+## Writer: Gemini's free tier (owner's decision, 2026-10-13)
+
+- **The owner asked for a free model** in place of the Claude API (no key
+  with billing on this machine). Checked on 2026-10-13:
+  - **Gemini API (Google AI Studio key): chosen.** `gemini-3.8-flash` (the
+    newest Flash) is on the free tier. Structured output takes a JSON
+    Schema (`responseJsonSchema`; `enum`, `required`, `additionalProperties`
+    supported), which is what `answer_schema()` already gives Claude.
+    Long inputs (each call here is roughly 5-10k tokens of passages).
+  - **DeepSeek:** no lasting free tier (a trial credit). **OpenRouter's
+    free models** (Qwen, DeepSeek, Llama and others): 20 a minute and 50 a
+    day without a $10 top-up, and free models come and go. **Groq,
+    Cerebras and other free tiers:** smaller per-model token limits, and
+    JSON-schema output depends on the model. Any of them can be added as
+    another class in `reasoning/writer.py` if Gemini doesn't serve.
+- **What the free tier costs instead of money** (Gemini API terms): Google
+  "uses the content you submit ... and any generated responses to provide,
+  improve, and develop" its products; "human reviewers may read, annotate,
+  and process your API input and output"; "Do not submit sensitive,
+  confidential, or personal information to the Unpaid Services." For an app
+  offered to users in the EEA, Switzerland or the UK, only paid keys. The
+  app's fake-data rule (CLAUDE.md 4) already covers it; the intake note says
+  the case goes to a cloud service.
+- **Limits:** Google doesn't publish free-tier numbers; each project's are
+  shown in AI Studio (third-party reports range from 20 to 1,500 requests a
+  day, by model). A case takes 3 requests; `golden_cases --rag` on the 8
+  development cases takes 24. A used-up quota shows on the page as the
+  reason there are no summaries. `gemini-3.5-flash-lite` usually allows
+  more requests if needed (`GEMINI_MODEL`).
+- **Built:** `GeminiWriter` in `reasoning/writer.py`, through the REST
+  endpoint with Python's own `urllib` (no SDK, no new dependency). Key from
+  `GEMINI_API_KEY`, sent in the `x-goog-api-key` header, never in the URL;
+  thinking left at the model's default (logged as effort "model default");
+  429/500/503 tried twice more, 3 s and 8 s apart; a blocked request,
+  a declined or cut-off answer, no text or invalid JSON become the reason
+  shown, like Claude's. Logged tokens: input = `promptTokenCount`, output =
+  answer plus thinking tokens. `LLM_PROVIDER` in `shared/config.py` picks
+  the writer (`"gemini"`, or `"claude"` for the Claude API, kept as it
+  was); `golden_cases --rag` uses the same choice (no cost estimate for
+  Gemini: free). `PROMPT_VERSION` stays `rag-v1` (same instructions); the
+  log records the model that answered. Log format unchanged.
+- **Texts:** the disclaimer and the intake note no longer name Claude
+  (English and Arabic: "an AI language model in a cloud service"). The
+  Arabic term sheet was re-exported: 2 rows changed, no corrections lost
+  (there were none). CLAUDE.md principles 3 and 4 name both providers.
+- **Not yet done: a live run** (no Gemini key on this machine). Unverified
+  until then: that the API takes this schema as given (enums of passage
+  ids, `additionalProperties: false`), how many of Flash's items the quote
+  check removes (Claude never ran live either, so there is nothing to
+  compare with yet), and the Arabic sentences. First one case through the app, then the development
+  golden cases with `--rag`.
+- **Tests:** 379 (4 new: the request, unusable answers, the key and the
+  errors, retries; the default writer by `LLM_PROVIDER`).
+
+## Independent blueprint reviewed, and the first fixes (2026-10-16)
+
+- **The document:** `AI prosthetics lab independent blueprint.md` (untracked;
+  an outside research report written from the 2026-10-11 handoff, before the
+  Gemini switch and the held-out split). Reviewed section by section against
+  the repo by Claude at the owner's request; the owner then asked Claude to
+  act as the engineer on it. Nothing in it is adopted as a decision; its
+  clinical and evidence proposals stay the owner's.
+- **Its claims, checked here** (offline unless noted):
+  - Correct: the VA/DoD lower-limb guideline has 26 recommendations, 16
+    "Weak for", 10 "Neither", none strong (our extracted text, grading key
+    left out); the upper-limb one 14; Wu 2025's "between 50% and 90% of LLM
+    responses are not fully supported" is word for word in A01; every VA/DoD
+    recommendation number and grade in its §11 matrix; its error bounds and
+    sample sizes (§13); SOSORT's "Bracing is recommended …" (B, I, p. 20) and
+    the 8-12 / 12-20 / 20-24 h definitions. Anthropic's and Google's
+    supported-country lists do not include Syria (read online 2026-10-16;
+    Google's page last updated 2026-04-28).
+  - Wrong or out of date: the WHO manual "never" reaching the writer (above);
+    the ICRC manual "excluded" (only from gap search: 127 of the 480 topic
+    passages in the 8 development cases, second to CMS); topic queries
+    "naming the side" (only "bilateral"); the GPU possibly unused (torch
+    2.9.1+cu130, `sm_120`, driver 582.05); the repo in OneDrive (it isn't);
+    "13 cases bound errors below 21%" (8 are now the tuning set; zero errors
+    in the 5 held-out cases bounds the rate only below 45%); "re-parse the
+    WHO manual first" (every answer-key quote is in `data/extracted/` on its
+    page, and the measured misses below are not extraction problems).
+  - Found while checking: since the RAG, nothing in code enforces "never
+    advise" (prompt rule 5 only); none of the owner's evidence values
+    (`items.json`) reaches the review page; the CMS cautions that K-levels
+    "should not be considered a functional classification" reach the
+    functional-level top 6 in 1 of the 7 lower-limb development cases; the
+    Knezevic 2024 paper (`ml_walking_ability_…`, cited for the K-level gap)
+    duplicated minority-class samples to 162 and then cross-validated over
+    them (its own text), so its 93% may be inflated; all 40 rule statements
+    expected in the held-out cases also appear in the development cases, so
+    the held-out set tests query wording (other levels and K-levels) but not
+    statements or passages; the Gemini free tier receives the passages too,
+    ICRC (© ICRC, no reuse statement) and WHO (CC BY-NC-SA) text included;
+    the review page names no licence; `pass1.csv` (open in the handoff) is
+    not in the repo. AHRQ CER 213 (R04, public domain) and the AWMF G09-G11
+    orthotics/rehabilitation guidelines are on disk but not catalogued.
+  - Measured for a local writer (no change made): writer prompts are about
+    6-11k tokens per part (bge-m3 tokeniser), up to 17.7k (golden-12's gaps,
+    17 fields), up to 34k per case; bge-m3 takes 2,175 MiB of GPU memory in
+    fp32 and on the CPU loads in 2.3 s, embeds 30 queries in 4.4 s and gives
+    identical vectors. SQLite FTS5 (no new package) indexes all 3,468 chunks
+    in memory in 0.07 s.
+- **Built (no new dependency, no cloud call, no commit):**
+  1. *Principle 3:* with `local_files_only`, loading bge-m3 still contacted
+     huggingface.co twice (measured with the network blocked):
+     huggingface_hub's "agent registry" fetch, and a transformers thread
+     asking about a safetensors conversion of the `pytorch_model.bin`
+     weights. `knowledge/embedding.py hub_offline()` switches the Hub's
+     offline flag on while the cached model loads: 0 attempts, same vectors;
+     a missing model still downloads.
+  2. *Review page:* a section without an AI summary now says why, as code
+     knows it ("the search found no passage", "the AI reported nothing", or
+     "the checks removed the AI's n summaries"), and always lists the
+     passages found. It used to say "The passages found … say nothing about
+     this", even when no passage had been found or every item was removed.
+     "n AI summaries removed" no longer claims every removal was a misquote.
+     The page names the model that answered (as the provider reported it)
+     and the prompt version; the disclaimer opens "Research prototype, not
+     validated for clinical use" (blueprint §14). Arabic for each; the term
+     sheet re-exported (225 rows: 3 added, 3 removed, 3 changed, no
+     corrections lost: there were none).
+  3. *Prompt rag-v2:* the writer gets only the case's amputation level,
+     limb, side and recorded K-level (`case_for_prompt`), not the whole case:
+     prompt rule 7 uses only these, and free text was the way an identifier
+     or an opinion ("confirm K4") could reach the model. Intake note,
+     README, SYSTEM_DESCRIPTION and CLAUDE.md principle 4's description of
+     what is sent updated (the rule itself unchanged). Not yet measured
+     live: no `--rag` run has been made with either version.
+  4. *`python -m intake.retrieval_misses`* (blueprint step 1, adapted):
+     development cases only, the app's own topic queries and filters, the
+     `--rag` coverage rule (same document, 6 words in a row), the full
+     ranking kept. First run: `data/eval/baseline/2026-10-16/`.
+  - Tests: 400 (21 new). `verify_all.py`: the same three FAILs as the
+    2026-10-13 baseline, all repo state (0.3 uncommitted changes, 0.5 main
+    pushed, 1.8 one line in the trial log); golden cases 34 PASS, 0 FAIL.
+- **First miss measurement** (8 development cases, 241 pairs, 57 statements,
+  k = 6):
+  - **Ceiling:** 85/241 (35%) reachable in some topic's top 6, 29/57
+    statements; this matches the 2026-10-11 36% and its depth curve (here
+    35/40/41/46/49/60% at k = 6/10/15/20/30/50), so the old script used this
+    rule. A whole quote inside one passage: 49/241 (20%). In the statement's
+    own topic: 51/241 (21%); 34 pairs are found only under another topic.
+  - **Why the 156 others miss:** 149 *query mismatch* (the statement's own
+    words put a gold passage in the top 6; the topic query ranks it 7-30 for
+    26, beyond 30 for 123), 7 *representation* (even its own words don't),
+    0 *not searchable*. One other document holds 4+ of the topic's top 6 in
+    35 of them (the ICRC manual in 21).
+  - **By topic** (own topic / reachable): fitting 0/36 and 10/36, socket
+    0/17 and 2/17, interface 1/14 and 7/14, alignment 6/49 and 9/49,
+    suspension 3/17, readiness 15/44 and 18/44, preparatory or definitive
+    9/30, foot and ankle 6/18 and 14/18, knee 4/7, functional level 5/6 and
+    6/6. **By document:** WHO implementation manual in 10 of 80 searches'
+    top 6, 0/32 of its pairs reachable; ICRC 50 searches, 36/126; CMS 55,
+    29/49; VA/DoD lower limb 45, 16/29.
+  - **What it means:** the passages exist and embed well; one general query
+    per topic does not reach the specific statements, mostly not even in the
+    top 30, so raising `RAG_TOP_K` alone helps little (60% at k = 50). The
+    blueprint's parsing and chunking fixes (Docling, re-chunking) answer the
+    7 representation misses, not the 149. The writer's cap of 4 per topic
+    (41 pairs expect a 5th or later item) doesn't bind yet: the search
+    finds fewer.
+  - **Before tuning queries on this:** the held-out cases share every
+    statement with the development cases, so a query tuned to reach these
+    statements will look good on the held-out cases too. The owner decides
+    first: a statement-level hold-out, new reviewer-written statements held
+    back, or accepting and recording the weakness.
+- **Built next, same day (no new dependency, no cloud call, no commit):**
+  5. *The yardstick asks first:* `.claude/hooks/protect_yardstick.py`, a
+     Claude Code PreToolUse hook in the project's `.claude/settings.json`
+     (with matching "ask" permission rules). Before Claude edits the golden
+     cases, the freeze manifest, the two guides (the answer key),
+     `evidence_rules.csv` or the review logs, or runs a shell command that
+     names one of them with a write (redirect, `sed -i`, `mv`, `git
+     checkout`, `Set-Content`, …), Claude Code asks the owner. Reading is
+     never stopped; the app's own log writes are not touched. Seen firing
+     live; 5 tests. A script that writes one without naming it is not seen
+     (the held-out cases are also hash-frozen).
+  6. *Sentence checks, measurement only:* `reasoning/sentence_checks.py`
+     flags kept AI items whose English sentence has a number, a code (K0-K4,
+     L-codes) or an amputation level the quote doesn't, a negation the quote
+     lacks (or drops one it has), advice wording (directive, choice or
+     ranking, readiness verdict, own recommendation; marked when the quote
+     has the same word), or whose Arabic sentence has other numbers or codes
+     or Arabic advice wording. Nothing is removed or shown: `golden_cases
+     --rag` reports them ("rag sentence flags", INFO) and `python -m
+     reasoning.sentence_checks` replays them over stored case files (none
+     has AI output yet). The patterns are deliberately simple; the owner
+     approves any that should ever remove or mark an item, from counts on
+     real output (open item 3 below). 12 tests.
+  7. *Licence on the citation line:* `licence` in `catalog.json` for the 12
+     documents whose manifest row states a Creative Commons licence (8 CC BY
+     4.0, 1 CC BY, the 4 WHO documents CC BY-NC-SA 3.0 IGO), copied as
+     written; a test checks catalog and manifest agree both ways. The review
+     page shows "authors; licence: …" under such a source's citation (CC
+     licences ask for both); US federal works and documents without a
+     recorded licence (ICRC, AAOP toolkit, AWMF, Fatone 2020) show nothing
+     more. Not added: WHO's adaptation disclaimer for AI summaries of its
+     text (part of open item 2). Arabic text added; term sheet re-exported
+     (226 rows).
+  - Checked live: golden-01 through the real form and search, AI off (the
+    2026-10-13 end-to-end script, output to a scratch folder): OK, real
+    `data/` untouched; the page opens with the prototype line, credits 19
+    licensed passages, never says "say nothing". Tests: 419.
+- **Open, for the owner** (none started):
+  1. Where the app will run, for the owner and the trial. If from Syria,
+     neither cloud writer is available; a local writer then becomes the only
+     path to a live run (and to a trial that reviews summaries).
+  2. ICRC and WHO text going to Gemini's free tier: accept and record,
+     filter what the writer receives, or change the writer; whether to ask
+     ICRC for permission.
+  3. Code checks for advice wording and for numbers, codes, level and
+     K-level in the English and Arabic sentences (the code half of principle
+     1): patterns to approve, and best calibrated on a first live run.
+  4. The owner's evidence values on the page (applying R1-R8 to AI items;
+     R5/R6 need a ruling, since they match on knowledge ids).
+  5. The CMS K-level cautions: fixed quotes on the page, answer-key entries,
+     or a second functional-level query.
+  6. The Knezevic paper: as it is, a limitation, a rule, or excluded.
+  7. `cms_power_assist_ankle`'s `ambulators_only` and golden-09's
+     expectation (still as recorded in 4a).
+  8. How to hold out statements before query tuning (above).
+  9. Which reviewer to approach (roadmap item 2).
+
+## Product 6 and orthotics (owner's decision 2026-10-16; core split done 2026-10-17)
+
+- **Decision (owner, 2026-10-16):** start orthotics (use case 03) before
+  the trial, replacing "only after the trial results are in"; split `Case`
+  first (item 6); stroke AFO is the first area. The others considered:
+  diabetic foot (IWGDF 2023 is the richest orthotic source on disk, but all
+  rights reserved, and its passages would go to Gemini's free tier),
+  scoliosis (SOSORT, paediatric), cerebral palsy (paediatric; GMFCS needs a
+  licence).
+- **Built (no new dependency, no cloud call, no commit):** `CaseCore` in
+  `shared/case_schema.py` holds what every domain records: case id, time,
+  age, body weight, comorbidities, cognitive status, notes, with their
+  checks and `unrecorded_fields()`/`unknown_fields()` (which now open any
+  nested section). `Case(CaseCore)` stays the prosthetics case: amputation
+  level, side, cause, months since amputation, residual limb, activity and
+  K-level, prior prostheses, contralateral limb. Prior devices and the
+  contralateral limb stay prosthetic because their field-guide queries are
+  about prostheses; an orthotic section can reuse `PriorDevice` if the
+  owner wants device history (the blueprint suggests adherence too).
+  `DOMAIN_CASES` and `case_from_dict()`: a case dict names its domain in
+  "domain" unless it is prosthetics, the default. So a prosthetics dict is
+  unchanged: no `CASE_FILE_VERSION` or `LOG_VERSION` change, and the frozen
+  held-out cases still pass "question must be exactly what Case.to_dict()
+  gives". The store reads through `case_from_dict()`; the golden-case and
+  trial-case loaders keep `Case.from_dict()`, since their checks are
+  prosthetic (a dict naming a domain fails there). The core fields' search
+  queries in `shared/field_guide.py` are worded for prosthetics; an orthotic
+  field guide needs its own.
+- **Checked:** 424 tests (5 new, with a stand-in second domain). All 5
+  saved case files, 15 trial cases, 13 golden cases (8 development, 5 held
+  out) and the review log's 1 line read through the new code and give the
+  identical dict. `golden_cases --no-search`: 34 PASS, 0 FAIL, as before.
+- **Next, waiting on the owner** (nothing orthotic is built or shown yet):
+  1. The orthotic intake fields for stroke AFO, and which are critical.
+     Blueprint §7 proposes a set from its sources (for stroke: ambulatory
+     status with a named gait-speed test, plantarflexion range with the knee
+     extended and flexed, tone with its scale, grade, muscle and position);
+     its critical/important split is a proposal for an orthotist to confirm.
+  2. Which sources to catalogue. On disk (rough counts of orthosis words in
+     pypdf text, 2026-10-16): Choo 2021 AFO meta-analysis, already catalogued
+     (`afo_stroke_walking_review_2021`); WHO PIR module 3, neurological (192
+     pages, 76 mentions; WHO licence, see open item 2 above); VA/DoD stroke
+     rehabilitation 2024 (242 pages, only 11 mentions; US federal work);
+     Wang 2025 3D-printed AFO review (41 pages). Arabic: only the WHO P&O
+     standards, which are about running a service (WHO's Arabic term for
+     orthoses is المقاويم).
+  3. The orthotic topics (the counterpart of `reasoning/rag_topics.py`), the
+     answer key and the golden cases (the blueprint's GC-ORT-01 is a
+     proposal).
+  4. Whether orthotic passages may go to Gemini's free tier (open item 2
+     above).
 
 ## Open decisions
 
@@ -984,12 +1316,10 @@ biomechanics/gait analysis, motor rehabilitation — and seven initial use
 cases. v1 is use case 01 only. None of the items below should be built yet;
 they're recorded so v1 choices don't block them.
 
-- **Other domains need other case data.** `Case` requires
-  `amputation_level` and `side`, so it cannot hold an orthotics case.
-  When a second domain starts, split it into a shared core (ids, timestamps,
-  demographics, health context) plus one section per domain (prosthetic,
-  orthotic, gait session, rehab plan), and give each use case its own module
-  under `reasoning/`. Until then, keeping one `Case` is simpler.
+- ~~**Other domains need other case data.**~~ The shared core is split off
+  (2026-10-17, see "Product 6 and orthotics" above); each domain's case adds
+  its own fields, and each use case still gets its own module under
+  `reasoning/`.
 - **Follow-up over time** (prosthetics follow-up, rehab progress, use case
   07) needs several cases linked to the same person. Today each case stands
   alone. Add a pseudonymous patient reference — still no real identifiers —

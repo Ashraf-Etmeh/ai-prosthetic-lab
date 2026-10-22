@@ -70,7 +70,8 @@
       "source_type": "protocol",
       "domains": ["prosthetics", "orthotics", "rehabilitation"],
       "limbs": ["lower", "upper"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY-NC-SA 3.0 IGO"
     },
     {
       "id": "who_po_implementation_manual_part2_2017",
@@ -85,7 +86,8 @@
       "source_type": "protocol",
       "domains": ["prosthetics", "orthotics", "rehabilitation"],
       "limbs": ["lower", "upper"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY-NC-SA 3.0 IGO"
     },
     {
       "id": "who_po_standards_part1_arabic_2019",
@@ -100,7 +102,8 @@
       "source_type": "protocol",
       "domains": ["prosthetics", "orthotics", "rehabilitation"],
       "limbs": ["lower", "upper"],
-      "language": "ar"
+      "language": "ar",
+      "licence": "CC BY-NC-SA 3.0 IGO"
     },
     {
       "id": "who_po_implementation_manual_part2_arabic_2019",
@@ -115,7 +118,8 @@
       "source_type": "protocol",
       "domains": ["prosthetics", "orthotics", "rehabilitation"],
       "limbs": ["lower", "upper"],
-      "language": "ar"
+      "language": "ar",
+      "licence": "CC BY-NC-SA 3.0 IGO"
     },
     {
       "id": "scoliosis_sosort_guidelines_2016",
@@ -128,7 +132,8 @@
       "url": null,
       "source_type": "protocol",
       "domains": ["orthotics", "rehabilitation"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "phantom_limb_pain_review_2020",
@@ -142,7 +147,8 @@
       "source_type": "scientific_reference",
       "domains": ["prosthetics"],
       "limbs": ["lower", "upper"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "ml_walking_ability_lower_limb_amputees_2024",
@@ -157,7 +163,8 @@
       "source_type": "scientific_reference",
       "domains": ["prosthetics", "rehabilitation"],
       "limbs": ["lower"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "3d_printed_prostheses_review_2025",
@@ -171,7 +178,8 @@
       "source_type": "scientific_reference",
       "domains": ["prosthetics"],
       "limbs": ["lower", "upper"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "3d_printed_transtibial_sockets_review_2022",
@@ -185,7 +193,8 @@
       "source_type": "scientific_reference",
       "domains": ["prosthetics"],
       "limbs": ["lower"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "socket_shape_capture_review_2026",
@@ -199,7 +208,8 @@
       "source_type": "scientific_reference",
       "domains": ["prosthetics"],
       "limbs": ["lower"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY"
     },
     {
       "id": "afo_stroke_walking_review_2021",
@@ -212,7 +222,8 @@
       "url": null,
       "source_type": "scientific_reference",
       "domains": ["orthotics", "gait"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "orthoses_cerebral_palsy_review_2024",
@@ -225,7 +236,8 @@
       "url": null,
       "source_type": "scientific_reference",
       "domains": ["orthotics", "rehabilitation"],
-      "language": "en"
+      "language": "en",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "lower_limb_outcome_measures_toolkit_aaop_2020",

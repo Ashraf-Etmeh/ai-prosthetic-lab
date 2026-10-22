@@ -64,3 +64,4 @@ broken (letters in the wrong order or shape).
 | `domains` | One or more of: `prosthetics`, `orthotics`, `gait`, `rehabilitation`. v1 (use case 01) searches `prosthetics` only. |
 | `language` | `en`, `ar` or `de`. |
 | `limbs` | Optional. `["lower"]`, `["upper"]` or both: which amputations the document is about. An upper-limb case never cites a `["lower"]`-only document. Leave it out if the document isn't limb-specific. |
+| `licence` | Optional. The licence the document states, copied exactly from the manifest's `licence` column (a test checks they match); leave it out when the manifest records none ("not shown", US federal works). When set, the review page shows the authors and the licence under the citation, as Creative Commons licences ask. |

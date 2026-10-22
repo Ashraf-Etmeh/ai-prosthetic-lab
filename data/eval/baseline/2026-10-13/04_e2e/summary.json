@@ -1,0 +1,122 @@
+{
+ "case_file": "data/eval/golden_cases/golden-01.json",
+ "case_id_assigned": "60831d33c276",
+ "post_intake": {
+  "status": 302,
+  "seconds_first": 12.66,
+  "seconds_second_model_loaded": 0.14,
+  "second_status": 302
+ },
+ "get_review": {
+  "status": 200,
+  "bytes": 78015
+ },
+ "post_decision": {
+  "status": 302,
+  "location": "/review/60831d33c276?saved=1"
+ },
+ "review_after_decision": {
+  "status": 200
+ },
+ "knowledge_warning": null,
+ "gaps": [
+  {
+   "field": "residual_limb.volume_stability",
+   "status": "recorded as unknown",
+   "cited": "socket_shape_capture_review_2026-0007 (p. 2)"
+  },
+  {
+   "field": "residual_limb.pain",
+   "status": "not recorded",
+   "cited": "lower_limb_amputation_va_dod_cpg_2024-0379 (p. 101)"
+  },
+  {
+   "field": "activity.functional_goals",
+   "status": "not recorded",
+   "cited": "lower_limb_amputation_va_dod_cpg_2024-0395 (p. 107)"
+  },
+  {
+   "field": "prior_devices",
+   "status": "not recorded",
+   "cited": null
+  }
+ ],
+ "passages_per_topic": {
+  "residual_limb.volume_stability": 5,
+  "residual_limb.pain": 5,
+  "activity.functional_goals": 5,
+  "prior_devices": 5,
+  "functional_level": 6,
+  "foot_ankle": 6,
+  "pylon": 6,
+  "socket": 6,
+  "interface": 6,
+  "suspension": 6,
+  "readiness": 6,
+  "prosthesis_stage": 6,
+  "fitting": 6,
+  "alignment": 6
+ },
+ "distinct_passages": 59,
+ "statements_shown": 0,
+ "generation_parts": {
+  "gaps": {
+   "status": "unavailable",
+   "reason": "baseline run: the Claude API is not called"
+  },
+  "components": {
+   "status": "unavailable",
+   "reason": "baseline run: the Claude API is not called"
+  },
+  "fitting": {
+   "status": "unavailable",
+   "reason": "baseline run: the Claude API is not called"
+  }
+ },
+ "golden_checks": [
+  {
+   "check": "statements",
+   "status": "PASS",
+   "lines": [
+    "as expected"
+   ]
+  },
+  {
+   "check": "supporting sources",
+   "status": "PASS",
+   "lines": [
+    "as expected"
+   ]
+  },
+  {
+   "check": "reasoning path",
+   "status": "PASS",
+   "lines": [
+    "matches the rules and the case"
+   ]
+  },
+  {
+   "check": "functional level",
+   "status": "PASS",
+   "lines": [
+    "shown: cms_k3_description, as expected"
+   ]
+  },
+  {
+   "check": "gaps",
+   "status": "PASS",
+   "lines": [
+    "as expected"
+   ]
+  },
+  {
+   "check": "excluded documents",
+   "status": "PASS",
+   "lines": [
+    "no gap cites one"
+   ]
+  }
+ ],
+ "log_lines_written": 1,
+ "real_data_untouched": true
+}

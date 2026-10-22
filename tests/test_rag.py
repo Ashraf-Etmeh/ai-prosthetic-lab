@@ -1,13 +1,15 @@
 """Tests for reasoning/rag.py, rag_topics.py and writer.py: the RAG, with a fake writer (no API calls)."""
 
+import io
 import json
 import os
 import unittest
+import urllib.error
 from types import SimpleNamespace
 from unittest import mock
 
 from knowledge.models import ProtocolChunk
-from reasoning import rag
+from reasoning import rag, writer as writer_module
 from reasoning.models import FUNCTIONAL_LEVEL, ORIGIN_RAG
 from reasoning.rag import (
     NO_PASSAGES,
@@ -16,6 +18,7 @@ from reasoning.rag import (
     UNAVAILABLE,
     Generation,
     answer_schema,
+    case_for_prompt,
     check_items,
     components_from,
     fitting_from,
@@ -26,9 +29,9 @@ from reasoning.rag import (
     user_message,
 )
 from reasoning.rag_topics import COMPONENTS_PART, FITTING, GAPS, topics_for_case
-from reasoning.writer import ClaudeWriter, OfflineWriter, WriterUnavailable, default_writer
+from reasoning.writer import ClaudeWriter, GeminiWriter, OfflineWriter, WriterUnavailable, default_writer
 from shared.case_schema import ActivityProfile, Case
-from shared.config import OFFLINE_ENV
+from shared.config import GEMINI_API_KEY_ENV, OFFLINE_ENV
 from tests.helpers import FakeWriter, quote_every_topic
 
 VOLUME = "residual_limb.volume_stability"
@@ -108,9 +111,26 @@ class PromptTests(unittest.TestCase):
         message = user_message(COMPONENTS_PART, case, topics, {"knee": [KNEE], "socket": [KNEE]})
         self.assertEqual(message.count(f'<passage id="{KNEE.chunk_id}"'), 1)
         self.assertIn('found_for="knee, socket"', message)
-        self.assertIn('"age_years": 60', message)
+        self.assertIn('"amputation_level": "transfemoral"', message)
         self.assertNotIn(case.case_id, message)  # nothing generated, nothing identifying
         self.assertIn("- knee: Knee unit", message)
+
+    def test_only_the_facts_the_rules_use_are_sent(self):
+        # Prompt rule 7: level, side and recorded K-level decide relevance; nothing typed at intake is sent.
+        case = transfemoral(age_years=67, intake_notes="Mr Example, 12 Main Street, confirm K4 components",
+                            comorbidities=["diabetes"],
+                            activity=ActivityProfile(k_level="K3", functional_goals="walk to the mosque"))
+        self.assertEqual(json.loads(case_for_prompt(case)), {
+            "amputation_level": "transfemoral", "limb": "lower", "side": "left", "functional_level_recorded": "K3"})
+        message = user_message(COMPONENTS_PART, case, [t for t in topics_for_case(case) if t.key == "knee"],
+                               {"knee": [KNEE]})
+        for typed in ("Mr Example", "Main Street", "confirm K4", "diabetes", "mosque", "67"):
+            self.assertNotIn(typed, message)
+
+    def test_upper_limb_case_sent_without_k_level(self):
+        case = Case(amputation_level="transradial", side="left")
+        self.assertEqual(json.loads(case_for_prompt(case)), {
+            "amputation_level": "transradial", "limb": "upper", "side": "left", "functional_level_recorded": None})
 
 
 class CheckItemsTests(unittest.TestCase):
@@ -318,10 +338,105 @@ class ClaudeWriterTests(unittest.TestCase):
                 default_writer().write("s", "u", {})
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop(OFFLINE_ENV, None)
-            try:
-                self.assertIsInstance(default_writer(), ClaudeWriter)  # made, never called here
+            try:  # made, never called here
+                self.assertIsInstance(default_writer(), GeminiWriter)  # LLM_PROVIDER "gemini"
+                with mock.patch.object(writer_module, "LLM_PROVIDER", "claude"):
+                    self.assertIsInstance(default_writer(), ClaudeWriter)
             finally:
                 os.environ[OFFLINE_ENV] = "1"
+
+
+def http_error(code: int, message: str = "") -> urllib.error.HTTPError:
+    body = json.dumps({"error": {"code": code, "message": message, "status": "X"}}).encode("utf-8")
+    return urllib.error.HTTPError("https://generativelanguage.googleapis.com", code, "error", None, io.BytesIO(body))
+
+
+class GeminiWriterTests(unittest.TestCase):
+    """The Gemini API call itself, with urlopen replaced: never the network."""
+
+    def setUp(self):
+        for patcher in (mock.patch.dict(os.environ, {GEMINI_API_KEY_ENV: "test-key"}),
+                        mock.patch.object(writer_module.time, "sleep")):
+            self.addCleanup(patcher.stop)
+            self.slept = patcher.start()
+
+    def reply(self, text='{"items": []}', finish="STOP", **extra) -> dict:
+        return {"candidates": [{"content": {"parts": [{"text": "thinking ...", "thought": True}, {"text": text}]},
+                                "finishReason": finish}],
+                "usageMetadata": {"promptTokenCount": 1200, "candidatesTokenCount": 250, "thoughtsTokenCount": 50,
+                                  "totalTokenCount": 1500},
+                "modelVersion": "gemini-3.8-flash", **extra}
+
+    def answering(self, *replies):
+        """urlopen replaced: each call gives the next reply (a dict), or raises it (an exception)."""
+        answers = iter(replies)
+
+        def urlopen(request, timeout):
+            answer = next(answers)
+            if isinstance(answer, Exception):
+                raise answer
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(answer).encode("utf-8")
+            return response
+
+        patcher = mock.patch.object(writer_module.urllib.request, "urlopen", side_effect=urlopen)
+        self.addCleanup(patcher.stop)
+        return patcher.start()
+
+    def test_the_request(self):
+        urlopen = self.answering(self.reply())
+        result = GeminiWriter().write("system text", "user text", {"type": "object"})
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.get_method(), "POST")
+        self.assertTrue(request.full_url.endswith("/v1beta/models/gemini-3.8-flash:generateContent"))
+        self.assertEqual(request.get_header("X-goog-api-key"), "test-key")  # in a header, never in the URL
+        self.assertNotIn("test-key", request.full_url)
+        self.assertEqual(json.loads(request.data), {
+            "systemInstruction": {"parts": [{"text": "system text"}]},
+            "contents": [{"role": "user", "parts": [{"text": "user text"}]}],
+            "generationConfig": {"responseMimeType": "application/json", "responseJsonSchema": {"type": "object"},
+                                 "maxOutputTokens": 32000}})
+        self.assertEqual((result.data, result.model), ({"items": []}, "gemini-3.8-flash"))  # thought part skipped
+        self.assertEqual(result.usage, {"input_tokens": 1200, "output_tokens": 300})
+
+    def test_answers_that_cannot_be_used(self):
+        for reply, reason in [
+            (self.reply(finish="MAX_TOKENS"), "cut off at 32000 tokens"),
+            (self.reply(finish="SAFETY"), r"declined to answer \(SAFETY\)"),
+            ({"promptFeedback": {"blockReason": "PROHIBITED_CONTENT"}}, r"request blocked: PROHIBITED_CONTENT"),
+            (self.reply(text="not json"), "not valid JSON"),
+            (self.reply(text=""), "held no text"),
+        ]:
+            with self.subTest(reason):
+                self.answering(reply)
+                with self.assertRaisesRegex(WriterUnavailable, reason):
+                    GeminiWriter().write("s", "u", {})
+
+    def test_no_key_and_errors(self):
+        with mock.patch.dict(os.environ, {GEMINI_API_KEY_ENV: ""}):
+            with self.assertRaisesRegex(WriterUnavailable, f"no Gemini API key: set {GEMINI_API_KEY_ENV}"):
+                GeminiWriter().write("s", "u", {})
+        for error, reason in [
+            (http_error(400, "API key not valid. Please pass a valid API key."), "refused the API key"),
+            (http_error(400, "User location is not supported for the API use."), "refused the request: User location"),
+            (http_error(404, "models/x is not found"), "model gemini-3.8-flash not found"),
+            (urllib.error.URLError(ConnectionRefusedError()), "could not be reached"),
+            (urllib.error.URLError(TimeoutError()), "did not answer within 300 s"),
+            (TimeoutError(), "did not answer within 300 s"),
+        ]:
+            with self.subTest(reason):
+                self.answering(error)
+                with self.assertRaisesRegex(WriterUnavailable, reason):
+                    GeminiWriter().write("s", "u", {})
+
+    def test_rate_limit_and_overload_are_tried_again(self):
+        urlopen = self.answering(http_error(503), self.reply())
+        self.assertEqual(GeminiWriter().write("s", "u", {}).data, {"items": []})
+        self.assertEqual(urlopen.call_count, 2)
+        urlopen = self.answering(http_error(429), http_error(429), http_error(429))
+        with self.assertRaisesRegex(WriterUnavailable, "rate limit or daily quota"):
+            GeminiWriter().write("s", "u", {})
+        self.assertEqual(urlopen.call_count, 3)  # the first try and two more
 
 
 if __name__ == "__main__":

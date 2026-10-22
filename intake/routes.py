@@ -226,7 +226,7 @@ def analyse_case(case: Case, retrieve=None, writer: Writer | None = None) -> Cas
     `retrieve` replaces the search (default: retrieve_relevant_chunks); the
     golden cases pass one that raises KnowledgeBaseMissing when the model is
     not available. `writer` replaces the AI (default: default_writer(), the
-    Claude API unless switched off); without its answer the page lists the
+    API of shared/config.py LLM_PROVIDER unless switched off); without its answer the page lists the
     passages found, and the gaps come from the topic-word check.
     """
     warning = None

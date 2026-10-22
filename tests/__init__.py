@@ -1,4 +1,4 @@
-"""The test package. Importing it switches the Claude API off for every test.
+"""The test package. Importing it switches the AI writer (Gemini or Claude API) off for every test.
 
 `python -m unittest` (and `python -m unittest tests.test_x`) imports this
 package first, so no test can reach the API, even on a machine where an

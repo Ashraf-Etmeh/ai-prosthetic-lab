@@ -1,7 +1,15 @@
 """Case-object schema for AI Prosthetic Lab (v1 prototype).
 
-A Case holds the intake data for one prosthetics evaluation. It is the object
-passed between intake -> knowledge -> reasoning -> review.
+A case holds the intake data for one evaluation. It is the object passed
+between intake -> knowledge -> reasoning -> review.
+
+Since 2026-10-17 (roadmap item 6) a case is a shared core plus one domain's
+section: CaseCore holds what every domain records (ids, timestamps,
+demographics, health context) and each domain's class adds its own fields.
+`Case` is the prosthetics case; its name predates the split and is kept.
+A domain other than prosthetics writes "domain" into its dict; a dict without
+it is a prosthetics case, so every case saved before the split, every golden
+case and every review-log line still reads unchanged (case_from_dict).
 
 Conventions:
 - A field set to None means "not recorded at intake". The reasoning layer
@@ -18,10 +26,13 @@ from __future__ import annotations
 
 import math
 import uuid
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
+
+# The domain of a case dict that names none: every case saved before the split.
+DEFAULT_DOMAIN = "prosthetics"
 
 
 class AmputationLevel(str, Enum):
@@ -137,11 +148,12 @@ class PriorDevice:
         _check_number("years_used", self.years_used)
 
 
-@dataclass
-class Case:
-    # Required at creation
-    amputation_level: AmputationLevel
-    side: Side
+@dataclass(kw_only=True)
+class CaseCore:
+    """What every domain's case records. Not used on its own: each domain's
+    class adds its fields and names its `domain`."""
+
+    domain: ClassVar[str]
 
     # Identity / bookkeeping
     case_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
@@ -153,19 +165,8 @@ class Case:
     age_years: Optional[int] = None
     body_weight_kg: Optional[float] = None
 
-    # Amputation history
-    etiology: Optional[Etiology] = None
-    months_since_amputation: Optional[float] = None
-
-    # Core evaluation inputs
-    residual_limb: ResidualLimb = field(default_factory=ResidualLimb)
-    activity: ActivityProfile = field(default_factory=ActivityProfile)
-    # None = device history not asked; [] = asked, no prior devices.
-    prior_devices: Optional[list[PriorDevice]] = None
-
     # Relevant health context
     comorbidities: Optional[list[str]] = None  # [] = asked, none reported
-    contralateral_limb_status: Optional[str] = None  # lower limb: other leg's condition
     cognitive_status: Optional[str] = None  # ability to learn donning/doffing, device care
 
     intake_notes: Optional[str] = None
@@ -173,38 +174,18 @@ class Case:
     # ---- Validation ----------------------------------------------------
 
     def __post_init__(self) -> None:
-        # Accept enum members or their string values; reject anything else.
-        self.amputation_level = AmputationLevel(self.amputation_level)
-        self.side = Side(self.side)
-        self.etiology = _to_enum(Etiology, self.etiology)
-
         _check_number("age_years", self.age_years)
         _check_number("body_weight_kg", self.body_weight_kg, positive=True)
-        _check_number("months_since_amputation", self.months_since_amputation)
 
     # ---- Serialization -------------------------------------------------
 
     def to_dict(self) -> dict[str, Any]:
-        return _enums_to_values(asdict(self))
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Case":
-        # Enum strings are converted by each class's __post_init__, so only
-        # the nested objects need rebuilding here.
-        data = dict(data)
-        data["residual_limb"] = ResidualLimb(**(data.get("residual_limb") or {}))
-        data["activity"] = ActivityProfile(**(data.get("activity") or {}))
-        if data.get("prior_devices") is not None:
-            data["prior_devices"] = [PriorDevice(**d) for d in data["prior_devices"]]
-        if data.get("comorbidities") is not None:
-            data["comorbidities"] = list(data["comorbidities"])
-        return cls(**data)
+        data = _enums_to_values(asdict(self))
+        if self.domain != DEFAULT_DOMAIN:
+            data = {"domain": self.domain, **data}
+        return data
 
     # ---- Helpers for the reasoning layer -------------------------------
-
-    @property
-    def is_lower_limb(self) -> bool:
-        return self.amputation_level.is_lower_limb
 
     def unrecorded_fields(self) -> list[str]:
         """Dotted paths of fields left as None (not recorded at intake).
@@ -230,19 +211,90 @@ class Case:
         ]
 
     def _not_applicable(self) -> set[str]:
-        if self.is_lower_limb:
-            return set()
-        return {"activity.k_level", "contralateral_limb_status"}
+        return set()
 
     def _leaf_values(self):
         """Yield (dotted path, value) for every field, opening the nested sections."""
         for f in fields(self):
             value = getattr(self, f.name)
-            if isinstance(value, (ResidualLimb, ActivityProfile)):
+            if is_dataclass(value):
                 for sub in fields(value):
                     yield f"{f.name}.{sub.name}", getattr(value, sub.name)
             else:
                 yield f.name, value
+
+
+@dataclass
+class Case(CaseCore):
+    """A prosthetics case: the shared core plus the amputation and the prosthesis."""
+
+    domain: ClassVar[str] = "prosthetics"
+
+    # Required at creation
+    amputation_level: AmputationLevel
+    side: Side
+
+    # Amputation history
+    etiology: Optional[Etiology] = None
+    months_since_amputation: Optional[float] = None
+
+    # Core evaluation inputs
+    residual_limb: ResidualLimb = field(default_factory=ResidualLimb)
+    activity: ActivityProfile = field(default_factory=ActivityProfile)
+    # None = device history not asked; [] = asked, no prior devices.
+    prior_devices: Optional[list[PriorDevice]] = None
+
+    contralateral_limb_status: Optional[str] = None  # lower limb: other leg's condition
+
+    # ---- Validation ----------------------------------------------------
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        # Accept enum members or their string values; reject anything else.
+        self.amputation_level = AmputationLevel(self.amputation_level)
+        self.side = Side(self.side)
+        self.etiology = _to_enum(Etiology, self.etiology)
+
+        _check_number("months_since_amputation", self.months_since_amputation)
+
+    # ---- Serialization -------------------------------------------------
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Case":
+        # Enum strings are converted by each class's __post_init__, so only
+        # the nested objects need rebuilding here.
+        data = dict(data)
+        data["residual_limb"] = ResidualLimb(**(data.get("residual_limb") or {}))
+        data["activity"] = ActivityProfile(**(data.get("activity") or {}))
+        if data.get("prior_devices") is not None:
+            data["prior_devices"] = [PriorDevice(**d) for d in data["prior_devices"]]
+        if data.get("comorbidities") is not None:
+            data["comorbidities"] = list(data["comorbidities"])
+        return cls(**data)
+
+    # ---- Helpers for the reasoning layer -------------------------------
+
+    @property
+    def is_lower_limb(self) -> bool:
+        return self.amputation_level.is_lower_limb
+
+    def _not_applicable(self) -> set[str]:
+        if self.is_lower_limb:
+            return set()
+        return {"activity.k_level", "contralateral_limb_status"}
+
+
+# Each domain's case class, by the name its dicts carry in "domain".
+DOMAIN_CASES: dict[str, type[CaseCore]] = {Case.domain: Case}
+
+
+def case_from_dict(data: dict[str, Any]) -> CaseCore:
+    """The case a dict holds, as the class of its domain (none named: prosthetics)."""
+    data = dict(data)
+    domain = data.pop("domain", DEFAULT_DOMAIN)
+    if domain not in DOMAIN_CASES:
+        raise ValueError(f"domain must be one of {sorted(DOMAIN_CASES)}, got {domain!r}")
+    return DOMAIN_CASES[domain].from_dict(data)
 
 
 def _to_enum(enum_cls: type[Enum], value: Any) -> Any:

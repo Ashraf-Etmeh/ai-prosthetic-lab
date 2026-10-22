@@ -1,8 +1,8 @@
 # CLAUDE.md — AI Prosthetic Lab
 
 A working local prototype of a decision-support tool for prosthetics
-specialists (Flask, RAG: local bge-m3 search plus Claude API summaries
-backed by checked quotes, English/Arabic pages).
+specialists (Flask, RAG: local bge-m3 search plus cloud-model summaries,
+Gemini free tier or Claude API, backed by checked quotes, English/Arabic pages).
 Extend it; don't rebuild it. Before changing anything, read
 `SYSTEM_DESCRIPTION.md` (what it does and how it is built), `README.md`
 (how to run it) and `FUTURE_WORK.md` (decisions, measurements, open items).
@@ -21,14 +21,20 @@ Extend it; don't rebuild it. Before changing anything, read
    removed. No clinical sentence is written by the code. Whether a statement
    applies to a case follows only from the source's own wording.
 3. **Search stays local; one cloud language model writes the summaries.**
-   Retrieval uses the local embedding model. The Claude API, behind one
-   swap point (`reasoning/writer.py`), writes the summary sentences from the
-   retrieved passages; no other cloud service. Without it the app still
-   works and shows the passages without summaries. (Owner's decision
-   2026-10-11, replacing "no language model and no cloud service".)
+   Retrieval uses the local embedding model. One cloud language model,
+   behind one swap point (`reasoning/writer.py`), writes the summary
+   sentences from the retrieved passages: the Gemini API's free tier, or
+   the Claude API (`LLM_PROVIDER` in `shared/config.py`); no other cloud
+   service. Without it the app still works and shows the passages without
+   summaries. (Owner's decisions: 2026-10-11, replacing "no language model
+   and no cloud service"; 2026-10-13, Gemini's free tier by default.)
 4. **Fake test data only.** Never collect or store patient identifiers
-   (name, date of birth, address, record numbers). The case as entered is
-   sent to the Claude API, which makes this doubly important.
+   (name, date of birth, address, record numbers). Part of each case is
+   sent to the cloud model with the passages (its amputation level, side
+   and recorded K-level, never what was typed: `case_for_prompt` in
+   `reasoning/rag.py`, since 2026-10-16), which makes this doubly
+   important: on Gemini's free tier Google uses what is sent to improve its
+   products and human reviewers may read it.
 5. **Two interface languages: English and Arabic (right to left).** Quotes
    and citations stay in the language of their source and are never
    translated.
@@ -64,6 +70,17 @@ Extend it; don't rebuild it. Before changing anything, read
   Copying a grade exactly as the source prints it is allowed (and tested,
   as `grade_as_printed`); anything without an owner's rule or value stays
   "unassigned" or empty.
+- **Held-out golden cases stay held out.** The cases in
+  `data/eval/golden_cases_held_out/` are frozen (content hashes in
+  `data/eval/golden_cases_held_out.json`, checked by
+  `tests/test_golden_cases.py`). Never edit them, never tune the search,
+  topics, prompt or settings on their results, and run them (`--held-out`)
+  only when the owner asks, recording each run in `FUTURE_WORK.md`. Tuning
+  and its measurements use `data/eval/golden_cases/` only.
+- **The yardstick asks first.** Claude Code asks the owner before Claude
+  edits the golden cases, the held-out manifest, the two guides, the rule
+  table or the review logs (`.claude/hooks/protect_yardstick.py`, in
+  `.claude/settings.json`); such a prompt is intended, not an error.
 - **Ask the owner first** before committing, pushing (the owner decides
   when to push), adding a dependency, deleting data, or starting the next
   roadmap item.
@@ -71,7 +88,7 @@ Extend it; don't rebuild it. Before changing anything, read
 ## Roadmap (in this order, by track)
 
 **RAG (owner's decision, 2026-10-11).** The review page is produced by
-retrieval plus Claude, with checked quotes. The 59 hand-written statements
+retrieval plus a cloud language model, with checked quotes. The 59 hand-written statements
 no longer produce the page; they are the answer key the RAG is measured
 against (`python -m intake.golden_cases --rag`).
 
@@ -88,8 +105,15 @@ against (`python -m intake.golden_cases --rag`).
 
 **Product**
 5. Smart search, use case 05 (can build on `knowledge/retrieval.py`).
-6. Split `Case` into a shared core plus one section per domain.
-7. Orthotics, use case 03 — only after the trial results are in.
+6. Split `Case` into a shared core plus one section per domain. Core done
+   2026-10-17: `CaseCore` plus `Case` (prosthetics) in
+   `shared/case_schema.py`, read back with `case_from_dict`; a dict without
+   "domain" is a prosthetics case, so saved cases, log lines and the golden
+   cases read unchanged.
+7. Orthotics, use case 03, stroke AFO first. (Owner's decision, 2026-10-16:
+   started before the trial, replacing "only after the trial results are
+   in".) Its intake fields and which are critical, its topics, answer key
+   and golden cases come from the owner; Claude may propose, not decide.
 
 ## Commands
 
@@ -100,8 +124,11 @@ python -m knowledge.ingest    # rebuild data/extracted/ and the search index
 python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
 python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
                               # (python -m knowledge.evidence_rules does the same)
-python -m intake.golden_cases # golden cases vs the app (--no-search: no model needed)
+python -m intake.golden_cases # development golden cases vs the app (--no-search: no model needed)
                               # --rag: live RAG coverage of the hand-written statements
-                              # (calls the Claude API, costs money: ask first)
+                              # (calls the cloud model: free-tier quota or money, ask first)
+                              # --held-out: the frozen held-out cases instead (only when the owner asks)
+python -m intake.retrieval_misses  # why expected statements miss the writer: development cases,
+                              # real search, no AI (--json FILE keeps every record)
 python scripts/verify_all.py  # the 0-2 checks and the golden cases (--with-model: real search)
 ```

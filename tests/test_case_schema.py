@@ -1,20 +1,26 @@
-"""Tests for shared/case_schema.py: validation, save/load, and unrecorded fields."""
+"""Tests for shared/case_schema.py: validation, save/load, unrecorded fields and domains."""
 
 import json
 import math
 import unittest
+from dataclasses import dataclass
+from typing import ClassVar, Optional
+from unittest.mock import patch
 
 from shared.case_schema import (
+    DOMAIN_CASES,
     ActivityLevel,
     ActivityProfile,
     AmputationLevel,
     Case,
+    CaseCore,
     Etiology,
     PriorDevice,
     ResidualLimb,
     Side,
     VolumeStability,
     WoundStatus,
+    case_from_dict,
 )
 
 
@@ -168,6 +174,62 @@ class UnknownFieldsTests(unittest.TestCase):
 
     def test_empty_is_not_unknown(self):
         self.assertEqual(make_case().unknown_fields(), [])
+
+
+@dataclass
+class OtherCase(CaseCore):
+    """A stand-in second domain, so the shared core is tested apart from prosthetics."""
+
+    domain: ClassVar[str] = "other"
+    finding: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
+
+class DomainTests(unittest.TestCase):
+    # Every key a prosthetics case had before the split (2026-10-17). Saved
+    # cases, review-log lines and the frozen held-out golden cases hold these.
+    PROSTHETICS_KEYS = {
+        "amputation_level", "side", "case_id", "created_at", "age_years", "body_weight_kg",
+        "etiology", "months_since_amputation", "residual_limb", "activity", "prior_devices",
+        "comorbidities", "contralateral_limb_status", "cognitive_status", "intake_notes",
+    }
+
+    def setUp(self):
+        patcher = patch.dict(DOMAIN_CASES, {OtherCase.domain: OtherCase})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_prosthetics_dict_unchanged_by_the_split(self):
+        self.assertEqual(set(make_case().to_dict()), self.PROSTHETICS_KEYS)
+
+    def test_dict_without_domain_is_a_prosthetics_case(self):
+        case = make_case(age_years=70, comorbidities=["diabetes"])
+        self.assertEqual(case_from_dict(case.to_dict()), case)
+        self.assertEqual(case_from_dict({**case.to_dict(), "domain": "prosthetics"}), case)
+
+    def test_other_domain_named_in_its_dict(self):
+        case = OtherCase(case_id="c-1", age_years=40, finding="foot drop")
+        saved = json.loads(json.dumps(case.to_dict()))
+        self.assertEqual(saved["domain"], "other")
+        self.assertEqual(case_from_dict(saved), case)
+
+    def test_unknown_domain_rejected(self):
+        with self.assertRaisesRegex(ValueError, "domain must be one of"):
+            case_from_dict({**make_case().to_dict(), "domain": "orthopaedics"})
+
+    def test_core_fields_shared_and_checked(self):
+        core = {"case_id", "created_at", "age_years", "body_weight_kg", "comorbidities",
+                "cognitive_status", "intake_notes"}
+        self.assertLessEqual(core, set(OtherCase().to_dict()))
+        self.assertEqual(set(OtherCase().unrecorded_fields()),
+                         {"age_years", "body_weight_kg", "comorbidities", "cognitive_status",
+                          "intake_notes", "finding"})
+        for kwargs in [{"age_years": -1}, {"body_weight_kg": 0}]:
+            with self.subTest(**kwargs), self.assertRaises(ValueError):
+                OtherCase(**kwargs)
 
 
 if __name__ == "__main__":

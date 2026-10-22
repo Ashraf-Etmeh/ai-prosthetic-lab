@@ -1,0 +1,52 @@
+8 development case(s), 241 (case, statement) pairs, 57 distinct statements, 80 topic searches
+
+At k = 6 (gold: a passage from the statement's document sharing 6 words in a row with it, the --rag rule):
+  reachable: in any topic's top 6       85/241 (35%)   29/57 statements   (the ceiling for --rag coverage)
+    whole quote inside one passage    49/241 (20%)
+  in its own topic's top 6             51/241 (21%)   (34 reachable only under another topic)
+    own topic, at most 4 per topic     51/241 (21%)   (41 pairs expect a 5th or later item in their (case, topic))
+
+Depth curve:   reachable (pairs; statements)        own topic
+  k =   6       85/241 (35%)   29/57          51/241 (21%)
+  k =  10       97/241 (40%)   29/57          63/241 (26%)
+  k =  15      100/241 (41%)   32/57          67/241 (28%)
+  k =  20      111/241 (46%)   38/57          79/241 (33%)
+  k =  30      119/241 (49%)   39/57          91/241 (38%)
+  k =  50      144/241 (60%)   44/57         108/241 (45%)
+
+Why the 156 pairs not reachable at k = 6 are missed (rank under their own topic's query; near: 7-30, far: beyond):
+  not searchable      0   near   0, far   0
+  query mismatch    149   near  26, far 123
+  representation      7   near   0, far   7
+  crowded out (one other document holds 4+ of the own topic's top 6): 35 of them: prosthetic_gait_analysis_icrc_manual_2014 21, lower_limb_prosthesis_cms_consensus_2017 6, upper_limb_amputation_va_dod_cpg_2022 3, socket_shape_capture_review_2026 3, lower_limb_amputation_va_dod_cpg_2024 2
+
+Per topic, at k = 6:   own topic   reachable
+  alignment            6/49 (12%)     9/49 (18%)
+  control_and_fit        0/1 (0%)     1/1 (100%)
+  fitting               0/36 (0%)    10/36 (28%)
+  foot_ankle           6/18 (33%)    14/18 (78%)
+  functional_level      5/6 (83%)     6/6 (100%)
+  interface             1/14 (7%)     7/14 (50%)
+  knee                  4/7 (57%)      4/7 (57%)
+  prosthesis_stage     9/30 (30%)     9/30 (30%)
+  prosthesis_type      1/1 (100%)     1/1 (100%)
+  pylon                1/1 (100%)     1/1 (100%)
+  readiness           15/44 (34%)    18/44 (41%)
+  socket                0/17 (0%)     2/17 (12%)
+  suspension           3/17 (18%)     3/17 (18%)
+
+Per document: topic searches with a passage in the top 6 / top 30; expected pairs reachable at k = 6
+  lower_limb_prosthesis_cms_consensus_2017          55 /  67   29/49 (59%)
+  prosthetic_gait_analysis_icrc_manual_2014         50 /  67   36/126 (29%)
+  lower_limb_amputation_va_dod_cpg_2024             45 /  72   16/29 (55%)
+  ml_walking_ability_lower_limb_amputees_2024       19 /  53   -
+  socket_shape_capture_review_2026                  13 /  41   -
+  who_po_implementation_manual_part2_2017           10 /  24   0/32 (0%)
+  3d_printed_prostheses_review_2025                  8 /  20   -
+  3d_printed_transtibial_sockets_review_2022         8 /  29   -
+  upper_limb_amputation_va_dod_cpg_2022              6 /   6   4/5 (80%)
+  who_po_standards_part1_2017                        2 /  11   -
+  lower_limb_outcome_measures_toolkit_aaop_2020      0 /   7   -
+  phantom_limb_pain_review_2020                      0 /   5   -
+
+Written: data\eval\baseline\2026-10-16\retrieval_misses.json

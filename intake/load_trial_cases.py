@@ -10,8 +10,9 @@ intake form is (intake/routes.py analyse_case: search, AI summaries, gaps,
 components, fitting) and saved to data/cases/, so its review page is
 http://127.0.0.1:5000/review/trial-01.
 
-Since the RAG (2026-10-11) this calls the Claude API for every case (three
-calls each; it costs money, and the cases are sent to the API). With the
+Since the RAG (2026-10-11) this calls the AI writer's API for every case
+(three calls each; the Gemini free tier's daily quota, or money with the
+Claude API, and the cases are sent to the API). With the
 environment variable AI_PROSTHETIC_LAB_OFFLINE set, it doesn't: the pages
 then show the passages found without summaries.
 

@@ -7,6 +7,7 @@ typo fails loudly here instead of turning up later in search results.
 
 import json
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
@@ -44,6 +45,10 @@ class SourceDocument:
     # Which amputations the document is about: "lower", "upper" or both.
     # None: not limb-specific (e.g. orthotics, or service standards).
     limbs: Optional[list[str]] = None
+    # The licence the document states, copied as written from the sources
+    # manifest (data/sources/00_registry/sources_manifest.csv); None when the
+    # manifest records none (e.g. US federal works, or "not shown").
+    licence: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.limbs is not None and (not self.limbs or not set(self.limbs) <= LIMBS):
@@ -80,6 +85,16 @@ def load_catalog(catalog_path: Path = CATALOG_PATH) -> list[SourceDocument]:
     if repeated:
         raise ValueError(f"catalog ids used more than once: {repeated}")
     return documents
+
+
+@lru_cache(maxsize=4)
+def attributions(catalog_path: Path = CATALOG_PATH) -> dict[str, tuple[str, str]]:
+    """Document id -> (authors, licence) for every document whose licence is recorded.
+
+    A Creative Commons licence asks for the authors and the licence to be named
+    with the work, so the review page shows both under such a source's citation.
+    """
+    return {doc.id: (doc.authors, doc.licence) for doc in load_catalog(catalog_path) if doc.licence}
 
 
 def find_unlisted_files(

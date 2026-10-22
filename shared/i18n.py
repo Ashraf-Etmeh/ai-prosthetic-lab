@@ -43,10 +43,11 @@ TEXT: dict[str, dict[str, str]] = {
     "nav.other_code": {"en": "ar", "ar": "en"},
     "disclaimer": {
         "en": DISCLAIMER,
-        "ar": "هذه أداة آلية لدعم القرار، وليست تقييماً سريرياً ولا تشخيصاً ولا وصفةً. تعرض "
+        "ar": "نموذج أوّلي للبحث، لم يُتحقَّق من صلاحيته للاستخدام السريري. "
+        "هذه أداة آلية لدعم القرار، وليست تقييماً سريرياً ولا تشخيصاً ولا وصفةً. تعرض "
         "المعلومات الناقصة في بيانات الحالة، وما تقوله الأدلة الإرشادية والأدلة التدريبية في مكتبة "
         "مصادرها عن مكوّنات الطرف الاصطناعي لهذه الحالة وتصميمه وتركيبه. كل ملخص قصير يكتبه نموذج "
-        "لغوي للذكاء الاصطناعي (Claude) وقد يكون خاطئاً؛ وتحته نص المصدر نفسه، مُتحقَّق منه حرفياً "
+        "لغوي للذكاء الاصطناعي وقد يكون خاطئاً؛ وتحته نص المصدر نفسه، مُتحقَّق منه حرفياً "
         "مقابل المقطع، مع درجة التوصية التي يحددها المصدر إن وُجدت. قارن كل ملخص باقتباسه. لا تختار "
         "المكوّنات ولا ترتّبها. لا تحكم على جاهزية المريض للتركيب. كل بند يحتاج إلى مراجعة مختص "
         "مؤهل في الأطراف الاصطناعية، والقرار له. قد تكون القوائم غير مكتملة: البند غير المدرج فُحص "
@@ -68,8 +69,10 @@ TEXT: dict[str, dict[str, str]] = {
     "ai_part.components": {"en": "the functional level and components", "ar": "المستوى الوظيفي والمكوّنات"},
     "ai_part.fitting": {"en": "design and fitting", "ar": "التصميم والتركيب"},
     "ai.removed": {
-        "en": "{n} AI summary or summaries removed: the quote was not found word for word in the passage.",
-        "ar": "حُذف من ملخصات الذكاء الاصطناعي: {n}، لأن الاقتباس لم يوجد حرفياً في المقطع.",
+        "en": "{n} AI summary or summaries removed by the checks (for example, a quote not found word for "
+        "word in its passage); each reason is kept in the log.",
+        "ar": "حذفت عمليات التحقق من ملخصات الذكاء الاصطناعي: {n} (مثلاً لأن الاقتباس لم يوجد حرفياً في "
+        "مقطعه)؛ وسبب كل حذف محفوظ في السجل.",
     },
     "ai.passages_found": {
         "en": "Passages the search found for this section, not summarised ({n})",
@@ -78,6 +81,24 @@ TEXT: dict[str, dict[str, str]] = {
     "ai.no_passages": {
         "en": "The search found no passage for this section.",
         "ar": "لم يجد البحث أي مقطع لهذا القسم.",
+    },
+    # A section the AI answered for but that has no summary: what code knows, never what the sources say.
+    "ai.topic_nothing_reported": {
+        "en": "No AI summary for this section: the AI reported nothing from the passages the search found. "
+        "Check them below.",
+        "ar": "لا يوجد ملخص بالذكاء الاصطناعي لهذا القسم: لم يذكر الذكاء الاصطناعي شيئاً من المقاطع التي "
+        "وجدها البحث. راجعها أدناه.",
+    },
+    "ai.topic_all_removed": {
+        "en": "No AI summary for this section: the checks removed the AI's {n} summary or summaries for it "
+        "(each reason is kept in the log). Check the passages the search found below.",
+        "ar": "لا يوجد ملخص بالذكاء الاصطناعي لهذا القسم: حذفت عمليات التحقق ملخصاته له (عددها: {n}؛ وسبب "
+        "كل حذف محفوظ في السجل). راجع المقاطع التي وجدها البحث أدناه.",
+    },
+    "review.attribution": {"en": "{authors}; licence: {licence}", "ar": "{authors}؛ الترخيص: {licence}"},
+    "ai.written_by": {
+        "en": "AI summaries on this page were written by {models} (prompt version {version}).",
+        "ar": "كتب ملخصات الذكاء الاصطناعي في هذه الصفحة: {models} (إصدار التعليمات {version}).",
     },
     # Intake form
     "intake.page_title": {
@@ -96,11 +117,13 @@ TEXT: dict[str, dict[str, str]] = {
         "المكوّنات: القرار للمختص.",
     },
     "intake.ai_note": {
-        "en": "After you submit, the analysis takes about a minute: an AI (Claude) summarises "
-        "the passages the search finds. The case as entered is sent to the Claude API, so enter "
-        "test data only.",
-        "ar": "بعد الإرسال يستغرق التحليل نحو دقيقة: يلخّص الذكاء الاصطناعي (Claude) المقاطع التي "
-        "يجدها البحث. تُرسَل الحالة كما أُدخلت إلى واجهة Claude البرمجية، لذا أدخل بيانات اختبارية فقط.",
+        "en": "After you submit, the analysis takes about a minute: an AI language model in a "
+        "cloud service summarises the passages the search finds. Only the amputation level, side "
+        "and recorded K-level are sent to that service with the passages, not what you type; "
+        "still, enter test data only.",
+        "ar": "بعد الإرسال يستغرق التحليل نحو دقيقة: يلخّص نموذج لغوي للذكاء الاصطناعي في خدمة "
+        "سحابية المقاطع التي يجدها البحث. لا يُرسَل إلى تلك الخدمة مع المقاطع إلا مستوى البتر "
+        "والجانب والمستوى الوظيفي المسجَّل (K)، لا ما تكتبه؛ ومع ذلك أدخل بيانات اختبارية فقط.",
     },
     "intake.not_saved": {"en": "Case not saved:", "ar": "لم تُحفظ الحالة:"},
     "intake.amputation": {"en": "Amputation", "ar": "البتر"},
@@ -234,10 +257,6 @@ TEXT: dict[str, dict[str, str]] = {
         "en": "What the sources say about the functional level:",
         "ar": "ما تقوله المصادر عن المستوى الوظيفي:",
     },
-    "functional.no_statement": {
-        "en": "The passages found say nothing about the functional level for this case.",
-        "ar": "لا تذكر المقاطع التي وُجدت شيئاً عن المستوى الوظيفي لهذه الحالة.",
-    },
     "review.made_before_ai": {
         "en": "This case was analysed before the AI summaries were added, so its functional level, "
         "component and fitting sections are not available. Submit the case again to see them.",
@@ -269,10 +288,6 @@ TEXT: dict[str, dict[str, str]] = {
         "transfer safely.",
         "ar": "سُجِّل المستوى K0، لذا لا تُعرض البيانات الخاصة بمن يمشون بالطرف الاصطناعي: تصف "
         "وثيقة CMS المستوى K0 بعدم القدرة أو الإمكانية على المشي أو الانتقال بأمان.",
-    },
-    "components.no_statement": {
-        "en": "The passages found in the source library say nothing about this component for this case.",
-        "ar": "لا تذكر المقاطع التي وُجدت في مكتبة المصادر شيئاً عن هذا المكوّن لهذه الحالة.",
     },
     "components.grade": {"en": "Source grade:", "ar": "درجة التوصية في المصدر:"},
     "components.same_source": {"en": "Same source, {pages}", "ar": "المصدر نفسه، {pages}"},
@@ -332,10 +347,6 @@ TEXT: dict[str, dict[str, str]] = {
     },
     "fitting.none_reported": {"en": "none reported", "ar": "لا يوجد"},
     "fitting.months": {"en": "{n} months", "ar": "عدد الأشهر: {n}"},
-    "fitting.no_statement": {
-        "en": "The passages found in the source library say nothing about this for this case.",
-        "ar": "لا تذكر المقاطع التي وُجدت في مكتبة المصادر شيئاً عن هذا الجانب لهذه الحالة.",
-    },
     "fitting_section.readiness": {"en": "Readiness for fitting", "ar": "الجاهزية للتركيب"},
     "fitting_section.prosthesis_stage": {
         "en": "Preparatory or definitive prosthesis",

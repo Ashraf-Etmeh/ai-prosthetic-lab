@@ -45,6 +45,10 @@
   </nav>
   <h1>{{ t('review.heading', case_id=case.case_id) }}</h1>
   <div class="banner">{{ t('disclaimer') }}</div>
+  {# Which model wrote the summaries, as the provider reported it, so the specialist knows where the case went. #}
+  {% if generation and generation.answered_by %}
+  <p class="gap-source">{{ t('ai.written_by', models=generation.answered_by | join(", "), version=generation.prompt_version) }}</p>
+  {% endif %}
 
   {% if knowledge_warning %}
   {# The warning itself is English (it names a command to run); other languages introduce it. #}
@@ -84,6 +88,9 @@
     </dd>
   </dl>
 
+  {# Authors and licence under the citation of a licensed source: Creative Commons licences ask for both. #}
+  {% macro attribution_line(doc_id) %}{% set credit = attribution(doc_id) %}{% if credit %}<div class="gap-source" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}{% endmacro %}
+
   <form method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
   <h2>{{ t('review.gaps_heading', n=gaps | length) }}</h2>
   {% if generation and generation.part('gaps').removed_items %}
@@ -104,6 +111,7 @@
     <div class="gap-source">
       {# Own line, in the source's direction: a wrapped title stays readable on the Arabic page. #}
       <div dir="auto" lang="{{ gap.evidence.language }}">{{ gap.evidence.citation }}</div>
+      {{ attribution_line(gap.evidence.doc_id) }}
       {{ t('doclang.' ~ gap.evidence.language) }} · {{ t('review.similarity', score="%.2f" | format(gap.evidence.score)) }}
       · <code dir="ltr">{{ gap.source_protocol_reference }}</code>
     </div>
@@ -120,7 +128,7 @@
       <summary>{{ t('review.retrieved', n=considered | length) }}</summary>
       <ul>
         {% for chunk in considered %}
-        <li><div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>{{ t('doclang.' ~ chunk.language) }} · {{ t('review.similarity', score="%.2f" | format(chunk.score)) }}</li>
+        <li><div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>{{ attribution_line(chunk.doc_id) }}{{ t('doclang.' ~ chunk.language) }} · {{ t('review.similarity', score="%.2f" | format(chunk.score)) }}</li>
         {% endfor %}
       </ul>
     </details>
@@ -143,6 +151,7 @@
   {% macro quoted(cited, quote, extra_class="") %}
   <blockquote class="{{ extra_class }}" dir="auto" lang="{{ cited.language }}">{{ quote_body(quote) }}</blockquote>
   <div class="gap-source" dir="auto" lang="{{ cited.language }}">{{ cited.citation(quote) }}</div>
+  {{ attribution_line(cited.statement.doc_id) }}
   {% endmacro %}
   {# More words from the same document as the statement above: only the page. #}
   {% macro context_quote(cited, quote) %}
@@ -180,23 +189,25 @@
     </div>
   </div>
   {% endmacro %}
-  {# A section without statements: why, and, where the AI could not answer, the passages the search found. #}
-  {% macro empty_section(part, key, no_statement_key) %}
-  {% if ai_status.get(part) == "unavailable" %}
+  {# A section without statements: why, as code knows it (no passage found; the AI reported nothing; the
+     checks removed what it gave; or the AI was unavailable, said at the top), and always the passages
+     the search found, so the specialist can check them. It never says what the sources do or don't say. #}
+  {% macro empty_section(part, key) %}
   {% set found = chunks.get(key, []) %}
   {% if found %}
+  {% if ai_status.get(part) == "ok" %}
+  {% set removed = generation.part(part).removed_for(key) %}
+  <p class="gap-source no-source">{{ t('ai.topic_all_removed', n=removed) if removed else t('ai.topic_nothing_reported') }}</p>
+  {% endif %}
   <details>
     <summary>{{ t('ai.passages_found', n=found | length) }}</summary>
     {% for chunk in found %}
     <blockquote dir="auto" lang="{{ chunk.language }}">{{ chunk.text }}</blockquote>
-    <div class="gap-source"><div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>{{ t('doclang.' ~ chunk.language) }} · {{ t('review.similarity', score="%.2f" | format(chunk.score)) }} · <code dir="ltr">{{ chunk.chunk_id }}</code></div>
+    <div class="gap-source"><div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>{{ attribution_line(chunk.doc_id) }}{{ t('doclang.' ~ chunk.language) }} · {{ t('review.similarity', score="%.2f" | format(chunk.score)) }} · <code dir="ltr">{{ chunk.chunk_id }}</code></div>
     {% endfor %}
   </details>
   {% else %}
   <p class="gap-source no-source">{{ t('ai.no_passages') }}</p>
-  {% endif %}
-  {% else %}
-  <p class="gap-source no-source">{{ t(no_statement_key) }}</p>
   {% endif %}
   {% endmacro %}
   {# How many summaries the quote check removed from a part, if any. #}
@@ -228,7 +239,7 @@
     {% if functional_section %}
     <p class="gap-source">{{ t('functional.from_sources') }}</p>
     {% for cited in functional_section.statements %}{{ statement_block(cited) }}
-    {% else %}{{ empty_section('components', 'functional_level', 'functional.no_statement') }}
+    {% else %}{{ empty_section('components', 'functional_level') }}
     {% endfor %}
     {% endif %}
     {% else %}
@@ -250,7 +261,7 @@
   {% for section in component_sections %}
   <h3>{{ t('component.' ~ section.component) }}</h3>
   {% for cited in section.statements %}{{ statement_block(cited) }}
-  {% else %}{{ empty_section('components', section.component, 'components.no_statement') }}
+  {% else %}{{ empty_section('components', section.component) }}
   {% endfor %}
   {% endfor %}
   {% elif not generation %}
@@ -275,7 +286,7 @@
   </div>
   {% endif %}
   {% for cited in section.statements %}{{ statement_block(cited) }}
-  {% else %}{{ empty_section('fitting', section.component, 'fitting.no_statement') }}
+  {% else %}{{ empty_section('fitting', section.component) }}
   {% endfor %}
   {% endfor %}
   {% endif %}

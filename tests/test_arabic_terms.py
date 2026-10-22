@@ -134,7 +134,7 @@ class ApplyTests(unittest.TestCase):
         new = self.i18n_copy.read_text(encoding="utf-8")
         removed = set(self.original.splitlines()) - set(new.splitlines())
         self.assertTrue(all(re.search("[؀-ۿ]", line) for line in removed), removed)  # Arabic lines only
-        self.assertLessEqual(len(removed), 12)  # the disclaimer spans 7 lines, the others 1 each
+        self.assertLessEqual(len(removed), 13)  # the disclaimer spans 8 lines, the others 1 each
         self.assertIn("# The Arabic names of the intake fields that can be gaps", new)
         self.assertIn('+    "review.approve": {"en": "Approve", "ar": "موافقة"},', output)  # the diff
 

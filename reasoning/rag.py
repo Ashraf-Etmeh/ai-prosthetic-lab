@@ -2,7 +2,7 @@
 
 The owner's decision (2026-10-11): the review page's gaps, functional level,
 components and design and fitting come from retrieval plus a language model
-(the Claude API, reasoning/writer.py), not from hand-written rules.
+(a cloud language model, reasoning/writer.py), not from hand-written rules.
 
 For a case:
 1. The search (knowledge/retrieval.py) has found passages for every topic
@@ -10,8 +10,9 @@ For a case:
    component and each fitting section.
 2. generate() asks the writer three questions at once, one per part (gaps,
    components, fitting). Each holds the fixed instructions (SYSTEM_PROMPT,
-   versioned by PROMPT_VERSION), the case as entered, the part's topics and
-   their passages, each with its id. The answer is JSON (ANSWER_SCHEMA): a
+   versioned by PROMPT_VERSION), the case's amputation level, side and
+   recorded K-level (nothing typed at intake: case_for_prompt()), the part's
+   topics and their passages, each with its id. The answer is JSON (ANSWER_SCHEMA): a
    list of items, each a topic, a passage id, a quote, one sentence in
    English and Arabic, and the grade if the passage prints one.
 3. Every item is checked (reasoning/quote_check.py). One that names a passage
@@ -75,9 +76,9 @@ GRADE_PHRASES = ("Strong for", "Weak for", "Neither for nor against", "Weak agai
 _ARABIC_LETTERS = re.compile("[؀-ۿ]")
 
 SYSTEM_PROMPT = f"""\
-You help a prosthetics specialist review one fictional amputation case. You receive the case as entered at \
-intake, a list of topics, and passages that a search found in the specialist's source library (guidelines, \
-manuals and reviews). For each topic, you report in short sentences what the passages say that bears on this \
+You help a prosthetics specialist review one fictional amputation case. You receive the case's amputation \
+level, side and recorded functional level, a list of topics, and passages that a search found in the \
+specialist's source library (guidelines, manuals and reviews). For each topic, you report in short sentences what the passages say that bears on this \
 case. The specialist reads each sentence next to the quote that backs it, and decides.
 
 Rules:
@@ -162,6 +163,10 @@ class Part:
     def removed_items(self) -> int:
         return sum(1 for entry in self.removed if entry["dropped"] == "item")
 
+    def removed_for(self, topic: str) -> int:
+        """How many of the AI's items for one topic the checks took out."""
+        return sum(1 for entry in self.removed if entry["dropped"] == "item" and entry["topic"] == topic)
+
 
 @dataclass
 class Generation:
@@ -179,6 +184,11 @@ class Generation:
     def unavailable(self) -> list[Part]:
         return [part for part in self.parts.values() if part.status == UNAVAILABLE]
 
+    @property
+    def answered_by(self) -> list[str]:
+        """The models that actually answered (as the provider reported them), each once."""
+        return sorted({part.model for part in self.parts.values() if part.status == OK and part.model})
+
     def to_dict(self) -> dict:
         return asdict(self)
 
@@ -195,8 +205,23 @@ class Generation:
 
 
 def case_for_prompt(case: Case) -> str:
-    """The case as entered, without its generated id and time (nothing identifies anyone)."""
-    data = {key: value for key, value in case.to_dict().items() if key not in ("case_id", "created_at")}
+    """What the writer is told about the case: only the facts its rules use.
+
+    Rule 7 of SYSTEM_PROMPT makes the amputation level, side and recorded
+    functional level the only case facts that decide what bears on the case,
+    and the missing fields arrive as the topics; for readiness the model
+    reports the source's criteria, never whether the patient meets them. So
+    nothing typed at intake is sent (since 2026-10-16, prompt rag-v2; before,
+    the whole case went): free text is how an identifier could leave the
+    machine (CLAUDE.md principle 4), and an opinion in it ("confirm K4
+    components") could steer the model.
+    """
+    data = {
+        "amputation_level": case.amputation_level.value,
+        "limb": "lower" if case.is_lower_limb else "upper",
+        "side": case.side.value,
+        "functional_level_recorded": recorded_k_level(case),
+    }
     return json.dumps(data, ensure_ascii=False, indent=1)
 
 
@@ -242,7 +267,8 @@ def user_message(part: str, case: Case, topics: list[Topic], passages: dict[str,
         for chunk in passages.get(topic.key, []):
             found_for.setdefault(chunk.chunk_id, []).append(topic.key)
     lines = ["TASK", TASKS[part], "",
-             "CASE (fictional; as entered at intake; null means not recorded)", case_for_prompt(case), "",
+             "CASE (fictional; amputation level, side and recorded functional level only; null means not "
+             "recorded)", case_for_prompt(case), "",
              "TOPICS", *(f"- {topic.key}: {topic.label}" for topic in topics), "", "PASSAGES"]
     for chunk in _passages_of(topics, passages).values():
         pages = f"{chunk.page}" if not chunk.end_page or chunk.end_page == chunk.page else f"{chunk.page}-{chunk.end_page}"

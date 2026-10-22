@@ -1,0 +1,17 @@
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 29598.66it/s]
+group            queries   hit@1   hit@5   hit@5 without German documents
+English               10    5/10   10/10   10/10
+Arabic                 8    3/8     6/8    7/8
+German                 5    5/5     5/5    -
+Cross-language         4    3/4     4/4    3/3
+(The app's gap search uses only: en, ar; shared/config.py RETRIEVAL_LANGUAGES.)
+(Not searched: prosthetic_gait_analysis_icrc_manual_2014; shared/config.py RETRIEVAL_EXCLUDED_DOCUMENTS.)
+
+Queries whose answer was not in the top 5:
+  ar-04: ركبة اصطناعية يتحكم بها معالج دقيق مقارنة بالركبة التقليدية  -> first result: WHO standards for prosthetics and orthotics. Part 2: Impleme (0.61)
+  ar-05: دعم الأقران المدربين أثناء إعادة التأهيل بعد البتر  -> first result: Rehabilitation nach Majoramputation an der oberen Extremität (0.62)
+
+Similarity scores
+  correct answers:      lowest 0.58, median 0.71
+  off-topic best match: highest 0.44
+  MIN_RELEVANCE_SCORE now 0.5: it should sit above the off-topic scores and below most correct answers.

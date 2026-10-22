@@ -29,7 +29,7 @@ from typing import Optional
 from knowledge.models import ProtocolChunk
 from reasoning.models import ComponentSupport, FittingSupport, Gap
 from reasoning.rag import Generation, components_from, fitting_from
-from shared.case_schema import Case
+from shared.case_schema import Case, case_from_dict
 from shared.config import CASES_DIR
 
 # Raise when the shape of a case file changes, and keep reading older files.
@@ -82,7 +82,7 @@ def record_to_dict(record: CaseRecord) -> dict:
 
 
 def record_from_dict(data: dict) -> CaseRecord:
-    case = Case.from_dict(data["case"])
+    case = case_from_dict(data["case"])  # a case without "domain" is a prosthetics case
     gaps = [
         Gap(**{**gap, "evidence": ProtocolChunk(**gap["evidence"]) if gap["evidence"] else None})
         for gap in data["gaps"]

@@ -1,0 +1,1076 @@
+{
+ "case_file_version": 2,
+ "case": {
+  "amputation_level": "transtibial",
+  "side": "left",
+  "case_id": "60831d33c276",
+  "created_at": "2026-10-13T18:33:38+00:00",
+  "age_years": 45,
+  "body_weight_kg": 82.0,
+  "etiology": "trauma",
+  "months_since_amputation": 9.0,
+  "residual_limb": {
+   "wound_status": "healed",
+   "volume_stability": "unknown",
+   "skin_condition": "intact, healed scar",
+   "length_description": "mid-length",
+   "pain": null,
+   "sensation": "intact",
+   "notes": null
+  },
+  "activity": {
+   "k_level": "K3",
+   "description": "office worker, walks to work daily",
+   "functional_goals": null
+  },
+  "prior_devices": null,
+  "comorbidities": [],
+  "contralateral_limb_status": "intact",
+  "cognitive_status": "intact",
+  "intake_notes": null
+ },
+ "knowledge_warning": null,
+ "retrieved_chunks": {
+  "residual_limb.volume_stability": [
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0368",
+    "text": "Weak for Reviewed, Amended Reviewed, Amended 8 7 Prior to surgery, we suggest that rehabilitation goals, outcomes, and other implications be included in shared decision making about residual limb length and amputation level. Weak for Reviewed, Amended Reviewed, New-added 5, 23 8 There is insufficient evidence to recommend one surgical amputation procedure over another. Not applicable Reviewed, New-added Not Reviewed, Not changed 1, 5, 23 9 We suggest the use of a rigid or semi-rigid dressing to promote healing and early prosthetic use as soon as feasible post-amputation in transtibial amputation. Rigid post-operative dressings are preferred in situations where limb protection is a priority.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 98,
+    "end_page": 98,
+    "language": "en",
+    "score": 0.642
+   },
+   {
+    "chunk_id": "socket_shape_capture_review_2026-0007",
+    "text": "Achieving an optimal socket fit remains one of the main challenges in prosthetic care. 3 Poor fit can cause excessive limb-socket interface stresses and skin problems, 3,4 aggravated by limb volume changes and heat accumulation within the socket.5,6 These issues reduce function and quality of life and often require frequent socket adjustments, increasing clinical workload and health care costs.3,7,8 13D Lab Radboudumc, Radboud University Medical Center, Nijmegen, The Netherlands 2Department of BioMechanical Engineering, Delft University of Technology, Delft, The Netherlands 3Department of Rehabilitation, Radboud University Medical Center, Nijmegen, The Netherlands 4Radboud Institute for Health Sciences, IQ Healthcare, Radboud University Medical Center, Nijmegen, The Netherlands The author(s) disclosed no potential conflicts of interest with respect to the research,",
+    "source": "02_evidence_reviews/R01_vanGastel2026_Digital_Sockets_ScopingReview.pdf",
+    "title": "Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review",
+    "year": 2026,
+    "page": 2,
+    "end_page": 2,
+    "language": "en",
+    "score": 0.6418
+   },
+   {
+    "chunk_id": "3d_printed_transtibial_sockets_review_2022-0004",
+    "text": "1. Introduction The prosthetic socket is an integral part of lower limb prostheses. Loads transfer from the residual limb to the prosthesis via the socket [1], which absorbs the impact forces felt on the residual limb [2, 3]. During normal gait the socket is subjected to repetitive loading with peak a1111111111 a1111111111 a1111111111 a1111111111 a1111111111 OPEN ACCESS Citation:Kim S, YallaS, ShettyS, RosenblattNJ (2022)3D printedtranstibialprosthetic sockets:A systematicreview.PLoS ONE 17(10):e0275161. https://doi.org/10.1371/journal.pone.0275161 Editor:MohammadAzadi,SemnanUniversity, ISLAMICREPUBLIC OF IRAN Received:May 31, 2022 Accepted:September12, 2022 Published:October10, 2022 Copyright:© 2022 Kim et al.",
+    "source": "02_evidence_reviews/S011_Kim2022_3D_Printed_Sockets_SR.pdf",
+    "title": "3D printed transtibial prosthetic sockets: A systematic review",
+    "year": 2022,
+    "page": 1,
+    "end_page": 1,
+    "language": "en",
+    "score": 0.6404
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0098",
+    "text": "For example, if there is uncertainty regarding the optimal length of a residual limb, a pre-operative consultation with an experienced physiatrist or prosthetist should be considered. Of the many contemporary lower limb surgical amputation procedures, only a few (e.g., Burgess versus Ertl, Gritti-Stokes versus traditional transfemoral) have been compared in non-randomized observational studies.(61-66) No one procedure has been shown to be clearly superior to another, or to lead to a clear advantage in prosthesis use or rehabilitation potential. Each procedure has its own advantages and disadvantages. Further research is needed to explore how different surgical techniques impact functional outcomes based on underlying indication for amputation (e.g., trauma, vascular deficiency, infection).",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 32,
+    "end_page": 32,
+    "language": "en",
+    "score": 0.6381
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0395",
+    "text": "Promote ROM and strengthening of proximal joints and muscles 5. Patient Education • Pain management • Manage expectations regarding pain post-amputation (e.g., May not be resolved w/ amputation) • Patient safety/fall precautions • Prevention of complications • Procedural/Recovery Issues • Level of amputation • Positioning • Rehabilitation process • Pain management • Residual limb care • Edema control • ACE wrapping or shrinker use • Wound care • Prosthetic timeline • Positioning • Rehabilitation process • Pain management • Residual limb care • Edema control • Application of shrinker • Prosthetic timeline • Prosthetic goals and expectation management • Pain management • Residual limb care, including edema management • Energy expenditure • Prosthetic education • Pain management • Equipment needs • Prosthetic goals and expectation management • Prevention",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 107,
+    "end_page": 107,
+    "language": "en",
+    "score": 0.6355
+   }
+  ],
+  "residual_limb.pain": [
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0379",
+    "text": "Imagery (GMI) Assess and treat residual limb pain (RLP), phantom limb pain (PLP), and phantom limb sensation (PLS) Provide treatment plan for RLP, PLP, PLS, including: patient education, wean narcotic use, psychosocial interventions, non-pharmacologic interventions (i.e., exercises, massage, etc.), Prosthetic sock ply management, Graded Motor Imagery (GMI) Reassess and adjust treatment for residual limb pain (RLP), phantom limb pain (PLP), and phantom limb sensation (PLS) Assess and treat contributing musculoskeletal problems",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 101,
+    "end_page": 101,
+    "language": "en",
+    "score": 0.7588
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0378",
+    "text": "Pain Management Assess for and manage existing pain Develop a peri-operative pain management plan Assess and treat residual limb pain (RLP), phantom limb pain (PLP), and phantom limb sensation (PLS) Provide treatment plan for RLP, PLP, PLS, including: patient education, narcotic use, regional anesthesia, psychosocial interventions, non-pharmacologic interventions (i.e., exercises, soft tissue mobilization, tapping, residual limb compression, etc.) Assess and treat residual limb pain (RLP), phantom limb pain (PLP), and phantom limb sensation (PLS) Provide treatment plan for RLP, PLP, PLS, including: patient education, wean use, psychosocial interventions,non-pharmacologic interventions (i.e., exercises, soft tissue mobilization, tapping, residual limb compression, etc.), Graded Motor",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 101,
+    "end_page": 101,
+    "language": "en",
+    "score": 0.7463
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0081",
+    "text": "(Recommendation 3)  Residual Limb Pain (RLP) Management:  Insufficient evidence for or against neurostimulation (e.g., peripheral nerve stimulation, or spinal cord stimulation) or neuroablation (e.g., cryoneurolysis, radio frequency ablation) interventions for the management of RLP (Recommendation 21)  Chronic Phantom Limb Pain Management:  Perineural catheter delivered anesthetic for the treatment of chronic severe phantom limb pain with functional impairment (Recommendation 22)  Consult for mirror therapy, alone or in combination with other therapies, to improve pain, function and quality of life for individuals with phantom limb pain.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 27,
+    "end_page": 27,
+    "language": "en",
+    "score": 0.7351
+   },
+   {
+    "chunk_id": "phantom_limb_pain_review_2020-0000",
+    "text": "RESEARCH ARTICLE The prevalenceand risk factors for phantom limb pain in people with amputations:A systematicreview and meta-analysis Katleho LimakatsoID 1☯, Gillian J. Bedwell1,2☯, Victoria J. Madden1, Romy Parker1,2¤* 1 Department of Anaesthesia and Perioperative Medicine, Pain Management Unit, Neuroscience Institute, University of Cape Town, Cape Town, South Africa, 2 Division of Physiotherapy, Department of Health and Rehabilitation Sciences, University of Cape Town, Cape Town, South Africa ☯ These authors contributed equally to this work.",
+    "source": "02_evidence_reviews/R03_Limakatso2020_Phantom_Limb_Pain_Prevalence.pdf",
+    "title": "The prevalence and risk factors for phantom limb pain in people with amputations: A systematic review and meta-analysis",
+    "year": 2020,
+    "page": 1,
+    "end_page": 1,
+    "language": "en",
+    "score": 0.7092
+   },
+   {
+    "chunk_id": "phantom_limb_pain_review_2020-0001",
+    "text": "¤ Current address: Department of Anaesthesia and Perioperative Medicine, Groote Schuur Hospital, Cape Town, South Africa * romy.parker@uct.ac.za Abstract Background Phantom limb pain (PLP)—pain felt in the amputated limb–is often accompanied by significant suffering. Estimates of the burden of PLP have provided conflicting data. To obtain a robust estimate of the burden of PLP, we gathered and critically appraised the literature on the prevalence and risk factors associated with PLP in people with limb amputations.",
+    "source": "02_evidence_reviews/R03_Limakatso2020_Phantom_Limb_Pain_Prevalence.pdf",
+    "title": "The prevalence and risk factors for phantom limb pain in people with amputations: A systematic review and meta-analysis",
+    "year": 2020,
+    "page": 1,
+    "end_page": 1,
+    "language": "en",
+    "score": 0.7034
+   }
+  ],
+  "activity.functional_goals": [
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0395",
+    "text": "Promote ROM and strengthening of proximal joints and muscles 5. Patient Education • Pain management • Manage expectations regarding pain post-amputation (e.g., May not be resolved w/ amputation) • Patient safety/fall precautions • Prevention of complications • Procedural/Recovery Issues • Level of amputation • Positioning • Rehabilitation process • Pain management • Residual limb care • Edema control • ACE wrapping or shrinker use • Wound care • Prosthetic timeline • Positioning • Rehabilitation process • Pain management • Residual limb care • Edema control • Application of shrinker • Prosthetic timeline • Prosthetic goals and expectation management • Pain management • Residual limb care, including edema management • Energy expenditure • Prosthetic education • Pain management • Equipment needs • Prosthetic goals and expectation management • Prevention",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 107,
+    "end_page": 107,
+    "language": "en",
+    "score": 0.684
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0097",
+    "text": "Recommendation 1. There is insufficient evidence to recommend one surgical amputation procedure over another. (Neither for nor against | Not reviewed, Not changed) Discussion The primary objective of a lower limb surgical amputation procedure is a well-healed and wellshaped residual limb that is free from pain or other complications with excellent function and soft tissue characteristics. While the surgical procedure chosen is most often related to the surgeon’s preference and experience or is determined after a conversation between the surgeon and the patient, involving other members of the care team can better align expected surgical outcomes with expected rehabilitation outcomes.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 32,
+    "end_page": 32,
+    "language": "en",
+    "score": 0.6767
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0032",
+    "text": "The overall goals of rehabilitation after amputation are to optimize the patient’s health status, functional independence, and quality of life.(40,41) Ongoing assessments and therapeutic interventions to address medical, psychosocial, physical, and functional limitations are necessary to achieve these desired outcomes.(42) III. Scope of This Guideline This CPG is based on published clinical evidence and related information available through March 15, 2024. It is intended to provide general guidance on best evidence-based practices (see Appendix A for additional information on the evidence review methodology).",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 9,
+    "end_page": 10,
+    "language": "en",
+    "score": 0.675
+   },
+   {
+    "chunk_id": "lower_limb_outcome_measures_toolkit_aaop_2020-0008",
+    "text": "Lower Limb Prosthetics Outcome Measures Toolkit ICF Basis Set Toolkit OM Recommendations The recommended patient-report outcome measures for the prosthetic treatment of adult individuals with lower-limb loss or difference include: EQ-5D-5L (health-related quality of life) Prosthetic Limb Users Survey of Mobility (PLUS-M ) Socket Comfort Score (SCS) The recommended performance-based outcome measures for the prosthetic treatment of adult individuals with lower-limb loss or difference include: 10-meter Walk Test (10mWT) Amputee Mobility Predictor (AMPPRO, AMPnoPRO) Timed Up and Go (TUG) Practitioners should consider a combination of patient-report and performance-based mobility measures in evaluation of mobility, since patient perception may differ from functional capacity. ©",
+    "source": "03_outcome_measures/O01_AAOP_2020_LowerLimb_Outcome_Measures_Toolkit.pdf",
+    "title": "Lower Limb Prosthetics Outcome Measures Toolkit Summary",
+    "year": 2020,
+    "page": 5,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6724
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0375",
+    "text": "Additional, equally valuable clinicians to include are nurses, social workers, recreational therapists, rehabilitation psychologists, and surgeons. Pre-Amputation: From initial discussion of amputation to admission for amputation Peri-Operative: From hospitalization admission to discharge to rehabilitation setting Post-Amputation: From acute hospitalization through initial rehab goals Prosthetic Training: Associated with prosthesis related functional goals Lifelong Care: From time of discharge from therapy services through to end of life Focus Areas MDT team/PM&R consult Functional implications of amputation Home safety evaluation Psychosocial well-being Pain management Residual limb protection and compression Contralateral foot/limb management Promote highest level of independence with and without prosthesis for all patients.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 100,
+    "end_page": 100,
+    "language": "en",
+    "score": 0.6687
+   }
+  ],
+  "prior_devices": [
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0098",
+    "text": "For example, if there is uncertainty regarding the optimal length of a residual limb, a pre-operative consultation with an experienced physiatrist or prosthetist should be considered. Of the many contemporary lower limb surgical amputation procedures, only a few (e.g., Burgess versus Ertl, Gritti-Stokes versus traditional transfemoral) have been compared in non-randomized observational studies.(61-66) No one procedure has been shown to be clearly superior to another, or to lead to a clear advantage in prosthesis use or rehabilitation potential. Each procedure has its own advantages and disadvantages. Further research is needed to explore how different surgical techniques impact functional outcomes based on underlying indication for amputation (e.g., trauma, vascular deficiency, infection).",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 32,
+    "end_page": 32,
+    "language": "en",
+    "score": 0.6416
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0018",
+    "text": "Pre-authorization should be based on the information in the submitted history and physical exam (H&P).1 It would be expected that the H&P would report, at a minimum, the following: History • Name • *Age • *Age at limb loss • *Level of amputation • *Etiology of amputation • *Co-morbidities of the patient and medical readiness related to safe use of a prosthesis • *Emotional readiness of the patient • *Cognitive abilities of the patient related to safe use of a prosthesis • Current or past therapy applicable to amputation (if appropriate) • Prior level of functioning • Current level of functioning (including use of prosthesis and assistive devices, if applicable) • Patient goals − Short term − Long term • Patient social situation information − Type of residence (e.g., private home, nursing",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 7,
+    "end_page": 7,
+    "language": "en",
+    "score": 0.6329
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0393",
+    "text": "using rigid dressings (e.g., rigid cast, rigid removable device, etc.) for transtibial amputations. desensitization techniques Advance ROM and strengthening of proximal joints and muscles Consider longer term residual limb protection for those with higher fall risk or skin risk (when not using prosthesis or if not a prosthesis candidate) Consider early prosthesis use only during therapy if there are safety concerns Educate on skin checks and pressure points, skin hygiene, sock ply management, and wear schedule and sock ply management",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 106,
+    "end_page": 106,
+    "language": "en",
+    "score": 0.6269
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0368",
+    "text": "Weak for Reviewed, Amended Reviewed, Amended 8 7 Prior to surgery, we suggest that rehabilitation goals, outcomes, and other implications be included in shared decision making about residual limb length and amputation level. Weak for Reviewed, Amended Reviewed, New-added 5, 23 8 There is insufficient evidence to recommend one surgical amputation procedure over another. Not applicable Reviewed, New-added Not Reviewed, Not changed 1, 5, 23 9 We suggest the use of a rigid or semi-rigid dressing to promote healing and early prosthetic use as soon as feasible post-amputation in transtibial amputation. Rigid post-operative dressings are preferred in situations where limb protection is a priority.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 98,
+    "end_page": 98,
+    "language": "en",
+    "score": 0.6017
+   },
+   {
+    "chunk_id": "socket_shape_capture_review_2026-0006",
+    "text": "1 In the Netherlands, 22% of lower limb amputations are performed at the transtibial level, and 14% at the transfemoral level. 2 Transition to a well-fitting prosthesis can enable a person to regain independence and engage in daily activities again. 3 A transtibial prosthesis (i.e., below-knee prosthesis) typically consists of a socket, suspension system, and foot. A transfemoral prosthesis (i.e., above-knee prosthesis) includes these components, together with a knee joint. In both prostheses, the socket serves as an integral interface connecting the human body to the prosthesis. Achieving an optimal socket fit remains one of the main challenges in prosthetic care.",
+    "source": "02_evidence_reviews/R01_vanGastel2026_Digital_Sockets_ScopingReview.pdf",
+    "title": "Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review",
+    "year": 2026,
+    "page": 2,
+    "end_page": 2,
+    "language": "en",
+    "score": 0.6016
+   }
+  ],
+  "functional_level": [
+   {
+    "chunk_id": "ml_walking_ability_lower_limb_amputees_2024-0027",
+    "text": "K1 refers to those who have the ability to use a prosthesis for basic transfers or ambulation, making them limited, low-level ambulators. K2 describes individuals classified as community ambulators, while K3 is for those who can perform activities requiring more advanced prosthetic use. K4 is assigned to individuals with the ability for prosthetic ambulation during activities with high-energy demands [54]. Assessment and classification according to K-levels were conducted by two experienced physiotherapists who were unaware of the study goals. In addition, the Timed Up and Go Test (TUG) and the Two-Minute Walk Test (TMWT) were performed at the end of the inpatient rehabilitation treatment. These tests were conducted by the same examiners who evaluated the K-levels.",
+    "source": "02_evidence_reviews/S006_Knezevic2024_ML_Walking_Ability.pdf",
+    "title": "Machine Learning Model for Predicting Walking Ability in Lower Limb Amputees",
+    "year": 2024,
+    "page": 5,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.7033
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.6877
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0008",
+    "text": "Though this individual may exhibit the functional abilities consistent with K0, s/he may be a candidate for a prosthesis typically provided to a beneficiary with K1 activity abilities. Level 1: Has the ability or potential to use a prosthesis for transfers or ambulation on level surfaces at fixed cadence, typical of the limited and unlimited household ambulator. a. The individual has sufficient cognitive ability to safely use a prosthesis with or without an assistive device and/or the assistance/supervision of one person. b. The individual is capable of safe but limited ambulation within the home or on a similar flat surface like a home, with or without an assistive device and/or with or without the assistance/supervision of one person. c.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 4,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.64
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0011",
+    "text": "d. The individual is generally not capable of accomplishing most of the tasks at Level 3 (or does so infrequently with great effort). Level 3: Has the ability or potential for ambulation with variable cadence, typical of the community ambulator who has the ability to transverse most environmental barriers and may have vocational, therapeutic, or exercise activity that demands prosthetic utilization beyond simple locomotion. a. With or without an assistive device (which may include one or two hand rails), the individual is independently capable (i.e. requires no personal assistance or supervision) of performing the Level 2 tasks above and can: i. Walk on terrain that varies in texture and level (e.g., grass, gravel, uneven concrete) ii. Negotiate 3-7 consecutive stairs iii.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6338
+   },
+   {
+    "chunk_id": "ml_walking_ability_lower_limb_amputees_2024-0026",
+    "text": "The MSPSS generally shows good internal consistency, with Cronbach’s alpha values of 0.88 [50,53]. At the end of the rehabilitation treatment, the participants were classified according to their K-level [8]. K-levels are a widely used classification system designed to assess the level of mobility in individuals with lower limb loss, providing a basis for prosthesis prescription. However, K-level is widely used for functional assessment of individuals with LLL [54]. The system ranges from K0 to K4, defined as follows: K0 indicates that the individual does not have the ability or potential to ambulate or transfer safely with or without assistance; however, individuals at this level may still use a prosthesis for aesthetic purposes, which can improve their quality of life.",
+    "source": "02_evidence_reviews/S006_Knezevic2024_ML_Walking_Ability.pdf",
+    "title": "Machine Learning Model for Predicting Walking Ability in Lower Limb Amputees",
+    "year": 2024,
+    "page": 4,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6044
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0009",
+    "text": "c. The individual requires the use of a wheelchair for most activities outside of their residence. d. The individual is not capable of most of the functional activities designated in Level 2. Level 2: Has the ability or potential for ambulation with the ability to transverse low level environmental barriers such as curbs, stairs or uneven surfaces. This level is typical of the limited community ambulator. a. The individual can, with or without an assistive device (which may include one or two handrails) and/or with or without the assistance/supervision of one person: i. Perform the Level 1 tasks designated above ii. Ambulate on a flat, smooth surface (e.g., concrete, asphalt) such as might be found outside the home. (e.g., porch, deck, patio garage, driveway) iii. Negotiate a curb iv.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6021
+   }
+  ],
+  "foot_ankle": [
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0231",
+    "text": "prosthetic feet, favoring a novel energy storing and returning prosthetic foot. This finding supports clinicians trialing of a variety of energy storing and returning prosthetic feet as part of routine clinical care to optimize patient-centered outcomes. Inclusion of microprocessor-controlled foot and ankle components in routine clinical care is supported by findings of Colas-Ribas et al. (2022) (158), who subjectively reported higher QOL for energy storing and returning feet with microprocessor-controlled foot and ankle components compared to energy storing and returning feet.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 58,
+    "end_page": 58,
+    "language": "en",
+    "score": 0.756
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0228",
+    "text": "Evidence cited in these recommendations captures these types of feet. Additional energy storing and returning prosthetic feet exist with articulating ankles of varying non-microprocessor controls though no evidence rose to the level of quality to be included in these recommendations. Evidence from three RCTs and one SR suggests modern energy storing and returning prosthetic feet, with a fixed ankle or microprocessor-controlled foot and ankle component, were preferred by patients and objectively improve prosthetic user ambulation.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 57,
+    "end_page": 57,
+    "language": "en",
+    "score": 0.732
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0232",
+    "text": "Despite this finding user satisfaction was similar between energy storing and returning prosthetic feet with and without a microprocessor-controlled ankles with users favoring the lighter weight on an energy storing and returning prosthetic foot and the overall comfort provided by a microprocessor-controlled ankle. Runciman et al.(155) also suggests that progressive orthopedic conditions such as osteoarthritis may be mitigated through use of energy storing and returning feet, although longitudinal evidence is not presently available to support this claim.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 58,
+    "end_page": 58,
+    "language": "en",
+    "score": 0.7218
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0287",
+    "text": "E. Prosthetic Interventions Assessing the comparative effectiveness of all categories of energy storing and returning feet, including those with articulated ankle components along with the categories studied in current evidence base may provide further evidence by category to drive clinical prescription. Longitudinal research is also required to determine whether general or novel energy storing and returning prosthetic feet, microprocessor-controlled foot and ankle components, or energy storing and returning feet with articulating ankles can positively impact long-term health outcomes and mitigate comorbidities.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 68,
+    "end_page": 68,
+    "language": "en",
+    "score": 0.715
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0233",
+    "text": "Muller et al.(156) definitively found biomechanical measurement of push off power may reach levels equal to anatomical limbs for prosthetic ambulators using microprocessor-controlled foot and ankle components specifically with powered push-off feature. Similarly, this SR did not identify current research to correlate this finding with any positive impact on long-term health conditions. Static balance may improve, and, at a minimum, there is no increased risks of falls or other adverse events when using a microprocessor-controlled foot and ankle components over energy storing and returning feet. No detectible changes in metabolic cost were reported in evidence referenced between energy storing and returning feet and microprocessor-controlled foot and ankle components.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 58,
+    "end_page": 58,
+    "language": "en",
+    "score": 0.6885
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0237",
+    "text": "specific option over another with very low confidence in the quality of evidence. The benefits of prosthetic ambulators receiving energy storing and returning prosthetic feet or microprocessor-controlled foot and ankle components include improved walking characteristics and improved patient satisfaction which outweighed the potential and rarely identified harms. Patient values and preferences varied somewhat because some patients prefer and find satisfaction in different prosthetic foot technology. Thus, the Work Group decided upon Weak for (Recommendation 18) and Neither for nor against (Recommendation 19) recommendations. Recommendation 20. We suggest using patient-reported and performance-based measures with acceptable psychometric properties to assess function.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 59,
+    "end_page": 59,
+    "language": "en",
+    "score": 0.6771
+   }
+  ],
+  "pylon": [
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.7068
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0038",
+    "text": "Shock Absorbing Pylons The Workgroup believes that at the present time, the literature does not support coverage of shock absorbing pylons for Medicare beneficiaries who utilize their prosthesis at the K2 level. However, the Workgroup is hopeful that advances in research will eventually describe the benefit of these components to a defined subgroup of the Medicare population. Prosthetic Liners/Socket Inserts The Workgroup has found no evidence to direct the choice of interface material between prosthesis and skin.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 11,
+    "end_page": 11,
+    "language": "en",
+    "score": 0.6645
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0008",
+    "text": "Though this individual may exhibit the functional abilities consistent with K0, s/he may be a candidate for a prosthesis typically provided to a beneficiary with K1 activity abilities. Level 1: Has the ability or potential to use a prosthesis for transfers or ambulation on level surfaces at fixed cadence, typical of the limited and unlimited household ambulator. a. The individual has sufficient cognitive ability to safely use a prosthesis with or without an assistive device and/or the assistance/supervision of one person. b. The individual is capable of safe but limited ambulation within the home or on a similar flat surface like a home, with or without an assistive device and/or with or without the assistance/supervision of one person. c.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 4,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6525
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0007",
+    "text": "d. The individual is bedridden and has no need or capacity to ambulate or transfer. Note: If a beneficiary has need of a lower limb prosthesis (LLP) to maintain sitting balance in an appropriately fitted wheelchair, but cannot ambulate or transfer using the prosthetic, the individual may be a candidate for a prosthesis which correlates with K1 activities. Example: A beneficiary with a trans-femoral amputation as well as a spinal cord injury (T4 ASIA B paraplegia) which precludes bi-pedal ambulation or weight bearing during transfers, depends on the resistance of the prosthetic socket portion to maintain sitting balance.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 4,
+    "end_page": 4,
+    "language": "en",
+    "score": 0.6464
+   },
+   {
+    "chunk_id": "ml_walking_ability_lower_limb_amputees_2024-0027",
+    "text": "K1 refers to those who have the ability to use a prosthesis for basic transfers or ambulation, making them limited, low-level ambulators. K2 describes individuals classified as community ambulators, while K3 is for those who can perform activities requiring more advanced prosthetic use. K4 is assigned to individuals with the ability for prosthetic ambulation during activities with high-energy demands [54]. Assessment and classification according to K-levels were conducted by two experienced physiotherapists who were unaware of the study goals. In addition, the Timed Up and Go Test (TUG) and the Two-Minute Walk Test (TMWT) were performed at the end of the inpatient rehabilitation treatment. These tests were conducted by the same examiners who evaluated the K-levels.",
+    "source": "02_evidence_reviews/S006_Knezevic2024_ML_Walking_Ability.pdf",
+    "title": "Machine Learning Model for Predicting Walking Ability in Lower Limb Amputees",
+    "year": 2024,
+    "page": 5,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6339
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0014",
+    "text": "Level 4: Has the ability or potential for prosthetic ambulation that exceeds the basic ambulation skills, exhibiting high impact, stress or energy levels typical of the prosthetic demands of the child, active adult, or athlete. With or without an assistive device (which may include one or two hand rails), this individual is independently capable (i.e. requires no personal assistance or supervision) of performing high impact domestic, vocational or recreational activities such as: a. Running b. Repetitive stair climbing c. Climbing of steep hills d. Being a caregiver for another individual e. Home maintenance (e.g.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 6,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.6271
+   }
+  ],
+  "socket": [
+   {
+    "chunk_id": "socket_shape_capture_review_2026-0009",
+    "text": "DOI: 10.1097/PXR.0000000000000531 The process of developing a prosthetic socket involves 3 key phases. First, the shape of the residual limb is captured, referred to here as shape capture. Second, the socket is designed using modifications to obtain a socket with adequate load transfer, referred to here as the socket shape design. Designing the socket consists of different aspects: (1) the socket type (e.g., specific weight-bearing or total surface-bearing socket for transtibial prostheses), (2) the socket shape design (i.e., defining its spatial characteristics and inner surface dimensions in relation to the residual limb shape), and (3) the proximal and distal parts of the socket (i.e., the socket brim and adapter, respectively). Last, the socket is manufactured.",
+    "source": "02_evidence_reviews/R01_vanGastel2026_Digital_Sockets_ScopingReview.pdf",
+    "title": "Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review",
+    "year": 2026,
+    "page": 2,
+    "end_page": 3,
+    "language": "en",
+    "score": 0.6925
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0288",
+    "text": "Other Topics for Consideration Other topics for consideration include • Comparative effectiveness studies on osseointegration versus conventional prosthetic socket use by level of amputation; • Comparison of different suspension types for all LLA levels; • Comparison of different socket interfaces for transtibial, joint disarticulation and partial foot amputation levels; • Consider K level for comparison studies for patient function optimization, safety, and QOL; • Consider socket design/fabrication utilizing 3D printing vs traditional hand mods as this impacts socket fit, prosthesis acceptance, and resource availability for O&P provider and rehab team; and • Consider device delivery timeframe/sock ply fit.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 68,
+    "end_page": 69,
+    "language": "en",
+    "score": 0.6562
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.6529
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0012",
+    "text": "The socket must provide: y comfort for the amputee; y provision of an interface between the residual limb and the prosthesis; y maintenance of suspension for the prosthesis. The suspension system: y holds the prosthesis in place on the residual limb; y enhances efficient energy transfer; y maximizes control; y allows movement; y minimizes discomfort and abrasions. The components and foot: y are used to build up the prosthesis; y are also used to align the prosthesis. 1 The specifications on this page are taken from B. Engstrom, C. Van de Ven, Therapy for Amputees, 3rd edition, Churchill Livingstone, 1999. ICRCICRC",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 12,
+    "end_page": 12,
+    "language": "en",
+    "score": 0.6526
+   },
+   {
+    "chunk_id": "3d_printed_transtibial_sockets_review_2022-0000",
+    "text": "RESEARCH ARTICLE 3D printed transtibialprostheticsockets: A systematicreview Sunjung Kim1, Sai Yalla1, Sagar Shetty2, Noah J. Rosenblatt1* 1 Dr. William M. Scholl College of Podiatric Medicine’s Center for Lower Extremity Ambulatory Research (CLEAR), Rosalind Franklin University of Medicine and Science, North Chicago, Illinois, United States of America, 2 Bionic Prosthetics & Orthotics, Merrillville, Indiana, United States of America * noah.rosenblatt@rosalindfranklin.edu Abstract The prosthetic socket, which transfers load from the residual limb to the prosthesis, is an integral part of the prosthesis. 3D printing has emerged as a potentially viable alternative to traditional fabrication for producing sockets that effectively transfer loads.",
+    "source": "02_evidence_reviews/S011_Kim2022_3D_Printed_Sockets_SR.pdf",
+    "title": "3D printed transtibial prosthetic sockets: A systematic review",
+    "year": 2022,
+    "page": 1,
+    "end_page": 1,
+    "language": "en",
+    "score": 0.6523
+   },
+   {
+    "chunk_id": "socket_shape_capture_review_2026-0054",
+    "text": "Table 2. Overview of study characteristics. (Continued) Authors (y) N (males), amputation level Study design Shape capture method Socket shape design method: level of standardization Trial duration Effectiveness measure Cost-effectiveness measure Li et al 55 6 (5), TF Withinsubject NR Pressuremeasurements combined with mathematical function determines modifications: fully standardized NR Scores on questions about static fit of socket None Ratto et al 40 61 (3), TT Withinsubject 3D scanning residual limb Prosthetist modifications: not standardized DM: 6 wk, MM: 4 wk Ambulation, residual limb health, utility and well-being (modified PEQ), prosthetist questionnaire and device condition None Tang et al 51 1 (1), TT Withinsubject CT duplication of socket Data-driven socket compensation algorithm: fully standardized 1 session Pressure",
+    "source": "02_evidence_reviews/R01_vanGastel2026_Digital_Sockets_ScopingReview.pdf",
+    "title": "Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review",
+    "year": 2026,
+    "page": 9,
+    "end_page": 9,
+    "language": "en",
+    "score": 0.6474
+   }
+  ],
+  "interface": [
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0066",
+    "text": "extremity, below knee, joint covers, pair L5679 Addition to lower extremity, below knee/above knee, custom fabricated from existing mold or prefabricated, socket insert, silicone gel, elastomeric or equal, not for use with locking mechanism L5680 Addition to lower extremity, below knee, thigh lacer, non-molded L5681 Addition to lower extremity, below knee/above knee, custom fabricated socket insert for congenital or atypical traumatic amputee, silicone gel, elastomeric or equal, for use with or without locking mechanism, initial only (for other than initial, use code l5673 or l5679) L5682 Addition to lower extremity, below knee, thigh lacer, gluteal/ischial, molded L5683 Addition to lower extremity, below knee/above knee, custom fabricated socket insert for other than congenital or",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 21,
+    "end_page": 21,
+    "language": "en",
+    "score": 0.6763
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0288",
+    "text": "Other Topics for Consideration Other topics for consideration include • Comparative effectiveness studies on osseointegration versus conventional prosthetic socket use by level of amputation; • Comparison of different suspension types for all LLA levels; • Comparison of different socket interfaces for transtibial, joint disarticulation and partial foot amputation levels; • Consider K level for comparison studies for patient function optimization, safety, and QOL; • Consider socket design/fabrication utilizing 3D printing vs traditional hand mods as this impacts socket fit, prosthesis acceptance, and resource availability for O&P provider and rehab team; and • Consider device delivery timeframe/sock ply fit.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 68,
+    "end_page": 69,
+    "language": "en",
+    "score": 0.6609
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.6581
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0297",
+    "text": "KQ Intervention(s) Comparator(s)  Sub-acute rehabilitation  Skilled Nursing Facility  Nursing home  Outpatient and/or outpatient rehabilitation and/or outpatient therapy  Intensive outpatient program 2 Socket/ interface  Hip Disarticulation Socket  Transfemoral Socket  Narrow mediolateral (Narrow ML)  Quadrilateral  Ischial Containment (IC) Socket  Ischial Ramus Containment (IRC) Socket  Subischial Socket design  Through Knee Socket/ Knee Disarticulation Socket  Below Knee Socket  Hydrostatic Design (HSD) Socket  Total Contact Socket  Patella or Patellar (PTB) Tendon Bearing Socket  Total Surface Bearing (TSB) Socket Suspension system  Anatomic Fit  Belt / Waist belt  Corset / Thigh corset  Lanyard / Distal locking lanyard  Osseointegration  Pin Suspension/ Pin",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 71,
+    "end_page": 71,
+    "language": "en",
+    "score": 0.6575
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0012",
+    "text": "The socket must provide: y comfort for the amputee; y provision of an interface between the residual limb and the prosthesis; y maintenance of suspension for the prosthesis. The suspension system: y holds the prosthesis in place on the residual limb; y enhances efficient energy transfer; y maximizes control; y allows movement; y minimizes discomfort and abrasions. The components and foot: y are used to build up the prosthesis; y are also used to align the prosthesis. 1 The specifications on this page are taken from B. Engstrom, C. Van de Ven, Therapy for Amputees, 3rd edition, Churchill Livingstone, 1999. ICRCICRC",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 12,
+    "end_page": 12,
+    "language": "en",
+    "score": 0.6545
+   },
+   {
+    "chunk_id": "3d_printed_transtibial_sockets_review_2022-0004",
+    "text": "1. Introduction The prosthetic socket is an integral part of lower limb prostheses. Loads transfer from the residual limb to the prosthesis via the socket [1], which absorbs the impact forces felt on the residual limb [2, 3]. During normal gait the socket is subjected to repetitive loading with peak a1111111111 a1111111111 a1111111111 a1111111111 a1111111111 OPEN ACCESS Citation:Kim S, YallaS, ShettyS, RosenblattNJ (2022)3D printedtranstibialprosthetic sockets:A systematicreview.PLoS ONE 17(10):e0275161. https://doi.org/10.1371/journal.pone.0275161 Editor:MohammadAzadi,SemnanUniversity, ISLAMICREPUBLIC OF IRAN Received:May 31, 2022 Accepted:September12, 2022 Published:October10, 2022 Copyright:© 2022 Kim et al.",
+    "source": "02_evidence_reviews/S011_Kim2022_3D_Printed_Sockets_SR.pdf",
+    "title": "3D printed transtibial prosthetic sockets: A systematic review",
+    "year": 2022,
+    "page": 1,
+    "end_page": 1,
+    "language": "en",
+    "score": 0.6543
+   }
+  ],
+  "suspension": [
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0298",
+    "text": "lock suspension / distal locking suspension / Locking Mechanism  Supracondylar  Suspension Sleeve  Thigh Cuff / Suprapatellar cuff  Vacuum Assisted Suspension/ Elevated Vacuum  Suction suspension / Passive suction suspension Seal-in suction suspension Hip Different types of prosthetic components compared to other types of components within the same class",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 71,
+    "end_page": 71,
+    "language": "en",
+    "score": 0.7194
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.6952
+   },
+   {
+    "chunk_id": "ml_walking_ability_lower_limb_amputees_2024-0005",
+    "text": "For the K-level, the ninth predictor was The Multidimensional Scale of Perceived Social Support (MSPSS). Conclusions: Using the SVM model, we can predict the K-level, TUG, and TMWT with high accuracy. These clinical assessments could be incorporated into routine clinical practice to guide clinicians and inform patients of their potential level of ambulation. Keywords: amputation; rehabilitation; recovery of function; support vector machines 1. Introduction Predicting functional outcomes post-amputation is a significant challenge in the field of rehabilitation for individuals with lower limb loss (LLL). Prediction of walking ability and the use of prosthetics is primarily based on clinical expertise and personal opinions [1]. J. Clin. Med. 2024, 13, 6763.",
+    "source": "02_evidence_reviews/S006_Knezevic2024_ML_Walking_Ability.pdf",
+    "title": "Machine Learning Model for Predicting Walking Ability in Lower Limb Amputees",
+    "year": 2024,
+    "page": 1,
+    "end_page": 1,
+    "language": "en",
+    "score": 0.6644
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0042",
+    "text": "D. KokegeiD. Kokegei lower-limb amPutations and General Prosthetic knowledGe 19 Adhesion (suspension) A transfemoral prosthesis may be held in place by: y adhesion by pressure difference (e.g. valve); y adhesion due to material properties (e.g. silicon liner); or y auxiliary suspension (e.g. Silesian belt). At the ICRC, transfemoral prostheses are held in place by pressure difference (suction) or auxiliary suspension: y integrated within the socket (valve: partial or total suction); y external to the socket (pelvic belt, Silesian belt, shoulder strap). Pelvic belt and Silesian belt At the ICRC, pelvic and Silesian belts are most frequently used to provide suspension for transfemoral amputees. They can be made of leather, cotton webbing or nylon webbing.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 22,
+    "end_page": 23,
+    "language": "en",
+    "score": 0.6497
+   },
+   {
+    "chunk_id": "ml_walking_ability_lower_limb_amputees_2024-0059",
+    "text": "extremity, 6 Multidimensional Scale of Perceived Social Support, 7 Mini Mental State Exam, 8 Beck depression inventory, 9 Timed Up and Go, 10 Two-minute walking test. In this work, an SVM approach paired with decision tree feature elimination was utilized to build predictive models for the K-level, TUG test, and TMWT. A previously described decision tree method was employed to select features that optimally distinguish the level of ability to walk with a prosthesis after lower limb amputation. Three decision trees were created, one for each of the following outputs: K-level, TUG, and TMWT (Figures 5–7, respectively). J. Clin. Med.",
+    "source": "02_evidence_reviews/S006_Knezevic2024_ML_Walking_Ability.pdf",
+    "title": "Machine Learning Model for Predicting Walking Ability in Lower Limb Amputees",
+    "year": 2024,
+    "page": 9,
+    "end_page": 10,
+    "language": "en",
+    "score": 0.6384
+   },
+   {
+    "chunk_id": "ml_walking_ability_lower_limb_amputees_2024-0061",
+    "text": "In this work, an SVM approach paired with decision tree feature elimination was utilized to build predictive models for the K-level, TUG test, and TMWT. A previously described decision tree method was employed to select features that optimally distinguish the level of ability to walk with a prosthesis after lower limb amputation. Three decision trees were created, one for each of the following outputs: K-level, TUG, and TMWT (Figures 5–7, respectively).",
+    "source": "02_evidence_reviews/S006_Knezevic2024_ML_Walking_Ability.pdf",
+    "title": "Machine Learning Model for Predicting Walking Ability in Lower Limb Amputees",
+    "year": 2024,
+    "page": 10,
+    "end_page": 10,
+    "language": "en",
+    "score": 0.6347
+   }
+  ],
+  "readiness": [
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0088",
+    "text": "– Those who need preparatory treatment before fitting Profuse oedema; Contractures in extreme ranges; Adherent scar tissue; Open wounds; Bad hygiene; Neuromas; Bone spurs; Muscle weakness; Phantom sensation/pain; Skin conditions such as anaerobic infections. – Those who cannot be fitted The amputee’s physical or mental condition is not appropriate for fitting; It is technically not possible to fit a prosthesis. Note Amputees who cannot be fitted with prostheses can gain independence by using a wheelchair or with the support of technical aids. It is advisable also to prescribe a wheelchair as an alternative mode of ambulation for bilateral amputees or if the amputee will not be able to wear the prosthesis all day long, although emphasis should be placed on using the prosthesis.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 49,
+    "end_page": 49,
+    "language": "en",
+    "score": 0.7303
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0149",
+    "text": "Their physical condition must be re-evaluated and the stump inspected so that any factors that could affect the prosthetic wear (skin/scar problem, vascular disease, sensibility, pain) can be noted and compare with the previous clinical assessment. Note: With TF amputations (new stump) oedema is frequent. (b) Check whether the manufactured device tallies with the prescription and that the type of knee joint (free/locked) and adhesion mechanism (valve/belt) used corresponds to the user’s need. Objective: To avoid gait deviations such pistoning or knee instability. (c) Check the socket – Are the medial, lateral, anterior and posterior contours of adequate height, shape and direction? Objective: To contain the stump adequately (volume).",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 70,
+    "end_page": 70,
+    "language": "en",
+    "score": 0.7058
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0095",
+    "text": "The members of the interdisciplinary team should therefore discuss every possible stage in the process with each other and with their patients in order to prepare them well for casting, fitting and post-fitting training and to help them understand the expectations of each clinical department (PT and P&O) regarding the outcome of the treatment. Rationale All lower-limb amputees need to be aware that their ability to walk and the quality of the prosthetic gait depend on the condition of the residual limb, the strength of the unaffected limb and general physical fitness. Therefore and according to the individual needs, they need to be prepared for an ideal prosthetic fitting.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 55,
+    "end_page": 55,
+    "language": "en",
+    "score": 0.7053
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0018",
+    "text": "Pre-authorization should be based on the information in the submitted history and physical exam (H&P).1 It would be expected that the H&P would report, at a minimum, the following: History • Name • *Age • *Age at limb loss • *Level of amputation • *Etiology of amputation • *Co-morbidities of the patient and medical readiness related to safe use of a prosthesis • *Emotional readiness of the patient • *Cognitive abilities of the patient related to safe use of a prosthesis • Current or past therapy applicable to amputation (if appropriate) • Prior level of functioning • Current level of functioning (including use of prosthesis and assistive devices, if applicable) • Patient goals − Short term − Long term • Patient social situation information − Type of residence (e.g., private home, nursing",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 7,
+    "end_page": 7,
+    "language": "en",
+    "score": 0.7004
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0163",
+    "text": "(b) Weight-bearing area – Does the amputee feel comfortable in a sitting position or is he/she bothered by the ischiatic plate in this position? – Is the lower leg (calf) of the prosthesis vertical? (c) Suspension – Does the device remain in place when the amputee or physiotherapist pulls slightly on the prosthesis? (d) Cosmetic – Is the proportion between the shank and the thigh cosmetically acceptable? – Compared to the sound leg, are the lengths of the sections respected? (e) Comfort – Does the amputee feel comfortable in the prosthesis so far? When doffing the prosthesis: – Is the skin free of abrasions, blisters or excessive redness or area of pressure? – Check the skin. – Ask the patient for feedback.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 74,
+    "end_page": 74,
+    "language": "en",
+    "score": 0.696
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0161",
+    "text": "(e) Static alignment – Is the knee axis horizontal and perpendicular to the line of progression? – Is the socket ADduction/flexion adequate? Useful tip: Ask the patient to close his/her eyes, to hold your hands (for security/balance) and to “march” (with both feet) on the spot. Alternatively, let him/her stand on a step (on the sound leg, the pelvis in a horizontal position) and check where the prosthetic leg is “floating.” – Is the sole of the shoe flat on the floor (antero-posteriorly and medio-laterally)? Useful tip: Check by taking a thin piece of paper and trying to slide it underneath the heel or sole. (f) Comfort – Does the amputee feel comfortable in the prosthesis so far?",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 73,
+    "end_page": 73,
+    "language": "en",
+    "score": 0.6949
+   }
+  ],
+  "prosthesis_stage": [
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.6987
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0027",
+    "text": "In emergency situations, there should also be a mechanism in place to request an expedited 2 business day review. When doing so, a submitter should clearly indicate and provide the supporting rationale that explains how the 10-business day time period could jeopardize the beneficiary’s health or safety. As previously noted, the K level classification should not be considered a functional classification; instead it is a description of the intended use of the prosthesis. Based on the intended use of the prosthesis and whether or not the patient can achieve these activities, the selection of appropriate components can be made for a patient. See Appendix B for the algorithm for the determination of K Level modifiers for an individual who requires an initial lower limb prosthetic.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 9,
+    "end_page": 9,
+    "language": "en",
+    "score": 0.6545
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0014",
+    "text": "The structural and cosmetic elements are the same. WEB WEB Prosthetic Gait analysis for PhysiotheraPists10 Ì Second classification Immediate/early prosthesis (post-operation): applied at the time of surgery or before the removal of the sutures. It is fitted at the hospital and allows early verticalization. The socket may be made of plaster of Paris. Temporary/interim prosthesis: applied after the sutures have been removed. It is not manufactured from expensive material because it does not last very long (approximately two months). It permits amputees to leave the hospital by walking even if the stump is not ready for a permanent fitting. It is worn for only a short period daily. The aim is to gradually enhance the resilience of the stump.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 13,
+    "end_page": 14,
+    "language": "en",
+    "score": 0.6518
+   },
+   {
+    "chunk_id": "ml_walking_ability_lower_limb_amputees_2024-0027",
+    "text": "K1 refers to those who have the ability to use a prosthesis for basic transfers or ambulation, making them limited, low-level ambulators. K2 describes individuals classified as community ambulators, while K3 is for those who can perform activities requiring more advanced prosthetic use. K4 is assigned to individuals with the ability for prosthetic ambulation during activities with high-energy demands [54]. Assessment and classification according to K-levels were conducted by two experienced physiotherapists who were unaware of the study goals. In addition, the Timed Up and Go Test (TUG) and the Two-Minute Walk Test (TMWT) were performed at the end of the inpatient rehabilitation treatment. These tests were conducted by the same examiners who evaluated the K-levels.",
+    "source": "02_evidence_reviews/S006_Knezevic2024_ML_Walking_Ability.pdf",
+    "title": "Machine Learning Model for Predicting Walking Ability in Lower Limb Amputees",
+    "year": 2024,
+    "page": 5,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6463
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0008",
+    "text": "Though this individual may exhibit the functional abilities consistent with K0, s/he may be a candidate for a prosthesis typically provided to a beneficiary with K1 activity abilities. Level 1: Has the ability or potential to use a prosthesis for transfers or ambulation on level surfaces at fixed cadence, typical of the limited and unlimited household ambulator. a. The individual has sufficient cognitive ability to safely use a prosthesis with or without an assistive device and/or the assistance/supervision of one person. b. The individual is capable of safe but limited ambulation within the home or on a similar flat surface like a home, with or without an assistive device and/or with or without the assistance/supervision of one person. c.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 4,
+    "end_page": 5,
+    "language": "en",
+    "score": 0.6433
+   },
+   {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0368",
+    "text": "Weak for Reviewed, Amended Reviewed, Amended 8 7 Prior to surgery, we suggest that rehabilitation goals, outcomes, and other implications be included in shared decision making about residual limb length and amputation level. Weak for Reviewed, Amended Reviewed, New-added 5, 23 8 There is insufficient evidence to recommend one surgical amputation procedure over another. Not applicable Reviewed, New-added Not Reviewed, Not changed 1, 5, 23 9 We suggest the use of a rigid or semi-rigid dressing to promote healing and early prosthetic use as soon as feasible post-amputation in transtibial amputation. Rigid post-operative dressings are preferred in situations where limb protection is a priority.",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 98,
+    "end_page": 98,
+    "language": "en",
+    "score": 0.6401
+   }
+  ],
+  "fitting": [
+   {
+    "chunk_id": "socket_shape_capture_review_2026-0009",
+    "text": "DOI: 10.1097/PXR.0000000000000531 The process of developing a prosthetic socket involves 3 key phases. First, the shape of the residual limb is captured, referred to here as shape capture. Second, the socket is designed using modifications to obtain a socket with adequate load transfer, referred to here as the socket shape design. Designing the socket consists of different aspects: (1) the socket type (e.g., specific weight-bearing or total surface-bearing socket for transtibial prostheses), (2) the socket shape design (i.e., defining its spatial characteristics and inner surface dimensions in relation to the residual limb shape), and (3) the proximal and distal parts of the socket (i.e., the socket brim and adapter, respectively). Last, the socket is manufactured.",
+    "source": "02_evidence_reviews/R01_vanGastel2026_Digital_Sockets_ScopingReview.pdf",
+    "title": "Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review",
+    "year": 2026,
+    "page": 2,
+    "end_page": 3,
+    "language": "en",
+    "score": 0.6974
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0136",
+    "text": "Their physical condition must be re-evaluated and the stump inspected so that any factors that could affect prosthetic wear (skin/scar problems, vascular disease, sensibility, pain) can be noted and compared with the previous clinical assessment. (b) Check whether the manufactured device tallies with the prescription and that the type of prosthesis (PTB, PTS SC, PTB SC SP , bent-knee prosthesis) prescribed (see the chapter entitled “Lower-limb amputations and general prosthetic knowledge,” p. 7) corresponds to the user’s need and will give enough support in accordance with the stump length, possible knee instability, and so on. Objective: To avoid gait deviations such as lateral shift of the prosthesis, knee instability, drop off. (c) Check the soft socket.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 67,
+    "end_page": 67,
+    "language": "en",
+    "score": 0.6863
+   },
+   {
+    "chunk_id": "socket_shape_capture_review_2026-0006",
+    "text": "1 In the Netherlands, 22% of lower limb amputations are performed at the transtibial level, and 14% at the transfemoral level. 2 Transition to a well-fitting prosthesis can enable a person to regain independence and engage in daily activities again. 3 A transtibial prosthesis (i.e., below-knee prosthesis) typically consists of a socket, suspension system, and foot. A transfemoral prosthesis (i.e., above-knee prosthesis) includes these components, together with a knee joint. In both prostheses, the socket serves as an integral interface connecting the human body to the prosthesis. Achieving an optimal socket fit remains one of the main challenges in prosthetic care.",
+    "source": "02_evidence_reviews/R01_vanGastel2026_Digital_Sockets_ScopingReview.pdf",
+    "title": "Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review",
+    "year": 2026,
+    "page": 2,
+    "end_page": 2,
+    "language": "en",
+    "score": 0.6857
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.68
+   },
+   {
+    "chunk_id": "who_po_implementation_manual_part2_2017-0365",
+    "text": "5). Many ISO standards that define prosthetics and orthotics terminology, users and methods can be used in formulating and documenting procedures in service delivery (see Box 26). Fig. 5. The prosthetics and orthotics service delivery process Product delivery and follow-up • Product delivery • Outcome evaluation • Follow-up • Maintenance and repair Service delivery process User training • Therapy • Gait training • Training to acquire daily living skills Fabrication and fitting • Measuring • Fabrication • Fitting and customization Assessment • Appointment • Assessment • Prescription • Goal-setting 1 Assessment Appointment Once the user is in contact with a prosthetics and orthotics service unit, an appointment is made to assess the individual’s precise needs.",
+    "source": "01_guidelines/G06-P2_WHO_2017_Prosthetics_Orthotics_Implementation_Manual.pdf",
+    "title": "WHO standards for prosthetics and orthotics. Part 2: Implementation manual",
+    "year": 2017,
+    "page": 97,
+    "end_page": 98,
+    "language": "en",
+    "score": 0.6778
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0234",
+    "text": "The fitting of the prosthesis needs to be followed by functional training; in the case of lower-limb amputation, this is essentially gait training. The progressive stages of gait training are described on pages 103-104. Rationale Attaining functional independence is the ultimate aim of rehabilitation for lower-limb amputees. By comparison, upper-limb amputees may want a prosthesis for cosmetic purposes only. Hence, gait training for the prosthesis user has maximum significance in the rehabilitation process. Apart from aiming for clear functional goals, users also need to be taught about prosthesis maintenance and care and made aware of the need to report back to the physical rehabilitation centre for follow-up.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 105,
+    "end_page": 105,
+    "language": "en",
+    "score": 0.6743
+   }
+  ],
+  "alignment": [
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0216",
+    "text": "Prosthetic Gait analysis for icrc PhysiotheraPists92 TF gait deviations (free knee gait only)371 Lateral trunk bending (towards the prosthetic side) Definition: Amputee leans towards the prosthesis Phase of gait cycle: Stance phase Assessment view: Frontal and dorsal Causes y Prosthetic causes – Insufficient femoral support of lateral socket wall (too wide open) – Prosthesis too short – Excessive abduction of socket – Medial brim (perineum area) of socket too high or giving discomfort – Ischiatic plate inclined medially – Type of socket (quadrilateral) y Amputee causes – Contracture of abductor muscles of the stump – Very short stump – Sensitive or painful stump – Weak hip abductor muscles (Trendelenberg gait) – Bad gait habit Rotation of the foot at heel strike Definition: Rotation",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 96,
+    "end_page": 96,
+    "language": "en",
+    "score": 0.7277
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0061",
+    "text": "Appropriate prosthetic alignment involves several steps: y Initial/bench alignment (alignment done on the bench); y Static fitting (amputee standing/sitting); y Static alignment (on amputee); y Balance and weight-bearing exercises; y Dynamic alignment (amputee walking); y Gait training; y Alignment corrections. Initial transtibial alignment Initial alignment for transtibial prostheses is carried out in the workshop and in accordance with a protocol and the manufacturer’s guidelines (which differ depending on the components used). Stump conditions (length and position) also have to be taken into consideration. The following diagrams show the protocol for the initial alignment of a TT prosthesis. 5 See M.M. Lusardi, C.C.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 31,
+    "end_page": 31,
+    "language": "en",
+    "score": 0.725
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0206",
+    "text": "Alignment of the TT prosthesis placing the foot lateral to the socket. Seymour Seymour Gait analysis and Gait deviations 87 TT gait deviations363 Lateral trunk bending Definition: Amputee leans towards the prosthesis Phase of gait cycle: Stance phase Assessment view: Frontal and dorsal Causes y Prosthetic causes – Prosthesis too short – Incorrect alignment – Socket too much in adduction – Foot set too far laterally y Amputee causes – Lack of balance – Lack of confidence – Muscles imbalance, weakness of the hip joint – Pain (stump or sound leg) – Bad habit Rotation of the foot at heel strike Definition: Rotation usually outwards Phase of gait cycle: Heel strike Assessment view: Frontal (and dorsal) Causes y Prosthetic causes – Heel bumper too hard (too hard plantar flexion resistance) – Ill fitting socket – Poor suspension y Amputee causes – Weak hip muscles – Knee joint",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 90,
+    "end_page": 91,
+    "language": "en",
+    "score": 0.7216
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0133",
+    "text": "Prosthetic Gait analysis for icrc PhysiotheraPists62 First fitting principles Prior to initiating dynamic alignment and interdisciplinary prosthetic gait analysis, prosthetists complete the static and dynamic fitting of the device, thus reducing gait deviations caused by the prosthetic construction (socket design/bench alignment) to a minimum. Regardless of the functions provided by even the most sophisticated mechanical devices, the most important factors in the usefulness of an artificial leg are the socket fitting and the alignment of the various parts with the body and with each other. Fitting and alignment are difficult procedures that require a great deal of skill on the part of the prosthetist and a great deal of cooperation on the part of the patient.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 66,
+    "end_page": 66,
+    "language": "en",
+    "score": 0.6967
+   },
+   {
+    "chunk_id": "prosthetic_gait_analysis_icrc_manual_2014-0214",
+    "text": "the prosthesis on stance. Pistoning Definition: The prosthesis slips as the foot leaves the ground, the toes of the prosthesis catch on the ground, and movement of the socket against the skin may cause abrasion. Phase of gait cycle: Swing phase Assessment view: Lateral Causes y Prosthetic causes – Suspension mechanism is loose or inadequate – Not enough prosthetic socks – Faulty socket modification (not enough support under medial tibial flare or patellar tendon) y Amputee causes – Stump volume changes ICRC ICRC ICRC Gait analysis and Gait deviations 91 Uneven step length Definition: The amputee takes a long prosthetic step and a short step with the sound leg.",
+    "source": "06_professional_knowledge/K01_ICRC_Prosthetic_Gait_Analysis_Physiotherapists.pdf",
+    "title": "Prosthetic Gait Analysis for Physiotherapists. ICRC Physiotherapy Reference Manual",
+    "year": 2014,
+    "page": 94,
+    "end_page": 95,
+    "language": "en",
+    "score": 0.6858
+   },
+   {
+    "chunk_id": "lower_limb_prosthesis_cms_consensus_2017-0013",
+    "text": "carry an item or meaningfully converse while ambulating) b. The individual does not perform the activities of Level 4. Note: If the beneficiary can accomplish the physical tasks described by the K3 level, but requires personal assistance or supervision due to cognitive, sensory or communicative disability, then the individual is a candidate for a prosthesis which correlates with K3 usage. Example: In addition to the lower limb amputation, if the beneficiary has also experienced a TBI and is capable of performing the above K3 activities, but frequently needs supervision and assistance for safety purposes and redirection of attention, then s/he is a candidate for a prosthesis which correlates with K3 usage.",
+    "source": "01_guidelines/G05_CMS_2017_LLP_Consensus_K-levels.pdf",
+    "title": "Lower Limb Prosthetic Workgroup Consensus Document",
+    "year": 2017,
+    "page": 5,
+    "end_page": 6,
+    "language": "en",
+    "score": 0.6856
+   }
+  ]
+ },
+ "gaps": [
+  {
+   "field": "residual_limb.volume_stability",
+   "label": "Residual limb volume stability",
+   "status": "recorded as unknown",
+   "why_needed": "Residual limb volume stability was recorded as unknown. Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review (2026), p. 2 discusses this topic (quoted below); check whether it applies to this case.",
+   "source_protocol_reference": "socket_shape_capture_review_2026-0007",
+   "evidence": {
+    "chunk_id": "socket_shape_capture_review_2026-0007",
+    "text": "Achieving an optimal socket fit remains one of the main challenges in prosthetic care. 3 Poor fit can cause excessive limb-socket interface stresses and skin problems, 3,4 aggravated by limb volume changes and heat accumulation within the socket.5,6 These issues reduce function and quality of life and often require frequent socket adjustments, increasing clinical workload and health care costs.3,7,8 13D Lab Radboudumc, Radboud University Medical Center, Nijmegen, The Netherlands 2Department of BioMechanical Engineering, Delft University of Technology, Delft, The Netherlands 3Department of Rehabilitation, Radboud University Medical Center, Nijmegen, The Netherlands 4Radboud Institute for Health Sciences, IQ Healthcare, Radboud University Medical Center, Nijmegen, The Netherlands The author(s) disclosed no potential conflicts of interest with respect to the research,",
+    "source": "02_evidence_reviews/R01_vanGastel2026_Digital_Sockets_ScopingReview.pdf",
+    "title": "Comparisons of (cost-)effectiveness of manual, hybrid, and digital shape capture and shape design techniques for transtibial and transfemoral prosthetic sockets: A scoping review",
+    "year": 2026,
+    "page": 2,
+    "end_page": 2,
+    "language": "en",
+    "score": 0.6418
+   },
+   "excerpt": "3 Poor fit can cause excessive limb-socket interface stresses and skin problems, 3,4 aggravated by limb volume changes and heat accumulation within the socket.5,6 These issues reduce function and quality of life and often require …",
+   "summary_en": null,
+   "summary_ar": null
+  },
+  {
+   "field": "residual_limb.pain",
+   "label": "Residual limb and phantom pain",
+   "status": "not recorded",
+   "why_needed": "Residual limb and phantom pain was not recorded at intake. VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0) (2024), p. 101 discusses this topic (quoted below); check whether it applies to this case.",
+   "source_protocol_reference": "lower_limb_amputation_va_dod_cpg_2024-0379",
+   "evidence": {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0379",
+    "text": "Imagery (GMI) Assess and treat residual limb pain (RLP), phantom limb pain (PLP), and phantom limb sensation (PLS) Provide treatment plan for RLP, PLP, PLS, including: patient education, wean narcotic use, psychosocial interventions, non-pharmacologic interventions (i.e., exercises, massage, etc.), Prosthetic sock ply management, Graded Motor Imagery (GMI) Reassess and adjust treatment for residual limb pain (RLP), phantom limb pain (PLP), and phantom limb sensation (PLS) Assess and treat contributing musculoskeletal problems",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 101,
+    "end_page": 101,
+    "language": "en",
+    "score": 0.7588
+   },
+   "excerpt": "Imagery (GMI) Assess and treat residual limb pain (RLP), phantom limb pain (PLP), and phantom limb sensation (PLS) Provide treatment plan for RLP, PLP, PLS, including: …",
+   "summary_en": null,
+   "summary_ar": null
+  },
+  {
+   "field": "activity.functional_goals",
+   "label": "Functional goals",
+   "status": "not recorded",
+   "why_needed": "Functional goals was not recorded at intake. VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0) (2024), p. 107 discusses this topic (quoted below); check whether it applies to this case.",
+   "source_protocol_reference": "lower_limb_amputation_va_dod_cpg_2024-0395",
+   "evidence": {
+    "chunk_id": "lower_limb_amputation_va_dod_cpg_2024-0395",
+    "text": "Promote ROM and strengthening of proximal joints and muscles 5. Patient Education • Pain management • Manage expectations regarding pain post-amputation (e.g., May not be resolved w/ amputation) • Patient safety/fall precautions • Prevention of complications • Procedural/Recovery Issues • Level of amputation • Positioning • Rehabilitation process • Pain management • Residual limb care • Edema control • ACE wrapping or shrinker use • Wound care • Prosthetic timeline • Positioning • Rehabilitation process • Pain management • Residual limb care • Edema control • Application of shrinker • Prosthetic timeline • Prosthetic goals and expectation management • Pain management • Residual limb care, including edema management • Energy expenditure • Prosthetic education • Pain management • Equipment needs • Prosthetic goals and expectation management • Prevention",
+    "source": "01_guidelines/G01_VADoD_2024_Lower_Limb_Amputation_CPG.pdf",
+    "title": "VA/DoD Clinical Practice Guideline for Rehabilitation of Individuals with Lower Limb Amputation (Version 3.0)",
+    "year": 2024,
+    "page": 107,
+    "end_page": 107,
+    "language": "en",
+    "score": 0.684
+   },
+   "excerpt": "… • Pain management • Residual limb care • Edema control • Application of shrinker • Prosthetic timeline • Prosthetic goals and expectation management • Pain management • Residual limb care, including edema management • Energy expenditure • …",
+   "summary_en": null,
+   "summary_ar": null
+  },
+  {
+   "field": "prior_devices",
+   "label": "Prior prosthesis use",
+   "status": "not recorded",
+   "why_needed": "Prior prosthesis use was not recorded at intake. No passage in the source library was found on this topic, so whether it is needed is for the specialist to judge.",
+   "source_protocol_reference": null,
+   "evidence": null,
+   "excerpt": null,
+   "summary_en": null,
+   "summary_ar": null
+  }
+ ],
+ "generation": {
+  "prompt_version": "rag-v1",
+  "writer": "offline",
+  "effort": "medium",
+  "parts": {
+   "gaps": {
+    "kind": "gaps",
+    "status": "unavailable",
+    "reason": "baseline run: the Claude API is not called",
+    "model": null,
+    "usage": {},
+    "seconds": null,
+    "topics": [
+     "residual_limb.volume_stability",
+     "residual_limb.pain",
+     "activity.functional_goals",
+     "prior_devices"
+    ],
+    "items": [],
+    "removed": []
+   },
+   "components": {
+    "kind": "components",
+    "status": "unavailable",
+    "reason": "baseline run: the Claude API is not called",
+    "model": null,
+    "usage": {},
+    "seconds": null,
+    "topics": [
+     "functional_level",
+     "foot_ankle",
+     "pylon",
+     "socket",
+     "interface",
+     "suspension"
+    ],
+    "items": [],
+    "removed": []
+   },
+   "fitting": {
+    "kind": "fitting",
+    "status": "unavailable",
+    "reason": "baseline run: the Claude API is not called",
+    "model": null,
+    "usage": {},
+    "seconds": null,
+    "topics": [
+     "readiness",
+     "prosthesis_stage",
+     "fitting",
+     "alignment"
+    ],
+    "items": [],
+    "removed": []
+   }
+  }
+ }
+}

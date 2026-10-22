@@ -20,7 +20,8 @@ It is **decision support, not a replacement** for the specialist. It lists
 missing information and shows what the guidelines and manuals in its
 source library say about the case: since 2026-10-11 it is a **RAG**
 (retrieval-augmented generation). A local search finds the passages, and
-the Claude API writes one short sentence about each, labelled as AI, with
+a cloud language model (Gemini's free tier, or the Claude API) writes one
+short sentence about each, labelled as AI, with
 the source's own words quoted below it. Code checks every quote word for
 word against its passage and removes any sentence whose quote isn't there.
 It does not diagnose, prescribe, choose or rank components, or judge
@@ -36,7 +37,7 @@ record numbers) are collected.
 |-----------------------------|-------------------------------------|------------------------------------|
 | 01 Case data                | `intake/`, `shared/case_schema.py`  | Working: form (incl. prior prostheses), schema, validation |
 | 02 Information analysis     | `knowledge/`                        | Working: extraction, chunking, multilingual search (en/ar; German ingested, not searched), one search per missing field and per RAG topic |
-| 03 Specialised reasoning    | `reasoning/rag.py`, `reasoning/writer.py`, `reasoning/quote_check.py` | Working (RAG, since 2026-10-11): the Claude API summarises the passages found; every quote checked word for word; without the API, the gaps fall back to `reasoning/gap_analysis.py` and the passages are listed. The hand-written statements are the answer key |
+| 03 Specialised reasoning    | `reasoning/rag.py`, `reasoning/writer.py`, `reasoning/quote_check.py` | Working (RAG, since 2026-10-11): a cloud language model (Gemini free tier or Claude API) summarises the passages found; every quote checked word for word; without the API, the gaps fall back to `reasoning/gap_analysis.py` and the passages are listed. The hand-written statements are the answer key |
 | 04 Assistive output         | `reasoning/models.py`               | Working: gap list, functional level, statements per component, and design and fitting statements: an AI sentence each, labelled, over the source's quote |
 | 05 Specialist review        | `review/`                           | Working: approve / edit / reject, needed / not needed per gap, relevant / not relevant per component or fitting statement |
 | 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/review_log.jsonl` |
@@ -59,20 +60,33 @@ Then open http://127.0.0.1:5000. The first case you submit takes about
 10 seconds while the search model loads. Build the search index first
 (below), or the review page will warn that no sources were searched.
 
-**The AI summaries need a Claude API key** (an Anthropic account with
-billing). Set it before starting the app:
+**The AI summaries need a Gemini API key** (free, since 2026-10-13). Sign
+in at [Google AI Studio](https://aistudio.google.com/), choose *Get API
+key*, create one, and set it before starting the app:
 
 ```
-$env:ANTHROPIC_API_KEY = "sk-ant-..."      # PowerShell; never put it in a project file
+$env:GEMINI_API_KEY = "..."      # PowerShell; never put it in a project file
 python app.py
 ```
 
-Each case then makes three calls to the Claude API (`claude-opus-5-5`,
-`shared/config.py`), at the same time: one for the gaps, one for the
-functional level and components, one for design and fitting. **The case
-as entered is sent to the API**, so enter fake test data only. Cost and
-time per case are measured in `python -m intake.golden_cases --rag`
-(FUTURE_WORK.md).
+Each case then makes three calls to the Gemini API (`gemini-3.8-flash`,
+`GEMINI_MODEL` in `shared/config.py`), at the same time: one for the gaps,
+one for the functional level and components, one for design and fitting.
+**Each case's amputation level, side and recorded K-level are sent to
+Google, with the passages found** (never what was typed at intake:
+`case_for_prompt` in `reasoning/rag.py`). On the free tier Google uses
+prompts and answers to improve its products and human reviewers may read
+them, so enter fake test data only (Google's terms allow only a paid key
+for an app offered to users in the EEA, Switzerland or the UK). The free tier limits
+requests per minute and per day; your project's limits are shown in AI
+Studio. When they are used up, the page says so and shows the passages
+without summaries until the quota resets. If they are too tight,
+`GEMINI_MODEL = "gemini-3.5-flash-lite"` usually allows more requests.
+
+To use the Claude API instead (paid): set `LLM_PROVIDER = "claude"` in
+`shared/config.py` and `$env:ANTHROPIC_API_KEY = "sk-ant-..."`. Time,
+tokens and (for Claude) cost per case are measured in
+`python -m intake.golden_cases --rag` (FUTURE_WORK.md).
 
 Without a key, or offline, the app still works: the page says why there are
 no summaries, the gaps cite passages through the topic-word check, and
@@ -137,19 +151,22 @@ python -m knowledge.evaluate
      ankle, pylon, socket, interface, suspension; upper limb: type of
      prosthesis, control and fit), and each fitting section (readiness,
      preparatory or definitive, fitting, alignment), with the queries in
-     `reasoning/rag_topics.py`, which name the case's level, side and
-     K-level.
-2. **Summarise (Claude API).** `reasoning/rag.py` sends three requests at
+     `reasoning/rag_topics.py`, which name the case's level and limb,
+     "bilateral" for a bilateral case (left and right are not named), and
+     the recorded K-level.
+2. **Summarise (cloud model: Gemini API, or Claude API).** `reasoning/rag.py` sends three requests at
    once (gaps; functional level and components; fitting). Each holds the
-   instructions (`SYSTEM_PROMPT`, versioned by `PROMPT_VERSION`), the case
-   as entered, the topics and the passages found, each with its id. The
+   instructions (`SYSTEM_PROMPT`, versioned by `PROMPT_VERSION`), the
+   case's amputation level, side and recorded K-level (nothing typed at
+   intake), the topics and the passages found, each with its id. The
    instructions say: use only these passages; back every sentence with a
    quote copied character for character; say whom the source says it
    applies to, in its own words; give both sides where sources differ;
    copy a grade only if the passage prints it; never advise, choose, rank
    or say whether the patient is ready. The answer must be JSON in a fixed
    shape (structured output). `reasoning/writer.py` is the one place that
-   talks to the API, so a local model could replace it later.
+   talks to the API (`GeminiWriter` or `ClaudeWriter`, by `LLM_PROVIDER`),
+   so another model, or a local one, can replace it.
 3. **Check (code).** `reasoning/quote_check.py` keeps an item only if its
    quote is in the named passage word for word (line breaks and the print
    form of quotation marks and dashes aside), at least five words long,
@@ -246,8 +263,39 @@ python -m review.trial_report            # counts from the review log -> data/tr
 ```
 python -m unittest
 python -m intake.golden_cases     # fake cases with the output they must give (data/eval/golden_cases/)
-python -m intake.golden_cases --rag   # also measure the RAG (calls the Claude API: costs money)
+python -m intake.golden_cases --rag   # also measure the RAG (calls the cloud model: free-tier quota or money)
+python -m intake.golden_cases --held-out   # the frozen held-out cases instead (only when the owner asks)
+python -m intake.retrieval_misses   # why expected statements don't reach the writer (development cases,
+                                    # real search, no AI; --json FILE keeps every record)
+python -m reasoning.sentence_checks # flags on stored AI sentences (data/cases/): measurement only
 ```
+
+`reasoning.sentence_checks` flags kept AI items whose sentence has a number,
+code (K0-K4, L-codes) or amputation level its quote doesn't, a negation that
+differs, advice wording, or Arabic numbers or codes that differ from the
+English. It removes nothing and the page doesn't show the flags; `--rag`
+reports them too, so the owner can choose patterns from real output.
+
+The golden cases, the two guides behind the answer key, the owner's rule
+table and the review logs are protected in Claude Code: a project hook
+(`.claude/hooks/protect_yardstick.py`) makes Claude ask before editing them.
+
+`intake.retrieval_misses` measures the search's ceiling for `--rag`: for
+each development case and expected statement, whether a passage the topic
+search returns (top `RAG_TOP_K`) is from the statement's document and shares
+six words in a row with it, and for each miss, why: the statement's own words
+would find it (the topic query is the problem), even they don't (chunking or
+embedding), or nothing can find it. The first run is in
+`data/eval/baseline/2026-10-16/` and FUTURE_WORK.md.
+
+**Held-out cases (2026-10-13).** Of the 13 golden cases, 8 are for
+development (`data/eval/golden_cases/`): they run by default, and the
+search, topics and prompt may be tuned on them. The other 5 are held out
+(`data/eval/golden_cases_held_out/`) to measure whether that tuning carries
+over to cases it never saw. They are frozen: each one's content hash is in
+`data/eval/golden_cases_held_out.json`, a test fails if a case changes, and
+`--held-out` runs nothing until they match. They run only with `--held-out`,
+when the owner asks, and each run is recorded in FUTURE_WORK.md.
 
 The golden cases run through the same analysis as the intake form (one is
 submitted through the Arabic form and must match its English twin). Their
@@ -275,7 +323,7 @@ shared/             Case schema, config (paths, settings, disclaimer), case stor
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
 knowledge/          Source catalog, text extraction, ingestion, search, evaluation,
                     knowledge items (the curated statements with their evidence fields)
-reasoning/          The RAG: topics, the AI writer (Claude API), the quote check, and the page's
+reasoning/          The RAG: topics, the AI writer (Gemini or Claude API), the quote check, and the page's
                     shapes; gap analysis without the AI; the hand-written statements and
                     their rules (the answer key)
 review/             Specialist review page and decision log (writes data/review_log.jsonl)
@@ -284,7 +332,7 @@ data/sources/       Knowledge documents: catalog.json in git, the PDFs kept loca
 data/knowledge/     The owner's evidence rules, the knowledge items and the items to curate (in git)
 data/extracted/     Cleaned text per document (generated, not in git)
 data/vector_store/  Chunks and their vectors (generated, not in git)
-data/eval/          Retrieval evaluation queries and golden cases (in git)
+data/eval/          Retrieval evaluation queries, golden cases and the frozen held-out cases (in git)
 data/cases/         One JSON file per case entered (not in git)
 data/trial/         Arabic term sheet, prepared trial cases (in git); trial report (not in git)
 ```

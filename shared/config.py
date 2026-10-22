@@ -48,8 +48,13 @@ RETRIEVAL_LANGUAGES = ("en", "ar")
 # answers scored 0.58 or more, off-topic text at most 0.44.
 MIN_RELEVANCE_SCORE = 0.50
 EVAL_QUERIES_PATH = DATA_DIR / "eval" / "retrieval_queries.json"
-# One fake case per file with the output it must give (intake/golden_cases.py)
+# One fake case per file with the output it must give (intake/golden_cases.py):
+# the development cases, run by default and free to tune against
 GOLDEN_CASES_DIR = DATA_DIR / "eval" / "golden_cases"
+# Golden cases held out (2026-10-13): frozen, never tuned on, run only with --held-out.
+# The manifest holds each one's content hash; the tests fail if a case changes.
+GOLDEN_HELD_OUT_DIR = DATA_DIR / "eval" / "golden_cases_held_out"
+GOLDEN_HELD_OUT_MANIFEST = DATA_DIR / "eval" / "golden_cases_held_out.json"
 # Only documents whose catalog "domains" include one of these are searched.
 # v1 is use case 01 (amputation), so orthotics-only documents are skipped.
 RETRIEVAL_DOMAINS = ("prosthetics",)
@@ -62,8 +67,8 @@ RETRIEVAL_DOMAINS = ("prosthetics",)
 # queries (see FUTURE_WORK.md, design and fitting).
 RETRIEVAL_EXCLUDED_DOCUMENTS = ("prosthetic_gait_analysis_icrc_manual_2014",)
 
-# RAG (owner's decision, 2026-10-11): retrieval plus the Claude API, which
-# writes short summary sentences, each backed by an exact quote that
+# RAG (owner's decision, 2026-10-11): retrieval plus a cloud language model
+# (LLM_PROVIDER below), which writes short summary sentences, each backed by an exact quote that
 # reasoning/quote_check.py verifies before it is shown (reasoning/rag.py).
 # Passages searched per topic (component, fitting section, functional level).
 RAG_TOP_K = 6
@@ -77,34 +82,51 @@ RAG_TOPIC_EXCLUDED_DOCUMENTS: tuple[str, ...] = ()
 MIN_QUOTE_WORDS = 5
 # Items kept per topic (a gap field gets at most one).
 MAX_ITEMS_PER_TOPIC = 4
-# The Claude API. No key here: the SDK reads ANTHROPIC_API_KEY from the
-# environment (or an `ant auth login` profile).
+# Which cloud language model writes the summaries (reasoning/writer.py):
+# "gemini" (owner's decision 2026-10-13: the Gemini API's free tier) or
+# "claude" (the Claude API, the choice of 2026-10-11).
+LLM_PROVIDER = "gemini"
+# The Gemini API. No key here: set GEMINI_API_KEY (from Google AI Studio).
+# On the free tier Google uses prompts and answers to improve its products
+# and human reviewers may read them, so fake test data only (CLAUDE.md 4).
+# Its free limits (requests per minute and per day) are shown per project in
+# Google AI Studio; Google doesn't publish them.
+GEMINI_MODEL = "gemini-3.8-flash"
+GEMINI_API_KEY_ENV = "GEMINI_API_KEY"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+# The Claude API (LLM_PROVIDER "claude"). No key here: the SDK reads
+# ANTHROPIC_API_KEY from the environment (or an `ant auth login` profile).
 LLM_MODEL = "claude-opus-5-5"
 LLM_EFFORT = "medium"  # low / medium / high / xhigh / max
-LLM_MAX_TOKENS = 32000
-LLM_TIMEOUT_SECONDS = 300
+LLM_MAX_TOKENS = 32000  # both providers
+LLM_TIMEOUT_SECONDS = 300  # both providers
 # On a refusal by the safety classifiers, the API retries on the model
 # Anthropic recommends for that case (server-side fallbacks); the log
 # records the model that answered.
 LLM_FALLBACKS = True
 # Changes whenever the instructions sent to the model change; logged with
 # every decision, so a reviewer's marks can be traced to the prompt.
-PROMPT_VERSION = "rag-v1"  # first version: 2026-10-11
-# Set (to anything) to switch the Claude API off: the app then shows the
-# passages without summaries. The tests set it, so they never call the API.
+# rag-v1 (2026-10-11): the whole case as entered. rag-v2 (2026-10-16): only
+# the amputation level, side and recorded K-level (reasoning/rag.py case_for_prompt).
+PROMPT_VERSION = "rag-v2"
+# Set (to anything) to switch the AI writer off: the app then shows the
+# passages without summaries. The tests set it, so they never call an API.
 OFFLINE_ENV = "AI_PROSTHETIC_LAB_OFFLINE"
 
 # Shown on every review page. The tool reports missing information and quotes
 # what its sources say about components, design and fitting; it does not make
 # clinical decisions. Revised 2026-10-08 when component statements were added
-# (was: "missing information only"), 2026-10-09 for design and fitting, and
-# 2026-10-11 for the AI summaries (RAG).
+# (was: "missing information only"), 2026-10-09 for design and fitting,
+# 2026-10-11 for the AI summaries (RAG), 2026-10-13 to name no model
+# (the provider is a setting), and 2026-10-16 to say first that this is an
+# unvalidated research prototype (blueprint §14: truthful labelling).
 DISCLAIMER = (
+    "Research prototype, not validated for clinical use. "
     "This is automated decision support, not a clinical assessment, diagnosis "
     "or prescription. It lists intake information that appears to be missing "
     "and shows what the guidelines and manuals in its source library say "
     "about this case's prosthetic components, design and fitting. Each short "
-    "summary is written by an AI language model (Claude) and may be wrong; "
+    "summary is written by an AI language model and may be wrong; "
     "below it is the source's own words, checked word for word against the "
     "passage, with the source's grade where it gives one. Check each summary "
     "against its quote. It does not choose or rank components. It does not "
