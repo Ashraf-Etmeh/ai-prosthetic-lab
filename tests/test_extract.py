@@ -16,6 +16,7 @@ from knowledge.extract import (
     drop_search_syntax,
     extract_document,
     read_extracted,
+    repair_split_ligatures,
     write_extracted,
 )
 
@@ -56,6 +57,29 @@ class CleanTextTests(unittest.TestCase):
 
     def test_spacing_tidied(self):
         self.assertEqual(clean_text("  a   b \n\n\n\n c  "), "a b\n\nc")
+
+
+class SplitLigatureTests(unittest.TestCase):
+    # As the ICRC ankle-foot orthosis manual (2010) comes out of its PDF.
+    def test_words_split_after_a_ligature_are_joined(self):
+        self.assertEqual(
+            repair_split_ligatures("Th e initial fi tting. Dorsifl exion, diff erent, effi ciency"),
+            "The initial fitting. Dorsiflexion, different, efficiency",
+        )
+
+    def test_whole_words_ending_in_ff_stay_apart(self):
+        self.assertEqual(repair_split_ligatures("cut off the excess; the cuff belt"),
+                         "cut off the excess; the cuff belt")
+
+    def test_only_documents_marked_in_the_catalog(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / "test_doc.txt").write_text("Th e initial fi tting is performed in the clinic.",
+                                                 encoding="utf-8")
+            plain = extract_document(make_doc(), sources_dir=folder)
+            marked = extract_document(make_doc(split_ligatures=True), sources_dir=folder)
+        self.assertEqual(plain.pages, [(1, "Th e initial fi tting is performed in the clinic.")])
+        self.assertEqual(marked.pages, [(1, "The initial fitting is performed in the clinic.")])
 
 
 class DropReferencesTests(unittest.TestCase):

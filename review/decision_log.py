@@ -23,7 +23,14 @@ object that can be read on its own, holding
   "guide"), the AI's sentences in English and Arabic, the passage it was
   found in (id and full text), and "generation": the prompt version, the
   model, and per part (gaps, components, fitting) whether the AI answered,
-  why not, its token counts and time, and what the quote check removed.
+  why not, its token counts and time, and what the quote check removed,
+- since version 7 (2026-10-23): "plan", an orthotic case's work after the
+  analysis as the orthotist saved it (requirements with their findings and
+  priorities, design options with their parts, marks and notes, the chosen
+  option and its reason, the design steps and every parameter version:
+  orthotics/plan.py); and the decision "design_choice", logged when the
+  orthotist records the option chosen on the options page, with the reason
+  as its note.
 
 Lines are only ever added. Editing or removing a logged decision is out of
 scope for v1 (FUTURE_WORK.md).
@@ -36,6 +43,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from knowledge.retrieval import domains_for
 from reasoning.models import CitedStatement, ComponentSection, ComponentSupport, FittingSupport, Gap, Quote
 from reasoning.rag import Generation
 from shared.config import (
@@ -45,7 +53,6 @@ from shared.config import (
     MIN_RELEVANCE_SCORE,
     RAG_TOP_K,
     RAG_TOPIC_EXCLUDED_DOCUMENTS,
-    RETRIEVAL_DOMAINS,
     RETRIEVAL_LANGUAGES,
     RETRIEVAL_TOP_K,
     REVIEW_LOG_PATH,
@@ -54,6 +61,9 @@ from shared.i18n import DEFAULT_LANGUAGE, TranslatableError
 from shared.store import CaseRecord
 
 DECISIONS = ("approve", "edit", "reject")
+# Orthotics (version 7): the option the orthotist chose on the options page. Logged
+# only through record_design_choice(), never from the review page's form.
+DESIGN_CHOICE = "design_choice"
 GAP_JUDGEMENTS = ("needed", "not_needed")
 STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
 # Raise when the shape of an entry changes. 2 (2026-10-08): adds "ui_language";
@@ -63,8 +73,17 @@ STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
 # statement, and "items" for a quote that introduces a list. 5 (2026-10-11,
 # the RAG): adds "generation", per statement "origin", "summary_en",
 # "summary_ar", "chunk_id" and "passage", per gap "summary_en" and
-# "summary_ar", and the RAG settings.
-LOG_VERSION = 5
+# "summary_ar", and the RAG settings. 6 (2026-10-22, orthotics): adds "domain"
+# ("prosthetics" or "orthotics"); for an orthotic case "components" holds the
+# orthosis and FES options with "functional_level" null, "fitting" its design
+# and fitting, and "settings" the orthotic search domains. An entry without
+# "domain" (versions 1-5) is a prosthetics case. 7 (2026-10-23): adds "plan"
+# (null for a prosthetic case or an orthotic case with nothing saved yet) and
+# the decision "design_choice"; an entry without "plan" (versions 1-6) has none.
+# 8 (2026-10-23, prompt rag-v3): an entry of generation.parts.*.removed may
+# have "dropped": "repeat", a quote already shown under an earlier topic (not
+# a failed check: reasoning/rag.py drop_repeats); before, only "item" or "grade".
+LOG_VERSION = 8
 
 # The development server answers requests in threads; one write at a time
 # keeps two decisions from mixing into one line.
@@ -93,7 +112,7 @@ def build_entry(
     note = (note or "").strip() or None
     gap_judgements = gap_judgements or {}
     statement_judgements = statement_judgements or {}
-    if decision not in DECISIONS:
+    if decision not in DECISIONS and not (decision == DESIGN_CHOICE and record.plan and record.plan.chosen):
         raise InvalidDecision("error.unknown_decision", decision=decision)
     if decision == "edit" and note is None:
         raise InvalidDecision("error.edit_needs_note")
@@ -114,6 +133,7 @@ def build_entry(
         "log_version": LOG_VERSION,
         "logged_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "case_id": record.case.case_id,
+        "domain": record.case.domain,
         "decision": decision,
         "note": note,
         "ui_language": ui_language,
@@ -127,13 +147,14 @@ def build_entry(
             "embedding_revision": EMBEDDING_MODEL_REVISION,
             "min_relevance_score": MIN_RELEVANCE_SCORE,
             "retrieval_languages": list(RETRIEVAL_LANGUAGES),
-            "retrieval_domains": list(RETRIEVAL_DOMAINS),
+            "retrieval_domains": list(domains_for(record.case)),
             "retrieval_top_k": RETRIEVAL_TOP_K,
             "rag_top_k": RAG_TOP_K,
             "rag_topic_excluded_documents": list(RAG_TOPIC_EXCLUDED_DOCUMENTS),
             "min_quote_words": MIN_QUOTE_WORDS,
         },
         "case": record.case.to_dict(),
+        "plan": record.plan.to_dict() if record.plan else None,
     }
 
 
@@ -239,12 +260,13 @@ def _components_entry(support: Optional[ComponentSupport], judgements: dict[str,
         return None
     functional = support.functional
     return {
+        # None for an orthotic case (no K-level).
         "functional_level": {
             "lower_limb": functional.lower_limb,
             "k_level": functional.k_level,
             "description": _quoted(functional.description) if functional.description else None,
             "cautions": [_quoted(cited) for cited in functional.cautions],
-        },
+        } if functional is not None else None,
         "notes": list(support.notes),  # why some statements were left out
         "sections": _sections_entry(support.sections, judgements, record),
     }
@@ -272,7 +294,19 @@ def record_decision(
     statement_judgements: Optional[dict[str, str]] = None,
 ) -> dict:
     """Validate the decision, append it to the log as one line, and return the entry."""
-    entry = build_entry(record, decision, note, gap_judgements, ui_language, statement_judgements)
+    if decision == DESIGN_CHOICE:  # only through record_design_choice()
+        raise InvalidDecision("error.unknown_decision", decision=decision)
+    return _append(build_entry(record, decision, note, gap_judgements, ui_language, statement_judgements), path)
+
+
+def record_design_choice(record: CaseRecord, path: Optional[Path] = None,
+                         ui_language: str = DEFAULT_LANGUAGE) -> dict:
+    """Log the option the orthotist chose (record.plan.chosen), its reason as the note, and the whole plan."""
+    return _append(build_entry(record, DESIGN_CHOICE, record.plan.choice_reason if record.plan else None,
+                               ui_language=ui_language), path)
+
+
+def _append(entry: dict, path: Optional[Path]) -> dict:
     path = path or REVIEW_LOG_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(entry, ensure_ascii=False)  # Arabic stays readable in the file

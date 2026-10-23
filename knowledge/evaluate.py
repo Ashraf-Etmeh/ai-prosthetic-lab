@@ -30,6 +30,7 @@ from knowledge.retrieval import VectorStore, get_store
 from shared.config import (
     EVAL_QUERIES_PATH,
     MIN_RELEVANCE_SCORE,
+    ORTHOTIC_TOPICS_PATH,
     RETRIEVAL_DOMAINS,
     RETRIEVAL_EXCLUDED_DOCUMENTS,
     RETRIEVAL_LANGUAGES,
@@ -123,10 +124,63 @@ def load_queries(path: Path = EVAL_QUERIES_PATH) -> list[dict]:
     return json.loads(path.read_text(encoding="utf-8"))["queries"]
 
 
+# ---- Orthotics (added 2026-10-22): the app's own topic searches -------------
+
+
+def orthotic_topic_ranks(
+    path: Path = ORTHOTIC_TOPICS_PATH,
+    store: Optional[VectorStore] = None,
+    embed: Callable[[list[str]], np.ndarray] = embed_texts,
+) -> list[tuple[str, str, Optional[int], list[ProtocolChunk]]]:
+    """(case id, topic, rank of the first right passage or None, passages) for every case and listed topic.
+
+    Runs knowledge/retrieval.py retrieve_relevant_chunks: the very searches the
+    app makes for the case (orthotics/topics.py), so it
+    measures what the AI would be given. A topic the case doesn't search (a
+    field it recorded) is skipped.
+    """
+    from knowledge.retrieval import retrieve_relevant_chunks  # here: the prosthetic run doesn't need it
+    from shared.case_schema import case_from_dict
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    store = store if store is not None else get_store()
+    rows = []
+    for entry in data["cases"]:
+        found = retrieve_relevant_chunks(case_from_dict(entry["case"]), store=store, embed=embed)
+        for topic, expected in data["topics"].items():
+            if topic not in found:
+                continue
+            chunks = found[topic]
+            rank = next((i for i, c in enumerate(chunks, 1) if is_answer(c, expected)), None)
+            rows.append((entry["id"], topic, rank, chunks))
+    return rows
+
+
+def orthotic_report(rows) -> None:
+    from collections import Counter
+
+    cases = list(dict.fromkeys(case for case, _, _, _ in rows))
+    topics = list(dict.fromkeys(topic for _, topic, _, _ in rows))
+    rank = {(case, topic): r for case, topic, r, _ in rows}
+    print(f"{'topic':32} " + " ".join(f"{case:>12}" for case in cases))
+    for topic in topics:
+        cells = [rank.get((case, topic), "-") for case in cases]
+        print(f"{topic:32} " + " ".join(f"{('-' if c == '-' else (c if c else 'miss')):>12}" for c in cells))
+    hits = sum(1 for _, _, r, _ in rows if r)
+    print(f"\nTopic searches with a right passage among those the AI sees: {hits}/{len(rows)}")
+    documents = Counter(chunk.doc_id for _, _, _, chunks in rows for chunk in chunks)
+    print("Passages per document across these searches:",
+          ", ".join(f"{doc} {n}" for doc, n in documents.most_common()))
+
+
 def main(
     store: Optional[VectorStore] = None,
     embed: Callable[[list[str]], np.ndarray] = embed_texts,
+    orthotics: bool = False,
 ) -> None:
+    if orthotics:
+        orthotic_report(orthotic_topic_ranks(store=store, embed=embed))
+        return
     queries = load_queries()
     store = store if store is not None else get_store()
     # Queries that need the German documents can't run without them.
@@ -137,4 +191,8 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    main(orthotics="--orthotics" in sys.argv[1:])
+
+

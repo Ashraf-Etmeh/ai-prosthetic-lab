@@ -606,6 +606,17 @@ class ComponentRouteTests(RouteTestCase):
         [removed] = store.all()[-1].generation.part("components").removed
         self.assertEqual(removed["reason"], "quote not found word for word in the passage")
 
+    def test_a_quote_shown_under_an_earlier_section_is_not_shown_again(self):
+        # The fake writer quotes the same words for the knee and for alignment: shown once, and said why.
+        with patch("intake.routes.retrieve_relevant_chunks",
+                   side_effect=lambda case: {**fake_retrieval(case), "alignment": [KNEE_PASSAGE]}):
+            page = self.review(amputation_level="transfemoral", k_level="K2")
+        self.assertRegex(page, r"Alignment\s+No AI summary for this section: the AI gave it only a quote that is "
+                               r"already shown under an earlier section\. Check the passages the search found below\.")
+        self.assertEqual(page.count("AI sentence about knee."), 1)
+        self.assertNotIn("AI sentence about alignment.", page)
+        self.assertNotIn("removed by the checks", page)  # not a failed check
+
     def test_upper_limb(self):
         page = self.review(amputation_level="transradial")
         self.assertIn("K-levels describe the intended use of a lower-limb prosthesis", page)

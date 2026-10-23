@@ -3,7 +3,9 @@
 Every golden case marked "reviewed" runs here (statements, supporting
 sources, reasoning path, functional level, and for an Arabic or twin case
 the intake form and the twin), so a regression fails the normal test run.
-Unreviewed cases stay out: only `python -m intake.golden_cases` checks them.
+Unreviewed cases stay out: only `python -m intake.golden_cases` checks them,
+except that the orthotic drafts' gap lists are checked here (no answer key
+to check yet, and their gap list doesn't depend on the search).
 The held-out cases are hashed against their freeze and read for shape, never
 analysed: what the app gives for them is seen only in a --held-out run.
 
@@ -56,6 +58,7 @@ def _status(path: Path):
 REVIEWED = [path for path in sorted(GOLDEN_CASES_DIR.glob("*.json")) if _status(path) == "reviewed"]
 GOLDEN_01 = GOLDEN_CASES_DIR / "golden-01.json"  # reviewed; the fixtures below start from it
 HELD_OUT = sorted(GOLDEN_HELD_OUT_DIR.glob("*.json"))
+ORTHOTIC = sorted(GOLDEN_CASES_DIR.glob("golden-ort-*.json"))  # drafts, awaiting the owner's review
 
 
 def no_search(case):
@@ -290,6 +293,45 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(list(findings), ["functional level"])
 
 
+class OrthoticCaseTests(unittest.TestCase):
+    """Orthotic cases (2026-10-22): checked on their gaps only, as there is no orthotic answer key yet."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.folder = Path(tmp.name)
+        self.data = json.loads(ORTHOTIC[0].read_text(encoding="utf-8"))
+
+    def test_the_drafts_read_and_their_gaps_match(self):
+        self.assertTrue(ORTHOTIC)
+        for path in ORTHOTIC:
+            with self.subTest(path.name):
+                golden = read_golden_case(path)
+                self.assertTrue(golden.orthotic)
+                findings = by_check(check_case(golden, analyse_case(golden.case, retrieve=no_search)))
+                self.assertEqual(list(findings), ["gaps", "excluded documents"])
+                self.assertEqual(findings["gaps"].status, PASS, findings["gaps"].lines)
+
+    def test_only_the_gaps_can_be_expected(self):
+        changes = {
+            "statements": lambda d: d.update(evaluation_criteria=["gaps", "statements"]),
+            "a statement": lambda d: d["expected_answer"]["statements_present"].append("cms_k2_microprocessor_knee"),
+            "functional level": lambda d: d["expected_answer"].update(functional_level="cms_k3_description"),
+            "a source": lambda d: d["supporting_sources"].append("afo_manufacturing_icrc_2010"),
+            "Arabic form": lambda d: d.update(interface_language="ar"),
+            "a prosthetic field": lambda d: d["expected_answer"]["gaps"].append(
+                {"field": "residual_limb.pain", "source_expected": None}),
+        }
+        for name, change in changes.items():
+            with self.subTest(name):
+                data = copy.deepcopy(self.data)
+                change(data)
+                path = self.folder / f"{data['id']}.json"
+                path.write_text(json.dumps(data), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    read_golden_case(path)
+
+
 class ArabicInterfaceAndTwinTests(unittest.TestCase):
     """A case submitted through the Arabic intake form, checked against its English twin (golden-01)."""
 
@@ -413,6 +455,20 @@ class RagMeasureTests(unittest.TestCase):
         self.assertIn("0 of 2 kept items flagged", flags.lines[0])
         # The answer key's own checks still pass: the RAG is measured, never failed.
         self.assertEqual(found["statements"].status, PASS)
+
+    def test_a_quote_counts_for_the_statement_it_matches_best(self):
+        # ICRC prints nearly the same alignment sentence for transtibial (p. 31) and transfemoral (p. 36).
+        tt = golden_cases.RULES["icrc_tt_initial_alignment"].statement
+        tf = golden_cases.RULES["icrc_tf_initial_alignment"].statement
+        self.assertTrue(shares_a_run(tt.quote.text, tf.quote.text))  # why a 6-word run alone is not enough
+        self.assertEqual(golden_cases.counted_for(tt.quote.text, tt.doc_id), {tt.id})
+        self.assertEqual(golden_cases.counted_for(tf.quote.text, tf.doc_id), {tf.id})
+        # A quote holding two statements whole counts for both; one sharing no run, for none.
+        k3 = golden_cases.K_LEVEL_BY_ID["cms_k3_description"]
+        k4 = golden_cases.K_LEVEL_BY_ID["cms_k4_description"]
+        self.assertTrue({k3.id, k4.id} <= golden_cases.counted_for(f"{k3.quote.text} {k4.quote.text}", k3.doc_id))
+        self.assertEqual(golden_cases.counted_for("an unrelated sentence about something else", tt.doc_id), set())
+        self.assertEqual(golden_cases.longest_run("a b c d", "x b c d y"), 3)
 
     def test_rag_needs_the_search(self):
         with self.assertRaises(SystemExit) as stop:

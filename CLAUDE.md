@@ -32,7 +32,9 @@ Extend it; don't rebuild it. Before changing anything, read
    (name, date of birth, address, record numbers). Part of each case is
    sent to the cloud model with the passages (its amputation level, side
    and recorded K-level, never what was typed: `case_for_prompt` in
-   `reasoning/rag.py`, since 2026-10-16), which makes this doubly
+   `reasoning/rag.py`, since 2026-10-16; an orthotic case: condition, side
+   and months since onset, `orthotics/rag.py`, but only once the owner sets
+   `ORTHOTIC_CLOUD_AI`, off since 2026-10-23), which makes this doubly
    important: on Gemini's free tier Google uses what is sent to improve its
    products and human reviewers may read it.
 5. **Two interface languages: English and Arabic (right to left).** Quotes
@@ -114,6 +116,13 @@ against (`python -m intake.golden_cases --rag`).
    started before the trial, replacing "only after the trial results are
    in".) Its intake fields and which are critical, its topics, answer key
    and golden cases come from the owner; Claude may propose, not decide.
+   Built 2026-10-22 from Claude's proposal as drafts, at the owner's
+   request (`orthotics/`, branch `orthotics`): they stay marked as awaiting
+   the owner's and an orthotist's review until the owner confirms them.
+   2026-10-23: modules 2-4 from the owner's design canvas (requirements,
+   design options with materials and parts, digital design workflow;
+   `orthotics/plan.py`, `modules.py`); every value on them is the
+   orthotist's, never the tool's.
 
 ## Commands
 
@@ -122,6 +131,7 @@ python -m unittest            # all tests, ~1 s, no model needed
 python app.py                 # app at http://127.0.0.1:5000
 python -m knowledge.ingest    # rebuild data/extracted/ and the search index
 python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
+                              # --orthotics: the orthotic topic searches (data/eval/orthotic_topics.json)
 python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
                               # (python -m knowledge.evidence_rules does the same)
 python -m intake.golden_cases # development golden cases vs the app (--no-search: no model needed)

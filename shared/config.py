@@ -48,6 +48,9 @@ RETRIEVAL_LANGUAGES = ("en", "ar")
 # answers scored 0.58 or more, off-topic text at most 0.44.
 MIN_RELEVANCE_SCORE = 0.50
 EVAL_QUERIES_PATH = DATA_DIR / "eval" / "retrieval_queries.json"
+# Orthotics (2026-10-22): the app's own orthotic topic searches for fake cases, with the pages
+# that answer each topic (python -m knowledge.evaluate --orthotics).
+ORTHOTIC_TOPICS_PATH = DATA_DIR / "eval" / "orthotic_topics.json"
 # One fake case per file with the output it must give (intake/golden_cases.py):
 # the development cases, run by default and free to tune against
 GOLDEN_CASES_DIR = DATA_DIR / "eval" / "golden_cases"
@@ -108,7 +111,10 @@ LLM_FALLBACKS = True
 # every decision, so a reviewer's marks can be traced to the prompt.
 # rag-v1 (2026-10-11): the whole case as entered. rag-v2 (2026-10-16): only
 # the amputation level, side and recorded K-level (reasoning/rag.py case_for_prompt).
-PROMPT_VERSION = "rag-v2"
+# rag-v3 (2026-10-23, after the first live run): keep the source's hedges and
+# strength, nothing from outside the quote (reasoning/rag.py FAITHFULNESS), and
+# the review page's Arabic terms (ARABIC_TERMS).
+PROMPT_VERSION = "rag-v3"
 # Set (to anything) to switch the AI writer off: the app then shows the
 # passages without summaries. The tests set it, so they never call an API.
 OFFLINE_ENV = "AI_PROSTHETIC_LAB_OFFLINE"
@@ -135,4 +141,41 @@ DISCLAIMER = (
     "The lists may be incomplete: a field that is not listed has not been "
     "checked for adequacy, only for being filled in, and only passages the "
     "search found in the source library are used."
+)
+
+# Orthotics (use case 03, stroke AFO; added 2026-10-22). Searched instead of
+# RETRIEVAL_DOMAINS for an orthotic case: documents whose catalog domains
+# include "orthotics" (the stroke, AFO and FES sources, and the WHO P&O standards).
+ORTHOTIC_RETRIEVAL_DOMAINS = ("orthotics",)
+# At most this many passages from one document per orthotic search. Measured
+# 2026-10-22 (python -m knowledge.evaluate --orthotics, 26 topic searches):
+# without it the Choo 2021 meta-analysis filled 103 of 146 places, mostly its
+# title and table rows, which say nothing about fitting, outcome measures or
+# tone. With no case words in the search text, a limit of 1, 2 or 3 found a
+# right passage for 18, 18 and 20 of the 26; 3 is kept (Choo 50 of 146).
+ORTHOTIC_PASSAGES_PER_DOCUMENT = 3
+# Whether an orthotic case may go to the cloud writer (LLM_PROVIDER). Owner's
+# decision 2026-10-23: not yet. The orthotic library holds the ICRC AFO manual
+# (no reuse statement), NICE HTG178 and WHO text (CC BY-NC-SA 3.0 IGO), and the
+# orthotic fields, topics and prompt (rag-ort-v1) are unreviewed drafts. Until
+# the owner sets this, orthotic pages show the passages found without
+# summaries, whatever key is set (reasoning/rag.py generate()).
+ORTHOTIC_CLOUD_AI = False
+# The orthotic page's disclaimer: the same rules, for an orthosis.
+ORTHOTIC_DISCLAIMER = (
+    "Research prototype, not validated for clinical use. "
+    "This is automated decision support, not a clinical assessment, diagnosis "
+    "or prescription. It lists intake information that appears to be missing "
+    "and shows what the guidelines and manuals in its source library say "
+    "about ankle-foot orthoses and FES, and about orthosis design and fitting, "
+    "for this case. Each short summary is written by an AI language model and "
+    "may be wrong; below it is the source's own words, checked word for word "
+    "against the passage, with the source's grade where it gives one. Check "
+    "each summary against its quote. It does not choose or rank devices, set "
+    "angles or wearing times, or say whether this patient should have an "
+    "orthosis or FES. Every item requires review by a qualified orthotist, who "
+    "makes the decision. The orthotic intake fields and which are marked "
+    "critical are a draft awaiting the owner's and an orthotist's review. "
+    "The lists may be incomplete: only passages the search found in the "
+    "source library are used."
 )

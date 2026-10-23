@@ -40,7 +40,7 @@ import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field, replace
-from typing import Optional
+from typing import Callable, Optional
 
 from knowledge.models import ProtocolChunk
 from reasoning.component_guide import COMPONENTS
@@ -62,18 +62,67 @@ from reasoning.models import (
 )
 from reasoning.quote_check import QuoteRefused, find_quote, grade_after, locate_pages
 from reasoning.rag_topics import COMPONENTS_PART, FITTING, GAPS, PARTS, Topic, topics_for_case
-from reasoning.writer import Writer, WriterUnavailable
+from reasoning.writer import OfflineWriter, Writer, WriterUnavailable, is_cloud
 from shared.case_schema import Case
-from shared.config import LLM_EFFORT, MAX_ITEMS_PER_TOPIC, PROMPT_VERSION
+from shared.config import LLM_EFFORT, MAX_ITEMS_PER_TOPIC, ORTHOTIC_CLOUD_AI, PROMPT_VERSION
 from shared.field_guide import missing_fields
 
 log = logging.getLogger(__name__)
 
 OK, UNAVAILABLE, NO_PASSAGES = "ok", "unavailable", "no passages"
+# Part.removed "dropped" for an item whose quote is already shown under an earlier topic (drop_repeats).
+REPEAT = "repeat"
+# Why an orthotic page has no summaries while shared/config.py ORTHOTIC_CLOUD_AI is off.
+ORTHOTIC_AI_OFF = "the AI writer is switched off for orthotic cases (ORTHOTIC_CLOUD_AI in shared/config.py)"
 # The strengths of recommendation a passage may print (VA/DoD's wording). A
 # grade outside this list can't be given; "" is "none printed".
 GRADE_PHRASES = ("Strong for", "Weak for", "Neither for nor against", "Weak against", "Strong against")
 _ARABIC_LETTERS = re.compile("[؀-ۿ]")
+
+# Rule 3's second half (since rag-v3, 2026-10-23). The first live run kept every quote, but
+# three sentences said more than theirs: a hedge dropped ("Evidence ... suggests" became a
+# fact), a claim taken from the passage outside the quote, and "is carried out" made "must".
+FAITHFULNESS = (
+    "Keep the source's own certainty and strength: where it says that evidence suggests something, that "
+    "something may happen, or that a study found it, say that, and never state it as a plain fact. Never turn a "
+    "description (\"is carried out\", \"is used\") into an instruction (\"must\", \"should\"); write \"must\" or "
+    "\"should\" only where the quote does. Take every part of the sentence from the quote itself, not from the "
+    "rest of the passage or its heading."
+)
+
+# The Arabic terms of the review page (shared/i18n.py), so the AI's Arabic sentences use the
+# page's word for each thing, every time (the first live run gave socket as التجويف and
+# المقبس, transtibial as تحت الركبة and عبر القصبة, fitting as التركيب and التثبيت).
+# tests/test_rag.py checks that each is the page's own wording.
+ARABIC_TERMS = (
+    ("prosthesis", "الطرف الاصطناعي"),
+    ("residual limb", "الطرف المتبقي"),
+    ("amputation", "البتر"),
+    ("socket", "التجويف"),
+    ("interface", "الواجهة"),
+    ("liner", "البطانة"),
+    ("suspension", "نظام التعليق"),
+    ("knee unit", "وحدة الركبة"),
+    ("foot and ankle", "القدم والكاحل"),
+    ("pylon", "الأنبوب الواصل"),
+    ("alignment", "المحاذاة"),
+    ("fitting", "التركيب"),
+    ("readiness for fitting", "الجاهزية للتركيب"),
+    ("preparatory (interim) prosthesis", "طرف اصطناعي تمهيدي (مؤقت)"),
+    ("definitive", "نهائي"),
+    ("functional level, K-level", "المستوى الوظيفي"),
+    ("transtibial, TT", "تحت الركبة"),
+    ("transfemoral, TF", "فوق الركبة"),
+    ("knee disarticulation", "فصل مفصل الركبة"),
+    ("transradial", "تحت المرفق"),
+    ("transhumeral", "فوق المرفق"),
+    ("phantom pain", "ألم شبحي"),
+)
+
+
+def terms_line(terms: tuple[tuple[str, str], ...]) -> str:
+    return "; ".join(f"{english} = {arabic}" for english, arabic in terms)
+
 
 SYSTEM_PROMPT = f"""\
 You help a prosthetics specialist review one fictional amputation case. You receive the case's amputation \
@@ -91,9 +140,9 @@ it. Code compares every quote with its passage and deletes any item whose quote 
 source by a short name (for example "The VA/DoD guideline", "The CMS consensus document", "The ICRC manual", \
 "The WHO standards"). Say whom the source says it applies to, in the source's own terms (for example "for \
 prosthetic ambulators", "at the K2 level", "TT", "unilateral"). Put nothing in the sentence that the quote does \
-not say.
-4. sentence_ar is the same sentence in Modern Standard Arabic. The quote stays in its own language; never \
-translate it.
+not say. {FAITHFULNESS}
+4. sentence_ar is the same sentence in Modern Standard Arabic. Use the Arabic terms of the specialist's page, the \
+same term every time: {terms_line(ARABIC_TERMS)}. The quote stays in its own language; never translate it.
 5. Report; never advise. Do not recommend, prescribe, choose or rank components, devices or treatments, do not \
 diagnose, and do not say or suggest whether this patient is or is not ready for fitting. Never write in your \
 own voice that something "should" be done for this patient; when a source recommends something, attribute it \
@@ -122,6 +171,7 @@ TASKS = {
              "this patient meets them.",
 }
 MAX_ITEMS = {GAPS: 1, COMPONENTS_PART: MAX_ITEMS_PER_TOPIC, FITTING: MAX_ITEMS_PER_TOPIC}
+CASE_HEADING = "CASE (fictional; amputation level, side and recorded functional level only; null means not recorded)"
 
 
 @dataclass(frozen=True)
@@ -152,7 +202,8 @@ class Part:
     seconds: Optional[float] = None
     topics: list[str] = field(default_factory=list)  # the topics asked about
     items: list[Item] = field(default_factory=list)
-    # Items (or grades) the check took out: topic, passage_id, quote, reason, dropped ("item" or "grade").
+    # Items (or grades) the check took out: topic, passage_id, quote, reason, dropped ("item" or "grade",
+    # or REPEAT: a quote shown under an earlier topic, not a failed check).
     removed: list[dict] = field(default_factory=list)
 
     @property
@@ -166,6 +217,10 @@ class Part:
     def removed_for(self, topic: str) -> int:
         """How many of the AI's items for one topic the checks took out."""
         return sum(1 for entry in self.removed if entry["dropped"] == "item" and entry["topic"] == topic)
+
+    def repeats_for(self, topic: str) -> int:
+        """How many of the AI's items for one topic are shown under an earlier topic instead."""
+        return sum(1 for entry in self.removed if entry["dropped"] == REPEAT and entry["topic"] == topic)
 
 
 @dataclass
@@ -225,6 +280,35 @@ def case_for_prompt(case: Case) -> str:
     return json.dumps(data, ensure_ascii=False, indent=1)
 
 
+@dataclass(frozen=True)
+class Profile:
+    """What a domain's RAG asks: its parts, instructions and what the writer is told about a case.
+
+    The checks (quote, page, grade, Arabic sentence) are the same for every
+    domain; only these differ. PROSTHETICS is the one this module has always
+    used; the orthotic one is in orthotics/rag.py (added 2026-10-22).
+    """
+
+    parts: tuple[str, ...]
+    system_prompt: str
+    tasks: dict
+    max_items: dict
+    case_for_prompt: Callable
+    case_heading: str
+    prompt_version: str
+
+
+PROSTHETICS = Profile(PARTS, SYSTEM_PROMPT, TASKS, MAX_ITEMS, case_for_prompt, CASE_HEADING, PROMPT_VERSION)
+
+
+def profile_for(case) -> "Profile":
+    """The profile of the case's domain."""
+    if case.domain == "orthotics":
+        from orthotics.rag import PROFILE  # here: orthotics/rag.py builds on this module
+        return PROFILE
+    return PROSTHETICS
+
+
 def answer_schema(topic_keys: list[str], passage_ids: list[str]) -> dict:
     """The JSON the answer must match. Topics and passage ids can only be ones given."""
     return {
@@ -261,14 +345,15 @@ def _passages_of(topics: list[Topic], passages: dict[str, list[ProtocolChunk]]) 
     return by_id
 
 
-def user_message(part: str, case: Case, topics: list[Topic], passages: dict[str, list[ProtocolChunk]]) -> str:
+def user_message(part: str, case: Case, topics: list[Topic], passages: dict[str, list[ProtocolChunk]],
+                 profile: Optional[Profile] = None) -> str:
+    profile = profile or profile_for(case)
     found_for: dict[str, list[str]] = {}
     for topic in topics:
         for chunk in passages.get(topic.key, []):
             found_for.setdefault(chunk.chunk_id, []).append(topic.key)
-    lines = ["TASK", TASKS[part], "",
-             "CASE (fictional; amputation level, side and recorded functional level only; null means not "
-             "recorded)", case_for_prompt(case), "",
+    lines = ["TASK", profile.tasks[part], "",
+             profile.case_heading, profile.case_for_prompt(case), "",
              "TOPICS", *(f"- {topic.key}: {topic.label}" for topic in topics), "", "PASSAGES"]
     for chunk in _passages_of(topics, passages).values():
         pages = f"{chunk.page}" if not chunk.end_page or chunk.end_page == chunk.page else f"{chunk.page}-{chunk.end_page}"
@@ -284,8 +369,10 @@ def item_id(topic: str, doc_id: str, quote: str) -> str:
     return f"rag-{topic}-{digest}"
 
 
-def check_items(part: str, answer: dict, topics: list[Topic], passages: dict[str, ProtocolChunk]) -> tuple[list[Item], list[dict]]:
+def check_items(part: str, answer: dict, topics: list[Topic], passages: dict[str, ProtocolChunk],
+                max_items: Optional[dict] = None) -> tuple[list[Item], list[dict]]:
     """The items that pass the checks, and what was removed and why."""
+    limit = (max_items or MAX_ITEMS)[part]
     keys = {topic.key for topic in topics}
     kept: list[Item] = []
     removed: list[dict] = []
@@ -321,8 +408,8 @@ def check_items(part: str, answer: dict, topics: list[Topic], passages: dict[str
         if any(item.id == new_id for item in kept):
             drop("the same quote again for this topic")
             continue
-        if per_topic.get(topic, 0) >= MAX_ITEMS[part]:
-            drop(f"more than {MAX_ITEMS[part]} item(s) for this topic")
+        if per_topic.get(topic, 0) >= limit:
+            drop(f"more than {limit} item(s) for this topic")
             continue
         grade = str(raw.get("grade") or "").strip() or None
         if grade and (grade not in GRADE_PHRASES or not grade_after(grade, shown, chunk.text)):
@@ -336,14 +423,15 @@ def check_items(part: str, answer: dict, topics: list[Topic], passages: dict[str
 
 
 def run_part(part: str, case: Case, topics: list[Topic], passages: dict[str, list[ProtocolChunk]],
-             writer: Writer) -> Part:
+             writer: Writer, profile: Optional[Profile] = None) -> Part:
+    profile = profile or profile_for(case)
     asked = [topic for topic in topics if passages.get(topic.key)]
     result = Part(part, NO_PASSAGES, topics=[topic.key for topic in asked])
     if not asked:
         return result  # nothing found to summarise: no call
     by_id = _passages_of(asked, passages)
     try:
-        answer = writer.write(SYSTEM_PROMPT, user_message(part, case, asked, passages),
+        answer = writer.write(profile.system_prompt, user_message(part, case, asked, passages, profile),
                               answer_schema([topic.key for topic in asked], list(by_id)))
     except WriterUnavailable as error:
         result.status, result.reason = UNAVAILABLE, str(error)
@@ -353,20 +441,58 @@ def run_part(part: str, case: Case, topics: list[Topic], passages: dict[str, lis
         result.status, result.reason = UNAVAILABLE, f"unexpected error: {type(error).__name__}: {error}"
         return result
     result.status, result.model, result.usage, result.seconds = OK, answer.model, answer.usage, answer.seconds
-    result.items, result.removed = check_items(part, answer.data, asked, by_id)
+    result.items, result.removed = check_items(part, answer.data, asked, by_id, profile.max_items)
     return result
 
 
 def generate(case: Case, passages: dict[str, list[ProtocolChunk]], writer: Writer,
              topics: Optional[list[Topic]] = None) -> Generation:
-    """The three parts, asked at the same time. `passages` maps topic keys to the passages found."""
+    """The three parts, asked at the same time. `passages` maps topic keys to the passages found.
+
+    An orthotic case never reaches a cloud writer while ORTHOTIC_CLOUD_AI is
+    off, whoever passes the writer (the app, the trial loader, golden_cases --rag).
+    """
+    profile = profile_for(case)
+    if case.domain == "orthotics" and not ORTHOTIC_CLOUD_AI and is_cloud(writer):
+        writer = OfflineWriter(ORTHOTIC_AI_OFF)
     topics = topics if topics is not None else topics_for_case(case)
-    with ThreadPoolExecutor(max_workers=len(PARTS)) as pool:
-        futures = {part: pool.submit(run_part, part, case, [t for t in topics if t.part == part], passages, writer)
-                   for part in PARTS}
+    with ThreadPoolExecutor(max_workers=len(profile.parts)) as pool:
+        futures = {part: pool.submit(run_part, part, case, [t for t in topics if t.part == part], passages, writer,
+                                     profile)
+                   for part in profile.parts}
         parts = {part: future.result() for part, future in futures.items()}
+    drop_repeats(parts, [part for part in profile.parts if part != GAPS])
     effort = getattr(writer, "effort", LLM_EFFORT)
-    return Generation(PROMPT_VERSION, writer.name, effort, parts)
+    return Generation(profile.prompt_version, writer.name, effort, parts)
+
+
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def drop_repeats(parts: dict[str, Part], kinds: list[str]) -> None:
+    """Show a quote once: an item whose quote (same document) holds or is held by one already kept,
+    in these parts and in order, is moved to Part.removed as a REPEAT, naming the topic it is shown under.
+
+    The parts are asked separately, so the AI can't see that it gave a quote under another
+    part's topic (the first live run: CMS's K3 note under the functional level and again under
+    preparatory or definitive). The gaps are not part of this: a gap says why a field matters.
+    """
+    shown: list[tuple[str, str, str]] = []  # (document, quote, topic) kept so far
+    for kind in kinds:
+        part = parts[kind]
+        kept = []
+        for item in part.items:
+            quote = _flat(item.quote)
+            earlier = next((topic for doc_id, text, topic in shown
+                            if doc_id == item.doc_id and (quote in text or text in quote)), None)
+            if earlier is None:
+                shown.append((item.doc_id, quote, item.topic))
+                kept.append(item)
+            else:
+                part.removed.append({"topic": item.topic, "passage_id": item.chunk_id, "quote": item.quote,
+                                     "reason": f"the same quote is shown under {earlier}", "dropped": REPEAT})
+        part.items = kept
 
 
 # ---- The page's shapes ------------------------------------------------------
@@ -406,6 +532,9 @@ def gaps_from(case: Case, retrieved: dict[str, list[ProtocolChunk]], generation:
 
 
 def components_from(case: Case, generation: Generation) -> ComponentSupport:
+    if case.domain == "orthotics":  # the orthosis and FES options (orthotics/rag.py)
+        from orthotics.rag import components_from as orthotic_components
+        return orthotic_components(case, generation)
     part = generation.part(COMPONENTS_PART)
     functional = FunctionalLevel(lower_limb=case.is_lower_limb, k_level=recorded_k_level(case),
                                  activity=case.activity.description, goals=case.activity.functional_goals)
@@ -420,6 +549,9 @@ def components_from(case: Case, generation: Generation) -> ComponentSupport:
 
 
 def fitting_from(case: Case, generation: Generation) -> FittingSupport:
+    if case.domain == "orthotics":  # orthosis design and fitting (orthotics/rag.py)
+        from orthotics.rag import fitting_from as orthotic_fitting
+        return orthotic_fitting(case, generation)
     part = generation.part(FITTING)
     sections = [ComponentSection(info.key, _statements(part, info.key))
                 for info in SECTIONS if case.amputation_level in info.levels]

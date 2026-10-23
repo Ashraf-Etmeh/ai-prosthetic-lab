@@ -4,6 +4,8 @@ import re
 import unittest
 
 from knowledge.catalog import SOURCE_TYPES, load_catalog
+from orthotics.topics import DESIGN_SECTIONS, DEVICE_SECTIONS
+from orthotics.topics import PARTS as ORTHOTIC_PARTS
 from reasoning.component_guide import COMPONENT_KEYS, GRADES
 from reasoning.component_support import NOTE_K0, NOTE_K_NOT_RECORDED
 from reasoning.fitting_guide import SECTION_KEYS
@@ -12,7 +14,7 @@ from reasoning.rag_topics import PARTS
 from review.decision_log import DECISIONS
 from shared import case_schema
 from shared.config import PROJECT_ROOT
-from shared.field_guide import FIELDS, NOT_RECORDED, RECORDED_UNKNOWN
+from shared.field_guide import FIELDS, NOT_RECORDED, ORTHOTIC_FIELDS, RECORDED_UNKNOWN
 from shared.i18n import (
     FIELD_LABELS,
     LANGUAGES,
@@ -34,6 +36,15 @@ ENUMS = [
     case_schema.ActivityLevel,
     case_schema.WoundStatus,
     case_schema.VolumeStability,
+    # Orthotics (2026-10-22)
+    case_schema.OrthoticCondition,
+    case_schema.WalkingStatus,
+    case_schema.KneeInStance,
+    case_schema.SensationStatus,
+    case_schema.ToneScale,
+    case_schema.DonningAbility,
+    case_schema.YesNoUnknown,
+    case_schema.GaitDeviation,
 ]
 OTHER_LANGUAGES = [lang for lang in LANGUAGES if lang != "en"]
 
@@ -69,7 +80,7 @@ class CompletenessTests(unittest.TestCase):
     def test_every_gap_field_has_a_label(self):
         for lang in OTHER_LANGUAGES:
             with self.subTest(lang=lang):
-                self.assertEqual(set(FIELD_LABELS[lang]), {info.path for info in FIELDS})
+                self.assertEqual(set(FIELD_LABELS[lang]), {info.path for info in (*FIELDS, *ORTHOTIC_FIELDS)})
 
     def test_every_choice_has_a_label(self):
         for lang in OTHER_LANGUAGES:
@@ -78,7 +89,7 @@ class CompletenessTests(unittest.TestCase):
                     self.assertEqual(set(VALUE_LABELS[lang][enum.__name__]), {m.value for m in enum})
 
     def test_keys_used_in_templates_and_code_exist(self):
-        files = [*PROJECT_ROOT.glob("*/templates/*.html"), *PROJECT_ROOT.glob("*/*.py")]
+        files = [*PROJECT_ROOT.glob("templates/*.html"), *PROJECT_ROOT.glob("*/templates/*.html"), *PROJECT_ROOT.glob("*/*.py")]
         used = {key for path in files for key in _KEY_IN_SOURCE.findall(path.read_text(encoding="utf-8"))}
         self.assertGreater(len(used), 50)  # the pattern still finds them
         self.assertEqual(used - set(TEXT), set())
@@ -100,6 +111,31 @@ class CompletenessTests(unittest.TestCase):
         # The RAG: 'ai_part.' ~ part.kind for an unavailable part, and any grade a passage may print
         expected |= {f"ai_part.{part}" for part in PARTS}
         expected |= {f"grade.{grade}" for grade in GRADE_PHRASES}
+        # Orthotics (2026-10-22): its sections, AI parts, gait phases, its summary heading and required field
+        expected |= {f"component.{key}" for key in DEVICE_SECTIONS}
+        expected |= {f"fitting_section.{key}" for key in DESIGN_SECTIONS}
+        expected |= {f"ai_part.{part}" for part in ORTHOTIC_PARTS}
+        expected |= {f"phase.{phase}" for phase in case_schema.GAIT_PHASES}
+        expected |= {"summary.orthotic_options", "error.required.condition"}
+        # Orthotic modules (2026-10-23): the header's modules, the map, and each vocabulary of orthotics/plan.py
+        from orthotics import plan
+        from review.decision_log import DESIGN_CHOICE
+        expected |= {f"mod.{key}" for key in ("analyse", "requirements", "options", "design")}
+        for prefix in ("chain", "chain_module"):
+            expected |= {f"{prefix}.{key}" for key in ("impairments", "gait", "requirements", "options", "design")}
+        for prefix in ("map_name", "map_does"):
+            expected |= {f"{prefix}.{key}" for key in ("analyse", "requirements", "options", "design")}
+        expected |= {f"req_group.{group}" for group in ("gait", "exam", "other")}
+        for prefix, vocabulary in (("priority", plan.Priority), ("mark", plan.Mark), ("device", plan.DeviceType),
+                                   ("part", plan.Part), ("step", plan.Step), ("step_status", plan.StepStatus),
+                                   ("method", plan.Method)):
+            expected |= {f"{prefix}.{member.value}" for member in vocabulary}
+        expected |= {f"param.{key}" for key in plan.PARAMETERS}
+        expected |= {f"decision.{DESIGN_CHOICE}"}
+        # Every page's header (2026-10-23): 'domain.' ~ domain, the prosthetic modules, the prosthetics map
+        expected |= {"domain.prosthetics", "domain.orthotics"}
+        for prefix in ("pmod", "pmap_name", "pmap_does"):
+            expected |= {f"{prefix}.{key}" for key in ("evaluate", "functional", "components", "fitting")}
         self.assertEqual(expected - set(TEXT), set())
 
 

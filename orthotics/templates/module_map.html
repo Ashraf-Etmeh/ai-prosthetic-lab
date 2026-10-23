@@ -1,0 +1,41 @@
+{% extends "ui_base.html" %}
+{# The orthotics modules and the brief's capabilities they cover (from the canvas's "System map"). #}
+{% block title %}{{ t('map.title') }}{% endblock %}
+{% block kicker %}{{ t('domain.orthotics') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('map.intro') }}</p>{% endblock %}
+{% block brief %}تقويم العظام{% endblock %}
+{% block content %}
+<div class="ui-draft">{{ t('mod.draft') }}</div>
+
+<section class="ui-card" style="margin-top: 1.5rem">
+  <h2>{{ t('map.chain_heading') }}</h2>
+  <ol class="ui-steps" aria-label="{{ t('map.chain_heading') }}">
+    {% for step in ['impairments', 'gait', 'requirements', 'options', 'design'] %}
+    <li><b>{{ loop.index }} · {{ t('chain.' ~ step) }}</b>{{ t('chain_module.' ~ step) }}</li>
+    {% endfor %}
+  </ol>
+  <p class="ui-note">{{ t('map.principle') }}</p>
+</section>
+
+<div class="ui-modules">
+  {% for key, brief, link in [('analyse', 'تحليل الحالات الوظيفية', url_for('orthotic_intake.show_form')),
+                              ('requirements', None, None),
+                              ('options', 'اختيار وتصميم الأجهزة التقويمية · ربط الحالة بالمكونات والمواد', None),
+                              ('design', 'دعم سير عمل التصميم الرقمي', None)] %}
+  <section class="ui-card">
+    <div class="ui-kicker">{{ t('map.module', n=loop.index) }}</div>
+    <h2>{{ t('map_name.' ~ key) }}</h2>
+    <p class="ui-note" style="color: var(--ui-muted-2)">{{ t('map_does.' ~ key) }}</p>
+    {% if brief %}<p class="ui-note">{{ t('map.in_brief') }} <span class="ui-brief" lang="ar" dir="rtl" style="font-size: 0.95rem">{{ brief }}</span></p>
+    {% else %}<p class="ui-note">{{ t('map.bridge') }}</p>{% endif %}
+    {% if link %}<div class="ui-actions"><a class="ui-btn" href="{{ link }}">{{ t('map.new_case') }}</a></div>
+    {% else %}<p class="ui-note">{{ t('map.from_case') }}</p>{% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+<section class="ui-card" style="margin-top: 1.5rem">
+  <h2>{{ t('map.not_built_heading') }}</h2>
+  <p class="ui-note" style="color: var(--ui-muted-2)">{{ t('map.not_built') }}</p>
+</section>
+{% endblock %}

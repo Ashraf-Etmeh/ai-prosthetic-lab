@@ -12,8 +12,10 @@ from knowledge.models import ProtocolChunk
 from reasoning import rag, writer as writer_module
 from reasoning.models import FUNCTIONAL_LEVEL, ORIGIN_RAG
 from reasoning.rag import (
+    ARABIC_TERMS,
     NO_PASSAGES,
     OK,
+    REPEAT,
     SYSTEM_PROMPT,
     UNAVAILABLE,
     Generation,
@@ -31,8 +33,15 @@ from reasoning.rag import (
 from reasoning.rag_topics import COMPONENTS_PART, FITTING, GAPS, topics_for_case
 from reasoning.writer import ClaudeWriter, GeminiWriter, OfflineWriter, WriterUnavailable, default_writer
 from shared.case_schema import ActivityProfile, Case
-from shared.config import GEMINI_API_KEY_ENV, OFFLINE_ENV
+from shared.config import GEMINI_API_KEY_ENV, OFFLINE_ENV, PROMPT_VERSION
+from shared.i18n import TEXT, VALUE_LABELS
 from tests.helpers import FakeWriter, quote_every_topic
+
+
+def page_arabic() -> str:
+    """Every Arabic text the pages can show (shared/i18n.py), to check a term is the page's own."""
+    return " ".join([entry["ar"] for entry in TEXT.values() if isinstance(entry, dict) and "ar" in entry]
+                    + [label for labels in VALUE_LABELS["ar"].values() for label in labels.values()])
 
 VOLUME = "residual_limb.volume_stability"
 WOUND = "residual_limb.wound_status"
@@ -95,6 +104,19 @@ class PromptTests(unittest.TestCase):
                       "Do not recommend, prescribe, choose or rank", "ready for fitting", "give each side",
                       "Never infer a grade", "never translate it"):
             self.assertIn(words, SYSTEM_PROMPT)
+
+    def test_v3_keeps_the_source_strength_and_the_page_terms(self):
+        # After the first live run (2026-10-23): a hedge dropped, a claim from outside the quote, "must"
+        # added; and one concept in two Arabic words. rag-v3 names each, and gives the page's terms.
+        self.assertEqual(PROMPT_VERSION, "rag-v3")
+        for words in ("never state it as a plain fact", "into an instruction", "only where the quote does",
+                      "not from the rest of the passage", "the same term every time"):
+            self.assertIn(words, SYSTEM_PROMPT)
+        page = page_arabic()
+        for english, arabic in ARABIC_TERMS:
+            with self.subTest(english):
+                self.assertIn(f"{english} = {arabic}", SYSTEM_PROMPT)
+                self.assertIn(arabic, page)  # the review page's own word
 
     def test_schema_allows_only_the_topics_and_passages_given(self):
         schema = answer_schema(["knee"], [KNEE.chunk_id])
@@ -218,6 +240,39 @@ class RunTests(unittest.TestCase):
         generation = generate(self.case, self.passages, FakeWriter(), self.topics)
         again = Generation.from_dict(json.loads(json.dumps(generation.to_dict())))
         self.assertEqual(again, generation)
+
+
+class RepeatTests(unittest.TestCase):
+    """A quote the AI gives under topics of two parts is shown once, under the first (drop_repeats)."""
+
+    def setUp(self):
+        self.case = transfemoral()
+        self.passages = {"knee": [KNEE], "alignment": [KNEE], VOLUME: [KNEE]}  # one passage for three topics
+
+    def test_shown_once_and_not_counted_as_a_failed_check(self):
+        generation = generate(self.case, self.passages, FakeWriter())  # quotes the same 8 words for each topic
+        components, fitting = generation.part(COMPONENTS_PART), generation.part(FITTING)
+        self.assertEqual([item.topic for item in components.items], ["knee"])
+        self.assertEqual(fitting.items, [])
+        [repeat] = fitting.removed
+        self.assertEqual((repeat["topic"], repeat["dropped"], repeat["reason"]),
+                         ("alignment", REPEAT, "the same quote is shown under knee"))
+        self.assertEqual((fitting.repeats_for("alignment"), fitting.removed_items, fitting.removed_for("alignment")),
+                         (1, 0, 0))
+        self.assertEqual([item.topic for item in generation.part(GAPS).items], [VOLUME])  # a gap keeps its quote
+
+    def test_a_quote_holding_one_already_shown_is_a_repeat(self):
+        def answer(user, schema):
+            data = quote_every_topic(user, schema, words=6)
+            for entry in data["items"]:
+                if entry["topic"] == "alignment":  # a longer stretch around the knee quote
+                    entry["quote"] = "For prosthetic ambulators, we suggest prescribing microprocessor knee units over"
+            return data
+        fitting = generate(self.case, self.passages, FakeWriter(answer)).part(FITTING)
+        self.assertEqual((fitting.items, fitting.repeats_for("alignment")), ([], 1))
+        other = {"knee": [KNEE], "alignment": [WOUND_TEXT]}  # a different quote is kept
+        self.assertEqual([i.topic for i in generate(self.case, other, FakeWriter()).part(FITTING).items],
+                         ["alignment"])
 
 
 class PageShapeTests(unittest.TestCase):

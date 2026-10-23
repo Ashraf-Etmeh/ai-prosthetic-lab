@@ -43,8 +43,10 @@ record numbers) are collected.
 | 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/review_log.jsonl` |
 
 The prosthetics domain's three parts (evaluate, choose components, design
-and fit) now each have a first version; the rest of the brief (orthotics,
-gait analysis, rehabilitation, follow-up) is planned but not started — see
+and fit) now each have a first version. Orthotics (use case 03, stroke
+ankle-foot orthosis) has a first version as drafts awaiting the owner's and
+an orthotist's review (below, "Orthotics"). The rest of the brief (gait
+analysis, rehabilitation, follow-up) is planned but not started — see
 [FUTURE_WORK.md](FUTURE_WORK.md#path-to-the-full-system).
 
 ## Running it
@@ -97,6 +99,61 @@ Each case is saved as `data/cases/<case id>.json` (not in git), so its
 review page still works after the server is restarted. The files hold the
 case as entered (no patient identifiers), the passages found and the gap
 list.
+
+### Orthotics (drafts, 2026-10-22)
+
+The intake form links to an orthotic case (stroke, ankle-foot orthosis) at
+http://127.0.0.1:5000/intake/orthotics: the condition and affected side,
+walking (gait speed with the test named, falls, deviations ticked by gait
+phase), the exam (dorsiflexion with the knee extended and flexed, tone with
+its scale, strength, knee in stance, foot posture, sensation, skin),
+footwear, donning, earlier orthoses or FES, and what the orthosis must do
+in the orthotist's own words. The review page lists the missing
+information (six fields marked critical), what the sources say about an
+ankle-foot orthosis or FES (side by side, never ranked) and about design
+and fitting, and records the orthotist's decision in the same log.
+For now no orthotic case is sent to the cloud model, whatever key is set
+(owner's decision 2026-10-23, `ORTHOTIC_CLOUD_AI` in `shared/config.py`): the
+orthotic pages show the passages found without summaries. When it is
+switched on, the condition, side and months since onset are sent, with the
+passages. The fields, critical flags, topics and prompt are Claude's
+proposal, awaiting the owner and an orthotist; no live orthotic AI run has
+been made yet. Only documents with the "orthotics" domain are searched, at
+most three passages from one document per search. To measure that search:
+
+```
+python -m knowledge.evaluate --orthotics
+```
+
+After the review page, the header leads to three more modules (2026-10-23,
+from the "Orthotics Module Design" canvas; drafts like the rest), so the
+brief's four orthotics capabilities each have a page. Module 1 is functional
+case analysis: the intake form and the review page.
+
+- **2 Requirements**: what the orthosis must do, in the orthotist's words,
+  each tied to the findings it comes from, with a priority.
+- **3 Options**: up to three design options side by side, never ranked.
+  Each has a device type and its materials and parts, each part tied to the
+  requirements it serves. The orthotist marks what each option addresses,
+  then chooses and gives a reason, which goes to the review log as a
+  "design_choice".
+- **4 Digital design**: the steps from capture to release, and the design
+  parameters, every save kept as a version.
+
+Each device type, part and step shows the passages the local search finds
+about it, quoted as printed and not summarised. Nothing on these pages is
+sent to the AI, and the tool suggests no value. The module map is at
+http://127.0.0.1:5000/orthotics.
+
+## The pages
+
+Every page has the same header (since 2026-10-23): Prosthetics / Orthotics,
+the domain's modules, and on a case's pages a bar with the case. The
+prosthetics map, http://127.0.0.1:5000/prosthetics, lists the brief's five
+prosthetics capabilities and where each is. The first four are the review
+page's sections: information gaps, functional level, components, design and
+fitting. The header links to each, and one decision marks them together.
+Follow-up is not built. The orthotics map is at /orthotics.
 
 ## Languages
 
@@ -256,6 +313,7 @@ python -m shared.arabic_terms export     # every interface text -> data/trial/ar
 python -m shared.arabic_terms apply data/trial/arabic_terms.csv   # a prosthetist's corrections -> shared/i18n.py
 python -m intake.load_trial_cases        # the 15 prepared fake cases in data/trial/cases/ -> the app
 python -m review.trial_report            # counts from the review log -> data/trial/report.csv
+                                         # (prosthetic cases; --domain orthotics -> report_orthotics.csv)
 ```
 
 ## Tests
@@ -309,6 +367,8 @@ the search model or the vector store (or with `--no-search`) their gap
 checks are skipped and the rest still run; the model is never downloaded.
 A difference fails a case marked "reviewed" and warns for an "unreviewed" one.
 The reviewed cases also run in `python -m unittest` (without their gap checks).
+The three orthotic cases (`golden-ort-01..03`, unreviewed drafts) are
+checked on their gaps only: there is no orthotic answer key yet.
 
 ```
 python scripts/verify_all.py      # the checks for prompts 0-2, then the golden cases
@@ -318,6 +378,7 @@ python scripts/verify_all.py      # the checks for prompts 0-2, then the golden 
 
 ```
 app.py              Flask entry point; registers the intake and review pages
+templates/          Every page's shared look: header (domain switch, modules, case bar), style, page layout
 shared/             Case schema, config (paths, settings, disclaimer), case store
                     (memory + data/cases/), interface text in English and Arabic (i18n.py)
 intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
@@ -327,12 +388,15 @@ reasoning/          The RAG: topics, the AI writer (Gemini or Claude API), the q
                     shapes; gap analysis without the AI; the hand-written statements and
                     their rules (the answer key)
 review/             Specialist review page and decision log (writes data/review_log.jsonl)
+orthotics/          Use case 03, stroke ankle-foot orthosis (drafts): intake form, topics, the AI's instructions,
+                    and modules 2-4 (requirements, design options, digital design: plan.py, sources.py, modules.py)
 tests/              unittest suite (a tiny fake embedder and a fake AI writer: no model, no API)
 data/sources/       Knowledge documents: catalog.json in git, the PDFs kept local
 data/knowledge/     The owner's evidence rules, the knowledge items and the items to curate (in git)
 data/extracted/     Cleaned text per document (generated, not in git)
 data/vector_store/  Chunks and their vectors (generated, not in git)
-data/eval/          Retrieval evaluation queries, golden cases and the frozen held-out cases (in git)
+data/eval/          Retrieval evaluation queries, the orthotic topic yardstick, golden cases and the
+                    frozen held-out cases (in git)
 data/cases/         One JSON file per case entered (not in git)
 data/trial/         Arabic term sheet, prepared trial cases (in git); trial report (not in git)
 ```

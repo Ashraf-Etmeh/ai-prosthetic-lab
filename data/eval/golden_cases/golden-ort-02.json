@@ -1,0 +1,87 @@
+{
+  "id": "golden-ort-02",
+  "description": "Stroke, right side, 2 months: protective sensation and donning recorded as unknown; gait speed, plantarflexor tone, footwear and prior orthoses not recorded. PROPOSAL, awaiting the owner's and an orthotist's review (2026-10-22): fake data. Expected gaps drafted by hand from shared/field_guide.py ORTHOTIC_FIELDS (a field is a gap when empty or 'unknown'; deviations [] and prior_orthoses [] are recorded) and the case, not from the app's output. source_expected is null (either) until the owner reviews it. Checked on gaps only: there is no orthotic answer key yet.",
+  "review_status": "unreviewed",
+  "question": {
+    "domain": "orthotics",
+    "case_id": "golden-ort-02",
+    "created_at": "2026-10-22T00:00:00+00:00",
+    "age_years": 70,
+    "body_weight_kg": 88,
+    "comorbidities": [],
+    "cognitive_status": "mild memory problems",
+    "intake_notes": null,
+    "condition": "stroke",
+    "side": "right",
+    "months_since_onset": 2,
+    "functional_goals": "walk at home safely",
+    "walking": {
+      "status": "with_assistance",
+      "walking_aid": null,
+      "gait_speed_m_s": null,
+      "gait_speed_test": null,
+      "falls_last_6_months": 0,
+      "deviations": [
+        "toe_drag"
+      ],
+      "other_deviations": null
+    },
+    "exam": {
+      "dorsiflexion_knee_extended_deg": 5,
+      "dorsiflexion_knee_flexed_deg": 15,
+      "plantarflexor_tone_scale": null,
+      "plantarflexor_tone_grade": null,
+      "plantarflexor_tone_notes": null,
+      "dorsiflexor_strength": "MRC 1/5",
+      "knee_extensor_strength": "MRC 3/5",
+      "knee_in_stance": "stable",
+      "foot_posture": "neutral",
+      "protective_sensation": "unknown",
+      "proprioception": "reduced",
+      "skin_condition": "intact"
+    },
+    "footwear": null,
+    "donning": "unknown",
+    "prior_orthoses": null,
+    "implanted_electronic_device": null,
+    "requirements": null
+  },
+  "expected_answer": {
+    "gaps": [
+      {
+        "field": "exam.protective_sensation",
+        "source_expected": null
+      },
+      {
+        "field": "walking.gait_speed_m_s",
+        "source_expected": null
+      },
+      {
+        "field": "exam.plantarflexor_tone_grade",
+        "source_expected": null
+      },
+      {
+        "field": "footwear",
+        "source_expected": null
+      },
+      {
+        "field": "donning",
+        "source_expected": null
+      },
+      {
+        "field": "prior_orthoses",
+        "source_expected": null
+      }
+    ],
+    "statements_present": [],
+    "functional_level": null
+  },
+  "common_wrong_answers": {
+    "statements_absent": []
+  },
+  "supporting_sources": [],
+  "reasoning_path": {},
+  "evaluation_criteria": [
+    "gaps"
+  ]
+}

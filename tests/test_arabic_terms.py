@@ -61,7 +61,8 @@ class ExportTests(unittest.TestCase):
         rows = {row["key"]: row["where it appears"] for row in read_sheet(self.sheet)}
         self.assertEqual(rows["component.knee"], "review/templates/review.html")  # built: 'component.' ~ key
         self.assertEqual(rows["error.required.side"], "intake/routes.py")  # built: f"error.required.{name}"
-        self.assertEqual(rows["intake.age"], "intake/routes.py; intake/templates/intake_form.html")
+        self.assertEqual(rows["intake.age"], "intake/routes.py; intake/templates/intake_form.html; "
+                                             "orthotics/routes.py; orthotics/templates/orthotic_intake_form.html")
         self.assertIn("reasoning/gap_analysis.py", rows[FIELD_PREFIX + "residual_limb.pain"])
         self.assertIn("intake/templates/intake_form.html", rows[CHOICE_PREFIX + "Side.left"])
 

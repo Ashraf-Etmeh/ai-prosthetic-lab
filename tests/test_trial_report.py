@@ -129,6 +129,54 @@ class TrialReportTests(unittest.TestCase):
         self.assertRegex(text, r"residual_limb.wound_status\s+3\s+case-tt case-tr case-old")
         self.assertIn("[ar]  يجب إضافة قياس الطول", text)
 
+    def test_an_orthotic_design_choice_adds_no_marks(self):
+        # Log version 7: the option an orthotist chose is a decision; its copy of the gaps was not marked.
+        from orthotics.plan import DesignOption, DeviceType, OrthoticPlan
+        from review.decision_log import record_design_choice
+        from tests.test_orthotics import full_case
+
+        before = build_report(read_log(self.log), self.log)
+        plan = OrthoticPlan(options=[DesignOption("A", DeviceType.SOLID_AFO)])
+        plan.choose("A", "knee control")
+        record_design_choice(CaseRecord(case=full_case(), plan=plan), path=self.log)
+        after = build_report(read_log(self.log), self.log)
+        self.assertEqual(after.decisions, before.decisions)  # the prosthetics report leaves it out
+        self.assertEqual(dict(after.other_domains), {"orthotics": 1})
+        self.assertEqual(after.gap_rows(), before.gap_rows())
+        orthotic = build_report(read_log(self.log), self.log, "orthotics")
+        self.assertEqual((orthotic.decisions, dict(orthotic.decision_counts)), (1, {"design_choice": 1}))
+        self.assertEqual((orthotic.gap_rows(), orthotic.statement_rows()), ([], []))
+        self.assertEqual(dict(orthotic.other_domains), {"prosthetics": 5})
+        out = io.StringIO()
+        print_summary(orthotic, out)
+        self.assertIn("orthotic design choices 1", out.getvalue())
+        out = io.StringIO()
+        print_summary(after, out)
+        self.assertIn("Domain: prosthetics (left out, other domains: orthotics 1)", out.getvalue())
+
+    def test_shared_gap_fields_never_mixed_across_domains(self):
+        # age_years is a gap field in both domains: an orthotist's mark must not land in the prosthetic row.
+        from intake.routes import analyse_case
+        from tests.helpers import FakeWriter
+        from tests.test_orthotics import full_case, orthotic_retrieval
+
+        before = {row[:3]: row[3:] for row in self.report.gap_rows()}
+        orthotic = analyse_case(full_case(age_years=None, months_since_onset=None), retrieve=orthotic_retrieval,
+                                writer=FakeWriter())
+        self.assertIn("age_years", [gap.field for gap in orthotic.gaps])
+        record_decision(orthotic, "approve", path=self.log, gap_judgements={"age_years": "needed"})
+        prosthetic = build_report(read_log(self.log), self.log)
+        self.assertEqual({row[:3]: row[3:] for row in prosthetic.gap_rows()}, before)
+        self.assertEqual(prosthetic.unsourced_rows(), self.report.unsourced_rows())
+        rows = {row[0]: row[3:] for row in build_report(read_log(self.log), self.log, "orthotics").gap_rows()}
+        self.assertEqual(rows["age_years"], (1, 0, 0))
+
+    def test_csv_names_the_domain(self):
+        write_csv(self.report, self.out)
+        first = sections(self.out)["Trial report (counts only)"]
+        self.assertIn(["domain", "prosthetics"], first)
+        self.assertIn(["decisions on other domains, left out", "none"], first)
+
     def test_empty_or_missing_log(self):
         report = build_report(read_log(self.log.parent / "missing.jsonl"))
         out = io.StringIO()

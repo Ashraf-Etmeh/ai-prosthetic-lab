@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "app-offline",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-c",
+        "import os, runpy; os.environ['AI_PROSTHETIC_LAB_OFFLINE'] = '1'; runpy.run_path('app.py', run_name='__main__')"
+      ],
+      "port": 5000
+    }
+  ]
+}

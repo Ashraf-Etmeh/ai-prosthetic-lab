@@ -27,6 +27,8 @@ from shared.case_schema import Case
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
+    ORTHOTIC_PASSAGES_PER_DOCUMENT,
+    ORTHOTIC_RETRIEVAL_DOMAINS,
     RAG_TOP_K,
     RAG_TOPIC_EXCLUDED_DOCUMENTS,
     RETRIEVAL_DOMAINS,
@@ -81,6 +83,7 @@ class VectorStore:
         languages: Optional[Iterable[str]] = None,
         limb: Optional[str] = None,
         exclude: Iterable[str] = (),
+        per_document: Optional[int] = None,
     ) -> list[ProtocolChunk]:
         """The top_k chunks most similar to the query, best first.
 
@@ -89,6 +92,9 @@ class VectorStore:
         limb: "lower" or "upper" leaves out documents only about the other
         limb. None means any.
         exclude: catalog ids of documents to leave out.
+        per_document: at most this many chunks from one document (None: no
+        limit). Orthotic searches use it (ORTHOTIC_PASSAGES_PER_DOCUMENT), so
+        one document's table rows can't fill every place.
         """
         domains = None if domains is None else set(domains)
         languages = None if languages is None else set(languages)
@@ -106,8 +112,18 @@ class VectorStore:
         if not allowed.any():
             return []
         scores = np.where(allowed, self.vectors @ query_vector, -np.inf)
-        best = np.argsort(-scores)[:top_k]
-        return [_to_protocol_chunk(self.chunks[i], float(scores[i])) for i in best if allowed[i]]
+        if per_document is None:
+            best = np.argsort(-scores)[:top_k]
+            return [_to_protocol_chunk(self.chunks[i], float(scores[i])) for i in best if allowed[i]]
+        found, taken = [], {}
+        for i in np.argsort(-scores):
+            if not allowed[i] or len(found) == top_k:
+                break
+            doc_id = self.chunks[i]["doc_id"]
+            if taken.get(doc_id, 0) < per_document:
+                taken[doc_id] = taken.get(doc_id, 0) + 1
+                found.append(_to_protocol_chunk(self.chunks[i], float(scores[i])))
+        return found
 
 
 def _to_protocol_chunk(chunk: dict, score: float) -> ProtocolChunk:
@@ -188,9 +204,16 @@ def retrieve_relevant_chunks(
         return {}
     store = store if store is not None else get_store()
     limb = "lower" if case.is_lower_limb else "upper"
+    domains = domains_for(case)
+    per_document = ORTHOTIC_PASSAGES_PER_DOCUMENT if case.domain == "orthotics" else None
     query_vectors = embed([query for _, query, _, _ in searches])
     return {
-        key: store.search(vector, k, domains=RETRIEVAL_DOMAINS, languages=RETRIEVAL_LANGUAGES, limb=limb,
-                          exclude=exclude)
+        key: store.search(vector, k, domains=domains, languages=RETRIEVAL_LANGUAGES, limb=limb, exclude=exclude,
+                          per_document=per_document)
         for (key, _, k, exclude), vector in zip(searches, query_vectors)
     }
+
+
+def domains_for(case) -> tuple[str, ...]:
+    """The catalog domains searched for the case: an orthotic case searches the orthotic sources."""
+    return ORTHOTIC_RETRIEVAL_DOMAINS if case.domain == "orthotics" else RETRIEVAL_DOMAINS

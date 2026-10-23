@@ -1,5 +1,6 @@
 """Intake: Flask route + form for entering case data.
 
+GET  /prosthetics   -> the prosthetics map: the brief's prosthetics capabilities and where each is
 GET  /intake        -> show the intake form
 POST /intake         -> build a Case from the form, run it through
                         knowledge -> reasoning, store the result, and
@@ -183,6 +184,12 @@ def _render_form(error: str | None = None, form=None):
         k_levels=list(ActivityLevel),
         max_prior_devices=MAX_PRIOR_DEVICES,
     )
+
+
+@bp.route("/prosthetics", methods=["GET"])
+def prosthetics_map():
+    """The brief's five prosthetics capabilities and where each is in the app (since 2026-10-23)."""
+    return render_template("prosthetics_map.html", case=None, domain="prosthetics", module="map", here=request.path)
 
 
 @bp.route("/intake", methods=["GET"])

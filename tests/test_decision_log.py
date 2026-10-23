@@ -122,7 +122,10 @@ class DecisionLogTests(unittest.TestCase):
         record = analyse_case(case, retrieve=lambda case: chunks, writer=FakeWriter(answer))
         knee_id = next(c.statement.id for c in record.components.statements if c.statement.component == "knee")
         entry = record_decision(record, "approve", path=self.path, statement_judgements={knee_id: "relevant"})
-        self.assertEqual(entry["log_version"], 5)
+        # Version 6 (orthotics, 2026-10-22) keeps every version-5 field and adds "domain";
+        # version 7 (2026-10-23) adds "plan", null for a prosthetic case; version 8 the "repeat" removals.
+        self.assertEqual((entry["log_version"], entry["domain"], entry["plan"]), (8, "prosthetics", None))
+        self.assertEqual(entry["settings"]["retrieval_domains"], ["prosthetics"])
         knee = next(s for section in entry["components"]["sections"] for s in section["statements"]
                     if s["id"] == knee_id)
         self.assertEqual((knee["origin"], knee["summary_en"], knee["summary_ar"]),
@@ -143,10 +146,10 @@ class DecisionLogTests(unittest.TestCase):
         self.assertEqual(generation["parts"]["fitting"]["status"], "no passages")  # nothing found: no call
         # A line from an earlier version (no "generation") is still read.
         old = dict(entry, log_version=4)
-        del old["generation"]
+        del old["generation"], old["domain"]
         with self.path.open("a", encoding="utf-8") as log:
             log.write(json.dumps(old) + "\n")
-        self.assertEqual([e["log_version"] for e in read_decisions("case-rag", path=self.path)], [5, 4])
+        self.assertEqual([e["log_version"] for e in read_decisions("case-rag", path=self.path)], [8, 4])
 
     def test_invalid_decisions_refused_and_nothing_written(self):
         for kwargs in [

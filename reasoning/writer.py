@@ -269,6 +269,11 @@ def _token_counts(usage: dict) -> dict:
 WRITERS = {"gemini": GeminiWriter, "claude": ClaudeWriter}
 
 
+def is_cloud(writer: Writer) -> bool:
+    """Whether the writer sends what it is given to a cloud API (every LLM_PROVIDER writer does)."""
+    return isinstance(writer, tuple(WRITERS.values()))
+
+
 def provider_writer() -> Writer:
     """The writer of LLM_PROVIDER, even when the AI is switched off (golden_cases --rag)."""
     return WRITERS[LLM_PROVIDER]()

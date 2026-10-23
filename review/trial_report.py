@@ -1,14 +1,22 @@
 """Trial report: how the reviewers marked what the review pages showed, as counts.
 
   python -m review.trial_report [--log data/review_log.jsonl] [--out data/trial/report.csv]
+  python -m review.trial_report --domain orthotics     (default out: data/trial/report_orthotics.csv)
 
-Reads every decision in the review log and counts:
+Reads the decisions on one domain's cases (default prosthetics, the trial's;
+a line without "domain", log versions 1-5, is a prosthetics case) and counts
+how many decisions on other domains it left out. Two domains share some gap
+fields (age, body weight, comorbidities, cognitive status), so their marks
+are never added together. For that domain it counts:
 - per gap field: marked Needed / Not needed / not marked, separately for
   gaps shown with a source passage and gaps shown without one,
 - gaps shown without a source that were marked Needed (where the library
   may lack a source), with their case ids,
 - per component or fitting statement: Relevant / Not relevant / not marked,
-- decisions (approve / edit / reject), and every edit note as written.
+- decisions (approve / edit / reject), and every edit note as written,
+- orthotic design choices (log version 7): counted as decisions, but their
+  copies of the gaps and statements are not counted as marks (the orthotist
+  chose an option on the options page; nothing was marked there).
 
 Each logged decision counts once: a case decided twice counts twice (the
 summary says how many cases were). Counts only: no scores, percentages,
@@ -26,19 +34,28 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from reasoning import component_guide, fitting_guide
+from shared.case_schema import DEFAULT_DOMAIN, DOMAIN_CASES
 from shared.config import REVIEW_LOG_PATH, TRIAL_DIR
-from shared.field_guide import FIELDS
+from shared.field_guide import FIELDS, ORTHOTIC_FIELDS
 
 REPORT_PATH = TRIAL_DIR / "report.csv"
 DECISIONS = ("approve", "edit", "reject")
+DESIGN_CHOICE = "design_choice"  # review/decision_log.py: an orthotic option chosen, with the plan
 MARKS = {"gap": ("needed", "not_needed", None), "statement": ("relevant", "not_relevant", None)}
 GUIDE_ORDER = [s.id for s in (*component_guide.ALL_STATEMENTS, *fitting_guide.ALL_STATEMENTS)]
-FIELD_ORDER = [info.path for info in FIELDS]
+# Each domain's gap fields in its field guide's order.
+FIELD_ORDERS = {"prosthetics": [info.path for info in FIELDS], "orthotics": [info.path for info in ORTHOTIC_FIELDS]}
+
+
+def report_path(domain: str) -> Path:
+    return REPORT_PATH if domain == DEFAULT_DOMAIN else TRIAL_DIR / f"report_{domain}.csv"
 
 
 @dataclass
 class TrialReport:
     log_path: Path
+    domain: str = DEFAULT_DOMAIN  # only this domain's decisions are counted
+    other_domains: Counter = field(default_factory=Counter)  # domain -> decisions left out
     decisions: int = 0
     cases: Counter = field(default_factory=Counter)  # case id -> decisions logged
     log_versions: Counter = field(default_factory=Counter)
@@ -55,14 +72,23 @@ class TrialReport:
     decision_counts: Counter = field(default_factory=Counter)
     edit_notes: list = field(default_factory=list)  # (logged at, case id, page language, note)
 
+    @property
+    def field_order(self) -> list[str]:
+        return FIELD_ORDERS.get(self.domain, [])
+
     def gap_rows(self) -> list[tuple]:
-        keys = sorted(self.gap_marks, key=lambda k: (_order(FIELD_ORDER, k[0]), not k[1]))
+        keys = sorted(self.gap_marks, key=lambda k: (_order(self.field_order, k[0]), not k[1]))
         return [(f, self.gap_labels.get(f, ""), "yes" if sourced else "no",
                  *(self.gap_marks[(f, sourced)][m] for m in MARKS["gap"])) for f, sourced in keys]
 
     def unsourced_rows(self) -> list[tuple]:
         return [(f, self.gap_labels.get(f, ""), len(ids), " ".join(ids))
-                for f, ids in sorted(self.unsourced_needed.items(), key=lambda item: _order(FIELD_ORDER, item[0]))]
+                for f, ids in sorted(self.unsourced_needed.items(),
+                                     key=lambda item: _order(self.field_order, item[0]))]
+
+    def left_out(self) -> str:
+        """The decisions on other domains, e.g. "orthotics 2" ("" if none)."""
+        return ", ".join(f"{d} {n}" for d, n in sorted(self.other_domains.items()))
 
     def statement_rows(self) -> list[tuple]:
         ids = sorted(self.statement_marks, key=lambda s: _order(GUIDE_ORDER, s))
@@ -81,9 +107,14 @@ def read_log(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def build_report(entries: list[dict], log_path: Path = REVIEW_LOG_PATH) -> TrialReport:
-    report = TrialReport(log_path)
+def build_report(entries: list[dict], log_path: Path = REVIEW_LOG_PATH,
+                 domain: str = DEFAULT_DOMAIN) -> TrialReport:
+    report = TrialReport(log_path, domain)
     for entry in entries:
+        entry_domain = entry.get("domain", DEFAULT_DOMAIN)  # none before log version 6: prosthetics
+        if entry_domain != domain:
+            report.other_domains[entry_domain] += 1
+            continue
         report.decisions += 1
         report.cases[entry["case_id"]] += 1
         report.log_versions[entry.get("log_version", 1)] += 1
@@ -93,6 +124,8 @@ def build_report(entries: list[dict], log_path: Path = REVIEW_LOG_PATH) -> Trial
         report.decision_counts[entry["decision"]] += 1
         if entry["decision"] == "edit":
             report.edit_notes.append((logged, entry["case_id"], entry.get("ui_language", "en"), entry.get("note") or ""))
+        if entry["decision"] == DESIGN_CHOICE:
+            continue  # its gaps and statements were not marked: they are a copy of the page
         for gap in entry["gaps"]:
             sourced = gap.get("source") is not None
             mark = gap.get("reviewer_judgement")
@@ -122,6 +155,8 @@ def write_csv(report: TrialReport, path: Path) -> None:
 
         section("Trial report (counts only)", ["item", "value"], [
             ("review log", report.log_path.as_posix()),
+            ("domain", report.domain),
+            ("decisions on other domains, left out", report.left_out() or "none"),
             ("decisions logged", report.decisions),
             ("cases", len(report.cases)),
             ("cases with more than one decision", sum(1 for n in report.cases.values() if n > 1)),
@@ -145,12 +180,15 @@ def print_summary(report: TrialReport, out=sys.stdout) -> None:
     p = lambda *args: print(*args, file=out)  # noqa: E731
     repeated = sum(1 for n in report.cases.values() if n > 1)
     p(f"Review log: {report.log_path}")
+    p(f"Domain: {report.domain}" + (f" (left out, other domains: {report.left_out()})" if report.other_domains else ""))
     if not report.decisions:
         p("No decisions logged yet.")
         return
     p(f"{report.decisions} decisions on {len(report.cases)} cases ({repeated} cases decided more than once), "
       f"{report.first_logged} to {report.last_logged} UTC")
-    p("Decisions: " + ", ".join(f"{d} {report.decision_counts[d]}" for d in DECISIONS))
+    p("Decisions: " + ", ".join(f"{d} {report.decision_counts[d]}" for d in DECISIONS)
+      + (f"; orthotic design choices {report.decision_counts[DESIGN_CHOICE]}"
+         if report.decision_counts[DESIGN_CHOICE] else ""))
 
     p("\nGap fields (source = a source passage was shown)")
     p(f"  {'field':34} {'source':6} {'needed':>6} {'not needed':>10} {'not marked':>10}")
@@ -177,12 +215,15 @@ def main(argv=None) -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="python -m review.trial_report", description=__doc__.splitlines()[0])
     parser.add_argument("--log", type=Path, default=REVIEW_LOG_PATH)
-    parser.add_argument("--out", type=Path, default=REPORT_PATH)
+    parser.add_argument("--domain", choices=sorted(DOMAIN_CASES), default=DEFAULT_DOMAIN,
+                        help="count this domain's decisions only (default: %(default)s)")
+    parser.add_argument("--out", type=Path, help=f"default: {REPORT_PATH.name}, or report_<domain>.csv")
     args = parser.parse_args(argv)
-    report = build_report(read_log(args.log), args.log)
+    out = args.out or report_path(args.domain)
+    report = build_report(read_log(args.log), args.log, args.domain)
     print_summary(report)
-    write_csv(report, args.out)
-    print(f"\nWritten: {args.out}")
+    write_csv(report, out)
+    print(f"\nWritten: {out}")
 
 
 if __name__ == "__main__":

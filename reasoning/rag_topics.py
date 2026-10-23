@@ -101,6 +101,9 @@ def _component_searched(key: str, levels, case: Case) -> bool:
 
 def topics_for_case(case: Case) -> list[Topic]:
     """Every topic of the case, part by part, in the order the review page shows them."""
+    if case.domain == "orthotics":  # orthotics/topics.py (added 2026-10-22)
+        from orthotics.topics import topics_for_case as orthotic_topics
+        return orthotic_topics(case)
     topics = [Topic(missing.info.path, GAPS, missing.info.label, build_query(case, missing.info))
               for missing in missing_fields(case)]
     if case.is_lower_limb:

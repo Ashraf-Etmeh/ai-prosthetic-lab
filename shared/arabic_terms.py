@@ -55,7 +55,7 @@ class Term:
 
 def _source_files(root: Path) -> list[Path]:
     """The templates and modules that show interface text (not tests, not i18n itself)."""
-    files = [root / "app.py", *root.glob("*/templates/*.html"), *root.glob("*/*.py")]
+    files = [root / "app.py", *root.glob("templates/*.html"), *root.glob("*/templates/*.html"), *root.glob("*/*.py")]
     return sorted(p for p in files if p.parent.name != "tests" and p.name not in ("i18n.py", "arabic_terms.py"))
 
 

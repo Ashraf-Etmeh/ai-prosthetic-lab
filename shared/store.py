@@ -13,7 +13,9 @@ second AI call might not produce again. The component and fitting sections
 are worked out again from that answer when a file is read, without calling
 the AI. A version 1 file (before the RAG) opens with its gaps; its component
 and fitting sections are not available. What the reviewer saw at each
-decision is in the review log (review/decision_log.py).
+decision is in the review log (review/decision_log.py). Version 3
+(2026-10-23) adds an orthotic case's "plan": the orthotist's requirements,
+design options and choice, and design workflow (orthotics/plan.py).
 
 Cases hold no patient identifiers (shared/case_schema.py); the file is named
 after the case's random case_id.
@@ -27,6 +29,7 @@ from pathlib import Path
 from typing import Optional
 
 from knowledge.models import ProtocolChunk
+from orthotics.plan import OrthoticPlan
 from reasoning.models import ComponentSupport, FittingSupport, Gap
 from reasoning.rag import Generation, components_from, fitting_from
 from shared.case_schema import Case, case_from_dict
@@ -35,7 +38,9 @@ from shared.config import CASES_DIR
 # Raise when the shape of a case file changes, and keep reading older files.
 # 2 (2026-10-11): adds "generation", the AI's answer (RAG); the passages
 # retrieved also hold the component, fitting and functional-level topics.
-CASE_FILE_VERSION = 2
+# 3 (2026-10-23): adds "plan", an orthotic case's work after the analysis
+# (orthotics/plan.py); null for a prosthetic case or before any is saved.
+CASE_FILE_VERSION = 3
 
 # What a case id may look like to be used as a file name (generated ids are
 # 12 hexadecimal characters). Anything else is never looked up on disk.
@@ -57,6 +62,9 @@ class CaseRecord:
     fitting: Optional[FittingSupport] = None
     # The AI's answer, as kept after the quote check (None: made before the RAG).
     generation: Optional[Generation] = None
+    # An orthotic case's requirements, design options and design workflow, as the
+    # orthotist saved them (None: nothing saved yet, or a prosthetic case).
+    plan: Optional[OrthoticPlan] = None
 
     def shown_statements(self) -> list:
         """Every component and fitting statement on the review page (CitedStatement)."""
@@ -78,6 +86,7 @@ def record_to_dict(record: CaseRecord) -> dict:
                              for path, chunks in record.retrieved_chunks.items()},
         "gaps": [asdict(gap) for gap in record.gaps],  # evidence included as a plain dict
         "generation": record.generation.to_dict() if record.generation else None,
+        "plan": record.plan.to_dict() if record.plan else None,
     }
 
 
@@ -98,6 +107,7 @@ def record_from_dict(data: dict) -> CaseRecord:
         components=components_from(case, generation) if generation else None,
         fitting=fitting_from(case, generation) if generation else None,
         generation=generation,
+        plan=OrthoticPlan.from_dict(data["plan"]) if data.get("plan") else None,  # none before version 3
     )
 
 

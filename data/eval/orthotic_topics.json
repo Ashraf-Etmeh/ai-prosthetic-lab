@@ -1,0 +1,432 @@
+{
+  "about": "Orthotic topic-search evaluation for `python -m knowledge.evaluate --orthotics` (added 2026-10-22). It runs the app's own orthotic searches (orthotics/topics.py, with the case words) for the fake cases below and checks, per topic, whether a passage from the pages listed is among the passages the AI would see (RAG_TOP_K for a topic, RETRIEVAL_TOP_K for a gap field). The pages were found by reading data/extracted/<doc>.txt on 2026-10-22: VA/DoD stroke p. 166 is recommendation 13 (FES or AFO for foot drop, 'Weak for'); NICE HTG178 pp. 4-7 its recommendations, indications, efficacy and safety; Choo 2021 pp. 1-2 and 9-10 its abstract, introduction and discussion of AFO effects; ICRC AFO pp. 5-26 its design choices, trim lines, materials and EVA lining, pp. 9, 19, 23, 27, 35 its fitting sections; Fatone 2020 pp. 1-21 the outcome instruments (pp. 7-21 its tables: 10MWT, gait speed, TUG; p. 14 the Modified Ashworth Scale in stroke); WHO PIR module 3 pp. 11-30 the stroke package (gait training, provision and training in the use of orthoses); VA/DoD stroke p. 119 FES with gait training, pp. 68, 161, 167 its spasticity recommendations; WHO P&O standards part 1 (English and Arabic) pp. 62-63 fabrication and fitting, user training, product delivery and follow-up, and evaluating the outcome (standards 54-58); WHO P&O implementation manual part 2 (English and Arabic) pp. 101-102 fitting and customization, user training (preparatory and functional training, gait training) and product delivery. Widened 2026-10-22 after reading what the search returned: Fatone pp. 7-21 and the WHO standards and implementation-manual pages answer these topics too. A DRAFT yardstick for tuning, not held out; the owner may revise it.",
+  "cases": [
+    {
+      "id": "ort-ref-A",
+      "note": "chronic stroke, left side; sensation, skin, gait speed, tone and footwear not recorded",
+      "case": {
+        "domain": "orthotics",
+        "condition": "stroke",
+        "side": "left",
+        "months_since_onset": 7,
+        "functional_goals": "walk outdoors without tripping",
+        "age_years": 61,
+        "body_weight_kg": 74,
+        "comorbidities": [
+          "hypertension"
+        ],
+        "cognitive_status": "intact",
+        "walking": {
+          "status": "independent_with_aid",
+          "walking_aid": "quad cane",
+          "falls_last_6_months": 2,
+          "deviations": [
+            "toe_drag",
+            "knee_hyperextension"
+          ]
+        },
+        "exam": {
+          "dorsiflexion_knee_extended_deg": -5,
+          "dorsiflexion_knee_flexed_deg": 10,
+          "dorsiflexor_strength": "MRC 2/5",
+          "knee_extensor_strength": "MRC 4/5",
+          "knee_in_stance": "hyperextends",
+          "foot_posture": "equinovarus, flexible",
+          "proprioception": "intact"
+        },
+        "donning": "needs_help",
+        "prior_orthoses": []
+      }
+    },
+    {
+      "id": "ort-ref-B",
+      "note": "early stroke (2 months), right side, toe drag only; the same fields not recorded",
+      "case": {
+        "domain": "orthotics",
+        "condition": "stroke",
+        "side": "right",
+        "months_since_onset": 2,
+        "functional_goals": "walk at home safely",
+        "age_years": 70,
+        "body_weight_kg": 88,
+        "comorbidities": [],
+        "cognitive_status": "mild memory problems",
+        "walking": {
+          "status": "with_assistance",
+          "falls_last_6_months": 0,
+          "deviations": [
+            "toe_drag"
+          ]
+        },
+        "exam": {
+          "dorsiflexion_knee_extended_deg": 5,
+          "dorsiflexion_knee_flexed_deg": 15,
+          "dorsiflexor_strength": "MRC 1/5",
+          "knee_extensor_strength": "MRC 3/5",
+          "knee_in_stance": "stable",
+          "foot_posture": "neutral",
+          "proprioception": "reduced"
+        },
+        "donning": "needs_help",
+        "prior_orthoses": []
+      }
+    }
+  ],
+  "topics": {
+    "afo_or_fes": [
+      {
+        "doc": "stroke_rehabilitation_va_dod_cpg_2024",
+        "pages": [
+          166,
+          166
+        ]
+      },
+      {
+        "doc": "fes_drop_foot_nice_htg178_2009",
+        "pages": [
+          4,
+          6
+        ]
+      },
+      {
+        "doc": "afo_stroke_walking_review_2021",
+        "pages": [
+          1,
+          2
+        ]
+      },
+      {
+        "doc": "afo_stroke_walking_review_2021",
+        "pages": [
+          9,
+          10
+        ]
+      }
+    ],
+    "afo_types": [
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          5,
+          13
+        ]
+      },
+      {
+        "doc": "afo_3d_printing_review_2025",
+        "pages": [
+          2,
+          3
+        ]
+      }
+    ],
+    "effects_limits": [
+      {
+        "doc": "afo_stroke_walking_review_2021",
+        "pages": [
+          1,
+          2
+        ]
+      },
+      {
+        "doc": "afo_stroke_walking_review_2021",
+        "pages": [
+          9,
+          10
+        ]
+      },
+      {
+        "doc": "fes_drop_foot_nice_htg178_2009",
+        "pages": [
+          6,
+          6
+        ]
+      },
+      {
+        "doc": "afo_3d_printing_review_2025",
+        "pages": [
+          2,
+          2
+        ]
+      }
+    ],
+    "cautions": [
+      {
+        "doc": "fes_drop_foot_nice_htg178_2009",
+        "pages": [
+          5,
+          7
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          9,
+          9
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          23,
+          23
+        ]
+      }
+    ],
+    "design": [
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          5,
+          26
+        ]
+      }
+    ],
+    "orthosis_fitting": [
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          9,
+          9
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          19,
+          19
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          23,
+          23
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          27,
+          27
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          35,
+          35
+        ]
+      },
+      {
+        "doc": "who_po_standards_part1_2017",
+        "pages": [
+          62,
+          63
+        ]
+      },
+      {
+        "doc": "who_po_standards_part1_arabic_2019",
+        "pages": [
+          62,
+          63
+        ]
+      },
+      {
+        "doc": "who_po_implementation_manual_part2_2017",
+        "pages": [
+          101,
+          102
+        ]
+      },
+      {
+        "doc": "who_po_implementation_manual_part2_arabic_2019",
+        "pages": [
+          101,
+          102
+        ]
+      }
+    ],
+    "timing_training": [
+      {
+        "doc": "who_pir_module3_neurological_2023",
+        "pages": [
+          11,
+          30
+        ]
+      },
+      {
+        "doc": "stroke_rehabilitation_va_dod_cpg_2024",
+        "pages": [
+          119,
+          119
+        ]
+      },
+      {
+        "doc": "who_po_standards_part1_2017",
+        "pages": [
+          62,
+          63
+        ]
+      },
+      {
+        "doc": "who_po_standards_part1_arabic_2019",
+        "pages": [
+          62,
+          63
+        ]
+      },
+      {
+        "doc": "who_po_implementation_manual_part2_2017",
+        "pages": [
+          101,
+          102
+        ]
+      },
+      {
+        "doc": "who_po_implementation_manual_part2_arabic_2019",
+        "pages": [
+          101,
+          102
+        ]
+      }
+    ],
+    "outcome_measures": [
+      {
+        "doc": "afo_care_quality_instruments_review_2020",
+        "pages": [
+          1,
+          21
+        ]
+      },
+      {
+        "doc": "who_po_standards_part1_2017",
+        "pages": [
+          63,
+          63
+        ]
+      },
+      {
+        "doc": "who_po_standards_part1_arabic_2019",
+        "pages": [
+          63,
+          63
+        ]
+      }
+    ],
+    "exam.protective_sensation": [
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          9,
+          9
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          23,
+          23
+        ]
+      }
+    ],
+    "exam.skin_condition": [
+      {
+        "doc": "fes_drop_foot_nice_htg178_2009",
+        "pages": [
+          7,
+          7
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          9,
+          9
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          23,
+          23
+        ]
+      }
+    ],
+    "walking.gait_speed_m_s": [
+      {
+        "doc": "afo_care_quality_instruments_review_2020",
+        "pages": [
+          1,
+          21
+        ]
+      },
+      {
+        "doc": "afo_stroke_walking_review_2021",
+        "pages": [
+          1,
+          2
+        ]
+      },
+      {
+        "doc": "fes_drop_foot_nice_htg178_2009",
+        "pages": [
+          6,
+          6
+        ]
+      }
+    ],
+    "exam.plantarflexor_tone_grade": [
+      {
+        "doc": "stroke_rehabilitation_va_dod_cpg_2024",
+        "pages": [
+          68,
+          68
+        ]
+      },
+      {
+        "doc": "stroke_rehabilitation_va_dod_cpg_2024",
+        "pages": [
+          161,
+          161
+        ]
+      },
+      {
+        "doc": "stroke_rehabilitation_va_dod_cpg_2024",
+        "pages": [
+          167,
+          167
+        ]
+      },
+      {
+        "doc": "afo_care_quality_instruments_review_2020",
+        "pages": [
+          14,
+          14
+        ]
+      }
+    ],
+    "footwear": [
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          9,
+          9
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          14,
+          14
+        ]
+      },
+      {
+        "doc": "afo_manufacturing_icrc_2010",
+        "pages": [
+          23,
+          25
+        ]
+      }
+    ]
+  }
+}

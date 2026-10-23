@@ -1,0 +1,61 @@
+﻿writer: gemini-3.8-flash
+ 
+analysis: 137.1 s; knowledge warning: None
+part gaps: ok  model=gemini-3.8-flash 92.6s usage={'input_tokens': 4643, 'output_tokens': 3950} topics=4 kept=4 removed=0
+part components: ok  model=gemini-3.8-flash 121.3s usage={'input_tokens': 6849, 'output_tokens': 9123} topics=6 kept=13 removed=0
+part fitting: ok  model=gemini-3.8-flash 100.1s usage={'input_tokens': 5660, 'output_tokens': 7027} topics=4 kept=11 removed=0
+  PASS  statements         as expected
+  PASS  supporting sources as expected
+  PASS  reasoning path     matches the rules and the case
+  PASS  functional level   shown: cms_k3_description, as expected
+  PASS  gaps               as expected
+  INFO  rag gap sources    4 of 4 gaps cite a passage; 1 differ from the golden file (set from the topic-word check)
+                           - source: prior_devices: source not expected, cited Lower Limb Prosthetic Workgroup Consensus Document (2017), p. 7
+  PASS  excluded documents no gap cites one
+  INFO  rag coverage       5 of 34 expected statements covered by a checked RAG quote (14%)
+                           - not covered: va_dod_ll_18_no_specific_foot
+                           - not covered: cms_power_assist_ankle
+                           - not covered: icrc_tt_ptb_socket
+                           - not covered: icrc_tt_total_surface_bearing_socket
+                           - not covered: icrc_total_contact_socket_conditions
+                           - not covered: icrc_grafted_skin_interface
+                           - not covered: cms_multiple_suspension
+                           - not covered: cms_elevated_vacuum
+                           - not covered: icrc_tt_suspension_methods
+                           - not covered: icrc_ready_for_fitting
+                           - not covered: icrc_cannot_be_fitted
+                           - not covered: icrc_tt_knee_flexion_contracture
+                           - not covered: va_dod_ll_5_rigid_dressing
+                           - not covered: who_preparatory_training
+                           - not covered: who_decision_not_to_prescribe
+                           - not covered: cms_preparatory_vs_definitive
+                           - not covered: cms_non_alignable_preparatory
+                           - not covered: icrc_definitive_socket_stable_stump
+                           - not covered: icrc_stump_shrinkage_recasting
+                           - not covered: va_dod_ll_algorithm_fitting
+                           - not covered: icrc_socket_fit_and_alignment_most_important
+                           - not covered: icrc_structured_fitting_process
+                           - not covered: who_delivery_check
+                           - not covered: icrc_alignment_definition
+                           - not covered: icrc_tt_foot_angle
+                           - not covered: icrc_tt_socket_flexion
+                           - not covered: icrc_tt_foot_position
+                           - not covered: icrc_footwear_alters_alignment
+                           - not covered: who_fit_and_alignment_customization
+  WARN  rag must-not-show  1 statement(s) the case must not show are covered
+                           - icrc_tf_initial_alignment: by rag-alignment-c5e30569e5
+  INFO  rag answer         24 statements shown (16 match no expected statement); quote check kept 28, removed 0; 17152 input + 20100 output tokens, 121 s
+  INFO  rag sentence flags 8 of 28 kept items flagged by the sentence checks (measurement only: nothing removed)
+                           - rag-foot_ankle-931645a529: advice wording: choice or ranking: 'preferred' (also in the quote)
+                           - rag-socket-e09bc7849e: level not in quote: transtibial
+                           - rag-socket-a30e44249d: advice wording: directive: 'must' (also in the quote)
+                           - rag-socket-a30e44249d: advice wording in Arabic: directive: 'يجب'
+                           - rag-readiness-63fe6fad09: advice wording: directive: 'should'
+                           - rag-readiness-63fe6fad09: advice wording in Arabic: directive: 'يجب'
+                           - rag-readiness-cdd0a84aa8: advice wording in Arabic: directive: 'يجب'
+                           - rag-fitting-7fc31d5696: level not in quote: transtibial
+                           - rag-fitting-7fc31d5696: advice wording: directive: 'must'
+                           - rag-fitting-7fc31d5696: advice wording in Arabic: directive: 'يجب'
+                           - rag-fitting-24591f963e: advice wording: directive: 'must'
+                           - rag-fitting-24591f963e: advice wording in Arabic: directive: 'يجب'
+                           - rag-alignment-c5e30569e5: advice wording: directive: 'must'

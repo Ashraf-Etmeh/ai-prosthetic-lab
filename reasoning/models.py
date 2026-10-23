@@ -135,7 +135,9 @@ class FunctionalLevel:
 
 @dataclass
 class ComponentSupport:
-    functional: FunctionalLevel
+    # None for an orthotic case: its sections are the orthosis and FES options
+    # (orthotics/rag.py), and K-levels describe prostheses only.
+    functional: Optional[FunctionalLevel]
     sections: list[ComponentSection]
     # Why some statements are not shown, as shared/i18n.py keys, e.g.
     # "components.k_not_recorded".

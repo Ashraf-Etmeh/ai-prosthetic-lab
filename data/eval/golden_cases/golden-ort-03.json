@@ -1,0 +1,149 @@
+{
+  "id": "golden-ort-03",
+  "description": "Stroke, right side: only the condition, side and age recorded; every other listed field is a gap, the six critical ones among them. PROPOSAL, awaiting the owner's and an orthotist's review (2026-10-22): fake data. Expected gaps drafted by hand from shared/field_guide.py ORTHOTIC_FIELDS (a field is a gap when empty or 'unknown'; deviations [] and prior_orthoses [] are recorded) and the case, not from the app's output. source_expected is null (either) until the owner reviews it. Checked on gaps only: there is no orthotic answer key yet.",
+  "review_status": "unreviewed",
+  "question": {
+    "domain": "orthotics",
+    "case_id": "golden-ort-03",
+    "created_at": "2026-10-22T00:00:00+00:00",
+    "age_years": 55,
+    "body_weight_kg": null,
+    "comorbidities": null,
+    "cognitive_status": null,
+    "intake_notes": null,
+    "condition": "stroke",
+    "side": "right",
+    "months_since_onset": null,
+    "functional_goals": null,
+    "walking": {
+      "status": null,
+      "walking_aid": null,
+      "gait_speed_m_s": null,
+      "gait_speed_test": null,
+      "falls_last_6_months": null,
+      "deviations": null,
+      "other_deviations": null
+    },
+    "exam": {
+      "dorsiflexion_knee_extended_deg": null,
+      "dorsiflexion_knee_flexed_deg": null,
+      "plantarflexor_tone_scale": null,
+      "plantarflexor_tone_grade": null,
+      "plantarflexor_tone_notes": null,
+      "dorsiflexor_strength": null,
+      "knee_extensor_strength": null,
+      "knee_in_stance": null,
+      "foot_posture": null,
+      "protective_sensation": null,
+      "proprioception": null,
+      "skin_condition": null
+    },
+    "footwear": null,
+    "donning": null,
+    "prior_orthoses": null,
+    "implanted_electronic_device": null,
+    "requirements": null
+  },
+  "expected_answer": {
+    "gaps": [
+      {
+        "field": "months_since_onset",
+        "source_expected": null
+      },
+      {
+        "field": "functional_goals",
+        "source_expected": null
+      },
+      {
+        "field": "exam.dorsiflexion_knee_extended_deg",
+        "source_expected": null
+      },
+      {
+        "field": "exam.dorsiflexion_knee_flexed_deg",
+        "source_expected": null
+      },
+      {
+        "field": "exam.protective_sensation",
+        "source_expected": null
+      },
+      {
+        "field": "exam.skin_condition",
+        "source_expected": null
+      },
+      {
+        "field": "walking.status",
+        "source_expected": null
+      },
+      {
+        "field": "walking.gait_speed_m_s",
+        "source_expected": null
+      },
+      {
+        "field": "exam.plantarflexor_tone_grade",
+        "source_expected": null
+      },
+      {
+        "field": "exam.dorsiflexor_strength",
+        "source_expected": null
+      },
+      {
+        "field": "exam.knee_extensor_strength",
+        "source_expected": null
+      },
+      {
+        "field": "exam.knee_in_stance",
+        "source_expected": null
+      },
+      {
+        "field": "walking.deviations",
+        "source_expected": null
+      },
+      {
+        "field": "walking.falls_last_6_months",
+        "source_expected": null
+      },
+      {
+        "field": "exam.foot_posture",
+        "source_expected": null
+      },
+      {
+        "field": "exam.proprioception",
+        "source_expected": null
+      },
+      {
+        "field": "footwear",
+        "source_expected": null
+      },
+      {
+        "field": "donning",
+        "source_expected": null
+      },
+      {
+        "field": "prior_orthoses",
+        "source_expected": null
+      },
+      {
+        "field": "comorbidities",
+        "source_expected": null
+      },
+      {
+        "field": "cognitive_status",
+        "source_expected": null
+      },
+      {
+        "field": "body_weight_kg",
+        "source_expected": null
+      }
+    ],
+    "statements_present": [],
+    "functional_level": null
+  },
+  "common_wrong_answers": {
+    "statements_absent": []
+  },
+  "supporting_sources": [],
+  "reasoning_path": {},
+  "evaluation_criteria": [
+    "gaps"
+  ]
+}

@@ -47,3 +47,9 @@ Reads `data/review_log.jsonl` and writes `report.csv` (not in git): per gap
 field, Needed / Not needed / not marked, split by whether a source passage
 was shown; gaps without a source marked Needed; Relevant / Not relevant per
 statement; decisions and every edit note. Counts only.
+
+It counts prosthetic cases only (the trial's) and says how many decisions
+on other domains it left out; `--domain orthotics` writes
+`report_orthotics.csv` for the orthotic ones. The two domains share some gap
+fields (age, body weight, comorbidities, cognitive status), so their marks
+are never added together (since 2026-10-23).

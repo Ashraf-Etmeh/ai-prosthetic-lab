@@ -135,6 +135,30 @@ def rejoin_hyphenated_words(text: str, context: Optional[str] = None) -> str:
     return _HYPHEN_BREAK.sub(join, text)
 
 
+# A word broken after its ligature: "fi tting", "Dorsifl exion", "diff erent",
+# "Th e". Group 1 runs up to the ligature, group 2 is the rest of the word.
+_LIGATURE_BREAK = re.compile(r"\b([A-Za-z]*(?:ffi|ffl|ff|fi|fl)|Th) ([a-z]+)\b")
+# Whole words that end in "ff", so "cut off the" and "cuff belt" stay apart.
+# Words ending in "fi", "fl", "ffi", "ffl" or the letters "Th" alone aren't
+# English words, so those are always rejoined.
+_WORDS_ENDING_IN_FF = frozenset({"off", "cuff", "staff", "stiff", "doff", "cutoff"})
+
+
+def repair_split_ligatures(text: str) -> str:
+    """Rejoin words a PDF split after a ligature: "fi tting" -> "fitting", "Th e" -> "The".
+
+    Only for documents whose catalog entry sets split_ligatures: in other
+    documents the same pattern is ordinary text ("cut off the").
+    """
+    def join(match: re.Match) -> str:
+        first, second = match.group(1), match.group(2)
+        if first.lower() in _WORDS_ENDING_IN_FF:
+            return match.group(0)
+        return first + second
+
+    return _LIGATURE_BREAK.sub(join, text)
+
+
 def drop_references(pages: list[Page]) -> tuple[list[Page], Optional[int], Optional[int]]:
     """Remove the reference list at the end of a document.
 
@@ -268,6 +292,8 @@ def extract_document(doc: SourceDocument, sources_dir: Path = SOURCES_DIR) -> Ex
     no_text = []
     for number, raw in enumerate(raw_pages, start=1):
         text = clean_text(raw, context)
+        if doc.split_ligatures:
+            text = repair_split_ligatures(text)
         if len(text) < MIN_PAGE_CHARS:
             no_text.append(number)
         if text:

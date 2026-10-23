@@ -26,6 +26,8 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 from reasoning.gap_analysis import explain_gap
 from review import decision_log
 from review.decision_log import InvalidDecision, read_decisions, record_decision
+from shared.case_schema import GAIT_PHASES
+from shared.field_guide import ORTHOTIC_FIELDS
 from shared.i18n import DEFAULT_LANGUAGE, error_message, language_from_cookies, t
 from shared.store import CaseRecord, store
 
@@ -58,7 +60,9 @@ def judgement_summary(entry: dict, lang: str = DEFAULT_LANGUAGE) -> str:
     summary = counts(gaps, [("needed", "summary.needed"), ("not_needed", "summary.not_needed"),
                             (None, "summary.not_marked")]) or t("summary.no_gaps", lang)
     # "components" is not in entries logged before version 3, "fitting" not before version 4.
-    for part, heading in (("components", "summary.components"), ("fitting", "summary.fitting")):
+    # An orthotic entry (version 6, "domain") holds the orthosis and FES options in "components".
+    options = "summary.orthotic_options" if entry.get("domain") == "orthotics" else "summary.components"
+    for part, heading in (("components", options), ("fitting", "summary.fitting")):
         statements = [s["reviewer_judgement"] for section in (entry.get(part) or {}).get("sections", [])
                       for s in section["statements"]]
         if statements:
@@ -74,6 +78,11 @@ def _render_review(record: CaseRecord, error: Optional[str] = None, form=None):
     return render_template(
         "review.html",
         case=record.case,
+        orthotic=record.case.domain == "orthotics",
+        gait_phases=GAIT_PHASES,
+        # Orthotic gaps marked critical (a draft proposal; shared/field_guide.py ORTHOTIC_FIELDS).
+        critical={info.path for info in ORTHOTIC_FIELDS if info.critical}
+        if record.case.domain == "orthotics" else set(),
         gaps=record.gaps,
         explain=lambda gap: explain_gap(gap, lang),
         chunks=record.retrieved_chunks,

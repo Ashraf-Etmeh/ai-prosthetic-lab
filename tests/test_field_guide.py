@@ -3,13 +3,15 @@
 import re
 import unittest
 
-from shared.case_schema import ActivityProfile, Case
+from shared.case_schema import ActivityProfile, Case, OrthoticCase
 from shared.field_guide import (
     FIELDS,
     FIELDS_BY_PATH,
     NOT_RECORDED,
+    ORTHOTIC_FIELDS,
     RECORDED_UNKNOWN,
     build_query,
+    fields_for,
     missing_fields,
 )
 
@@ -24,10 +26,35 @@ class CoverageTests(unittest.TestCase):
 
     def test_every_unrecorded_field_except_notes_is_in_the_guide(self):
         blank = Case(amputation_level="transfemoral", side="left")
-        self.assertEqual(set(blank.unrecorded_fields()) - NOTES, set(FIELDS_BY_PATH))
+        self.assertEqual(set(blank.unrecorded_fields()) - NOTES, {info.path for info in FIELDS})
+
+    def test_orthotic_guide_covers_the_orthotic_case(self):
+        # Every empty orthotic field is a gap field, except those that are never a gap: free text
+        # checked with its value (walking aid, speed test, tone scale and notes), the implanted
+        # device (asked only if FES is discussed) and the orthotist's own requirements.
+        blank = OrthoticCase(condition="stroke", side="left")
+        not_gaps = {"intake_notes", "walking.walking_aid", "walking.gait_speed_test", "walking.other_deviations",
+                    "exam.plantarflexor_tone_scale", "exam.plantarflexor_tone_notes",
+                    "implanted_electronic_device", "requirements"}
+        self.assertEqual(set(blank.unrecorded_fields()) - not_gaps, {info.path for info in ORTHOTIC_FIELDS})
+        self.assertEqual(fields_for(blank), ORTHOTIC_FIELDS)
+        self.assertEqual(fields_for(Case(amputation_level="syme", side="left")), FIELDS)
+
+    def test_shared_core_paths_have_one_label(self):
+        # A core path is in both guides; the label shown must not depend on the domain.
+        for info in ORTHOTIC_FIELDS:
+            if info.path in {f.path for f in FIELDS}:
+                self.assertEqual(info.label, next(f.label for f in FIELDS if f.path == info.path), info.path)
+
+    def test_only_orthotic_fields_are_marked_critical(self):
+        self.assertFalse(any(info.critical for info in FIELDS))
+        critical = [info.path for info in ORTHOTIC_FIELDS if info.critical]
+        self.assertEqual(critical, ["months_since_onset", "functional_goals", "exam.dorsiflexion_knee_extended_deg",
+                                    "exam.dorsiflexion_knee_flexed_deg", "exam.protective_sensation",
+                                    "exam.skin_condition"])
 
     def test_topic_terms_for_all_three_languages_compile(self):
-        for info in FIELDS:
+        for info in (*FIELDS, *ORTHOTIC_FIELDS):
             self.assertEqual(set(info.topic_terms), {"en", "de", "ar"}, info.path)
             for pattern in info.topic_terms.values():
                 re.compile(pattern)

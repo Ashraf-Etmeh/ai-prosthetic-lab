@@ -31,6 +31,7 @@ PROTECTED = (
     "data/knowledge/evidence_rules.csv",  # the owner's rule table
     "data/review_log.jsonl",  # append-only: the app adds lines, nobody edits them
     "data/review_log.test.jsonl",
+    "data/review_log.test-2026-10-23.jsonl",  # the 2 test lines moved out before the trial
 )
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 SHELL_TOOLS = ("Bash", "PowerShell")

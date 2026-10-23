@@ -49,6 +49,11 @@ class SourceDocument:
     # manifest (data/sources/00_registry/sources_manifest.csv); None when the
     # manifest records none (e.g. US federal works, or "not shown").
     licence: Optional[str] = None
+    # True for a PDF whose text comes out with a space after every "fi", "fl",
+    # "ff" or "Th" ligature ("fi tting", "Th e"): extraction rejoins those
+    # words (knowledge/extract.py repair_split_ligatures). Only set it after
+    # reading the extracted text; most documents don't need it.
+    split_ligatures: bool = False
 
     def __post_init__(self) -> None:
         if self.limbs is not None and (not self.limbs or not set(self.limbs) <= LIMBS):

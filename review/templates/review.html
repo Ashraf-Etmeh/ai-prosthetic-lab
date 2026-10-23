@@ -34,17 +34,28 @@
     button[value="reject"] { background: #fbe6e6; border: 1px solid #d99; }
     .gap-judgement { margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; }
     .logged { font-size: 0.85rem; padding-inline-start: 1.2rem; }
-    .lang-switch { text-align: end; font-size: 0.85rem; }
     .ai { background: #f3f0fa; border-inline-start: 3px solid #a99bd4; padding: 0.3rem 0.7rem; margin: 0.4rem 0; }
     .ai-label { display: block; font-size: 0.72rem; color: #5b4b8a; font-weight: 600; }
+    .critical { background: #fbe9df; color: #8f3510; }
   </style>
+  {% include "ui_style.html" %}
+  <style>.ui-review { max-width: 960px; } .ui-review h2[id] { scroll-margin-top: 1rem; }</style>
 </head>
-<body>
-  <nav class="lang-switch">
-    <a href="{{ url_for('set_language', code=t('nav.other_code'), next=here) }}" lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</a>
-  </nav>
+<body class="ui-page">
+  {# The header of every page (templates/ui_header.html): the case's domain, its modules and the case bar.
+     Orthotics: this page is module 1, functional case analysis. Prosthetics: its sections are the modules. #}
+  {% with module = 'analyse' if orthotic else 'review' %}{% include "ui_header.html" %}{% endwith %}
+  <main class="ui-wrap ui-main ui-review">
+  {% if orthotic %}
+  <div class="ui-kicker">{{ t('map.module', n=1) }} · <span lang="ar" dir="rtl">تحليل الحالات الوظيفية</span></div>
+  {% else %}
+  <div class="ui-kicker">{{ t('pmod.review_kicker') }} · <span lang="ar" dir="rtl">الأطراف الاصطناعية</span></div>
+  {% endif %}
   <h1>{{ t('review.heading', case_id=case.case_id) }}</h1>
-  <div class="banner">{{ t('disclaimer') }}</div>
+  <div class="banner">{{ t('disclaimer.orthotics' if orthotic else 'disclaimer') }}</div>
+  {# The AI parts of the case's domain: the orthotic options and design are their own parts. #}
+  {% set options_part = 'devices' if orthotic else 'components' %}
+  {% set design_part = 'design_fitting' if orthotic else 'fitting' %}
   {# Which model wrote the summaries, as the provider reported it, so the specialist knows where the case went. #}
   {% if generation and generation.answered_by %}
   <p class="gap-source">{{ t('ai.written_by', models=generation.answered_by | join(", "), version=generation.prompt_version) }}</p>
@@ -70,6 +81,62 @@
   {% endif %}
 
   <h2>{{ t('review.case') }}</h2>
+  {% if orthotic %}
+  {# Orthotic case (use case 03): as recorded, never judged. #}
+  {% macro shown(value) %}{% if value is none %}—{% elif value.value is defined %}{{ value_label(value) }}{% elif value is number %}<bdi>{{ "%g" | format(value) }}</bdi>{% else %}<bdi>{{ value }}</bdi>{% endif %}{% endmacro %}
+  {% macro degrees(value) %}{% if value is none %}—{% else %}<bdi>{{ t('ort.degrees', n="%g" | format(value)) }}</bdi>{% endif %}{% endmacro %}
+  <dl>
+    <dt>{{ t('ort.condition') }}</dt><dd>{{ value_label(case.condition) }}</dd>
+    <dt>{{ t('ort.side') }}</dt><dd>{{ value_label(case.side) }}</dd>
+    <dt>{{ t('ort.months_since_onset') }}</dt><dd>{{ shown(case.months_since_onset) }}</dd>
+    <dt>{{ t('review.age') }}</dt><dd>{{ shown(case.age_years) }}</dd>
+    <dt>{{ t('ort.functional_goals') }}</dt><dd>{{ shown(case.functional_goals) }}</dd>
+    <dt>{{ t('ort.walking_status') }}</dt><dd>{{ shown(case.walking.status) }}{% if case.walking.walking_aid %} · <bdi>{{ case.walking.walking_aid }}</bdi>{% endif %}</dd>
+    <dt>{{ t('ort.gait_speed') }}</dt><dd>{{ shown(case.walking.gait_speed_m_s) }}{% if case.walking.gait_speed_test %} · <bdi>{{ case.walking.gait_speed_test }}</bdi>{% endif %}</dd>
+    <dt>{{ t('ort.falls') }}</dt><dd>{{ shown(case.walking.falls_last_6_months) }}</dd>
+    <dt>{{ t('ort.df_knee_ext') }}</dt><dd>{{ degrees(case.exam.dorsiflexion_knee_extended_deg) }}</dd>
+    <dt>{{ t('ort.df_knee_flex') }}</dt><dd>{{ degrees(case.exam.dorsiflexion_knee_flexed_deg) }}</dd>
+    <dt>{{ t('ort.tone_grade') }}</dt><dd>{% if case.exam.plantarflexor_tone_grade %}<bdi>{{ case.exam.plantarflexor_tone_grade }}</bdi> · {{ value_label(case.exam.plantarflexor_tone_scale) }}{% if case.exam.plantarflexor_tone_notes %} · <bdi>{{ case.exam.plantarflexor_tone_notes }}</bdi>{% endif %}{% else %}—{% endif %}</dd>
+    <dt>{{ t('ort.df_strength') }}</dt><dd>{{ shown(case.exam.dorsiflexor_strength) }}</dd>
+    <dt>{{ t('ort.ke_strength') }}</dt><dd>{{ shown(case.exam.knee_extensor_strength) }}</dd>
+    <dt>{{ t('ort.knee_in_stance') }}</dt><dd>{{ shown(case.exam.knee_in_stance) }}</dd>
+    <dt>{{ t('ort.foot_posture') }}</dt><dd>{{ shown(case.exam.foot_posture) }}</dd>
+    <dt>{{ t('ort.protective_sensation') }}</dt><dd>{{ shown(case.exam.protective_sensation) }}</dd>
+    <dt>{{ t('ort.proprioception') }}</dt><dd>{{ shown(case.exam.proprioception) }}</dd>
+    <dt>{{ t('ort.skin') }}</dt><dd>{{ shown(case.exam.skin_condition) }}</dd>
+    <dt>{{ t('ort.footwear') }}</dt><dd>{{ shown(case.footwear) }}</dd>
+    <dt>{{ t('ort.donning') }}</dt><dd>{{ shown(case.donning) }}</dd>
+    <dt>{{ t('ort.prior_orthoses') }}</dt>
+    <dd>
+      {% if case.prior_orthoses is none %}—
+      {% elif not case.prior_orthoses %}{{ t('review.none_used') }}
+      {% else %}
+      {% for device in case.prior_orthoses %}
+      <div><bdi>{{ device.device_description }}</bdi>{% if device.years_used is not none %} · {{ t('review.years', years=device.years_used) }}{% endif %}{% if device.currently_using is not none %} · {{ t('review.in_use') if device.currently_using else t('review.no_longer_used') }}{% endif %}{% if device.issues %} · {{ t('review.issues') }} <bdi>{{ device.issues }}</bdi>{% endif %}</div>
+      {% endfor %}
+      {% endif %}
+    </dd>
+    <dt>{{ t('ort.implanted') }}</dt><dd>{{ shown(case.implanted_electronic_device) }}</dd>
+  </dl>
+  <h3>{{ t('ort.deviations_heading') }}</h3>
+  <div class="gap">
+    {% if case.walking.deviations is none %}<p class="gap-source">{{ t('ort.not_observed') }}</p>
+    {% elif not case.walking.deviations %}<p class="gap-source">{{ t('ort.none_observed') }}</p>
+    {% else %}
+    <dl>
+      {% for phase in gait_phases %}{% set seen = case.walking.deviations | selectattr('phase', 'equalto', phase) | list %}
+      <dt>{{ t('phase.' ~ phase) }}</dt><dd>{% for deviation in seen %}{{ value_label(deviation) }}{{ "، " if lang == "ar" and not loop.last else (", " if not loop.last) }}{% else %}—{% endfor %}</dd>
+      {% endfor %}
+    </dl>
+    {% endif %}
+    {% if case.walking.other_deviations %}<p><bdi>{{ case.walking.other_deviations }}</bdi></p>{% endif %}
+  </div>
+  <h3>{{ t('ort.requirements_heading') }}</h3>
+  <div class="gap">
+    {% if case.requirements %}<ul>{% for requirement in case.requirements %}<li><bdi>{{ requirement }}</bdi></li>{% endfor %}</ul>
+    {% else %}<p class="gap-source">{{ t('ort.requirements_none') }}</p>{% endif %}
+  </div>
+  {% else %}
   <dl>
     <dt>{{ t('intake.amputation_level') }}</dt><dd>{{ value_label(case.amputation_level) }}</dd>
     <dt>{{ t('intake.side') }}</dt><dd>{{ value_label(case.side) }}</dd>
@@ -87,12 +154,13 @@
       {% endif %}
     </dd>
   </dl>
+  {% endif %}
 
   {# Authors and licence under the citation of a licensed source: Creative Commons licences ask for both. #}
   {% macro attribution_line(doc_id) %}{% set credit = attribution(doc_id) %}{% if credit %}<div class="gap-source" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}{% endmacro %}
 
   <form method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
-  <h2>{{ t('review.gaps_heading', n=gaps | length) }}</h2>
+  <h2 id="gaps">{{ t('review.gaps_heading', n=gaps | length) }}</h2>
   {% if generation and generation.part('gaps').removed_items %}
   <p class="gap-source">{{ t('ai.removed', n=generation.part('gaps').removed_items) }}</p>
   {% endif %}
@@ -101,6 +169,7 @@
     <div class="gap-head">
       <span class="gap-label">{{ field_label(gap.field) }}</span>
       <span class="gap-status">{{ t('status.' ~ gap.status) }}</span>
+      {% if gap.field in critical %}<span class="gap-status critical">{{ t('ort.critical') }}</span>{% endif %}
       <span class="gap-field" dir="ltr">{{ gap.field }}</span>
     </div>
     <p>{{ explain(gap) }}</p>
@@ -190,14 +259,16 @@
   </div>
   {% endmacro %}
   {# A section without statements: why, as code knows it (no passage found; the AI reported nothing; the
-     checks removed what it gave; or the AI was unavailable, said at the top), and always the passages
+     checks removed what it gave; its quote is shown under an earlier topic; or the AI was unavailable,
+     said at the top), and always the passages
      the search found, so the specialist can check them. It never says what the sources do or don't say. #}
   {% macro empty_section(part, key) %}
   {% set found = chunks.get(key, []) %}
   {% if found %}
   {% if ai_status.get(part) == "ok" %}
   {% set removed = generation.part(part).removed_for(key) %}
-  <p class="gap-source no-source">{{ t('ai.topic_all_removed', n=removed) if removed else t('ai.topic_nothing_reported') }}</p>
+  {% set repeats = generation.part(part).repeats_for(key) %}
+  <p class="gap-source no-source">{{ t('ai.topic_all_removed', n=removed) if removed else (t('ai.topic_shown_elsewhere') if repeats else t('ai.topic_nothing_reported')) }}</p>
   {% endif %}
   <details>
     <summary>{{ t('ai.passages_found', n=found | length) }}</summary>
@@ -213,11 +284,12 @@
   {# How many summaries the quote check removed from a part, if any. #}
   {% macro removed_note(part) %}{% if generation and generation.part(part).removed_items %}<p class="gap-source">{{ t('ai.removed', n=generation.part(part).removed_items) }}</p>{% endif %}{% endmacro %}
   {# An intake value as recorded: a choice in the page's language, typed text as typed. #}
-  {% macro recorded(path, value) %}{% if value is none %}{{ t('status.not recorded') }}{% elif path == "months_since_amputation" %}{{ t('fitting.months', n="%g" | format(value)) }}{% elif value.value is defined %}{{ value_label(value) }}{% elif value is string %}<bdi>{{ value }}</bdi>{% elif value is number %}{{ value }}{% elif value %}<bdi>{{ value | join(", ") }}</bdi>{% else %}{{ t('fitting.none_reported') }}{% endif %}{% endmacro %}
+  {% macro recorded(path, value) %}{% if value is none %}{{ t('status.not recorded') }}{% elif path == "months_since_amputation" %}{{ t('fitting.months', n="%g" | format(value)) }}{% elif path.endswith("_deg") %}<bdi>{{ t('ort.degrees', n="%g" | format(value)) }}</bdi>{% elif value.value is defined %}{{ value_label(value) }}{% elif value is string %}<bdi>{{ value }}</bdi>{% elif value is number %}{{ "%g" | format(value) }}{% elif value %}<bdi>{{ value | join(", ") }}</bdi>{% else %}{{ t('fitting.none_reported') }}{% endif %}{% endmacro %}
 
   {% if components %}
   {% set functional = components.functional %}
-  <h2>{{ t('functional.heading') }}</h2>
+  {% if functional %}
+  <h2 id="functional">{{ t('functional.heading') }}</h2>
   <div class="gap">
     {% if functional.lower_limb %}
     <p><strong>{{ t('functional.k_level') }}</strong> {{ functional.k_level or t('functional.k_not_recorded') }}</p>
@@ -250,18 +322,20 @@
       <dt>{{ t('functional.goals') }}</dt><dd><bdi>{{ functional.goals or "—" }}</bdi></dd>
     </dl>
   </div>
+  {% endif %}
 
   {% set component_sections = components.component_sections %}
-  <h2 id="components">{{ t('components.heading', n=component_sections | sum(attribute='statements', start=[]) | length) }}</h2>
-  <div class="banner">{{ t('components.intro') }}</div>
-  {{ removed_note('components') }}
+  {% set shown_count = component_sections | sum(attribute='statements', start=[]) | length %}
+  <h2 id="components">{{ t('ort.options_heading', n=shown_count) if orthotic else t('components.heading', n=shown_count) }}</h2>
+  <div class="banner">{{ t('ort.options_intro' if orthotic else 'components.intro') }}</div>
+  {{ removed_note(options_part) }}
   {% for note in components.notes %}
   <p class="gap-source no-source">{{ t(note) }}</p>
   {% endfor %}
   {% for section in component_sections %}
   <h3>{{ t('component.' ~ section.component) }}</h3>
   {% for cited in section.statements %}{{ statement_block(cited) }}
-  {% else %}{{ empty_section('components', section.component) }}
+  {% else %}{{ empty_section(options_part, section.component) }}
   {% endfor %}
   {% endfor %}
   {% elif not generation %}
@@ -269,13 +343,13 @@
   {% endif %}
 
   {% if fitting %}
-  <h2 id="fitting">{{ t('fitting.heading', n=fitting.statements | length) }}</h2>
-  <div class="banner">{{ t('fitting.intro') }}</div>
-  {{ removed_note('fitting') }}
-  <p class="gap-source">{{ t('fitting.components_above') }}</p>
+  <h2 id="fitting">{{ t('ort.design_heading', n=fitting.statements | length) if orthotic else t('fitting.heading', n=fitting.statements | length) }}</h2>
+  <div class="banner">{{ t('ort.design_intro' if orthotic else 'fitting.intro') }}</div>
+  {{ removed_note(design_part) }}
+  {% if not orthotic %}<p class="gap-source">{{ t('fitting.components_above') }}</p>{% endif %}
   {% for section in fitting.sections %}
   <h3>{{ t('fitting_section.' ~ section.component) }}</h3>
-  {% if section.component == "readiness" %}
+  {% if section.component in ("readiness", "design") %}
   <div class="gap">
     <p class="gap-source">{{ t('fitting.recorded') }}</p>
     <dl>
@@ -286,7 +360,7 @@
   </div>
   {% endif %}
   {% for cited in section.statements %}{{ statement_block(cited) }}
-  {% else %}{{ empty_section('fitting', section.component) }}
+  {% else %}{{ empty_section(design_part, section.component) }}
   {% endfor %}
   {% endfor %}
   {% endif %}
@@ -309,5 +383,9 @@
     {% endfor %}
   </ol>
   {% endif %}
+  {% if orthotic %}
+  <div class="ui-actions"><a class="ui-btn" href="{{ url_for('orthotic_modules.requirements', case_id=case.case_id) }}">{{ t('review.to_requirements') }}</a></div>
+  {% endif %}
+  </main>
 </body>
 </html>

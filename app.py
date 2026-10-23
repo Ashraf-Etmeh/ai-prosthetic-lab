@@ -17,6 +17,8 @@ from flask import Flask, abort, g, redirect, request, url_for
 
 from intake.routes import bp as intake_bp
 from knowledge.catalog import attributions
+from orthotics.modules import bp as orthotic_modules_bp
+from orthotics.routes import bp as orthotic_intake_bp
 from review.routes import bp as review_bp
 from shared.i18n import (
     LANGUAGES,
@@ -41,6 +43,8 @@ def _local_page(target: str) -> bool:
 def create_app() -> Flask:
     app = Flask(__name__)
     app.register_blueprint(intake_bp)
+    app.register_blueprint(orthotic_intake_bp)  # /intake/orthotics (use case 03, stroke AFO)
+    app.register_blueprint(orthotic_modules_bp)  # /orthotics: modules 2-4 after the analysis
     app.register_blueprint(review_bp)
 
     @app.context_processor

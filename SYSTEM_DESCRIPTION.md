@@ -1,8 +1,9 @@
 # AI Prosthetic Lab — system description (functional and structural)
 
-State of the working tree on 2026-10-11 (the RAG, §4.8). Everything below
-runs and is tested offline; the live run of the AI writer (Gemini's free
-tier since 2026-10-13, or the Claude API) is still to be measured. More history and the reasons behind each decision are in
+State of the working tree on 2026-10-22 (the RAG, §4.8; orthotics as drafts,
+§4.9, on the branch `orthotics`). Everything below runs and is tested
+offline; the live run of the AI writer (Gemini's free tier since
+2026-10-13, or the Claude API) is still to be measured. More history and the reasons behind each decision are in
 `FUTURE_WORK.md`; how to run it is in `README.md`; principles, working
 rules and the roadmap are in `CLAUDE.md`.
 
@@ -36,9 +37,16 @@ the brief's "evaluate the amputation, choose the components, design and fit":
 | Design and fitting | What the sources say on readiness for fitting, preparatory vs definitive prosthesis, fitting steps and alignment (AI sentences over checked quotes), shown next to what the case recorded |
 
 Orthotics was started on 2026-10-16 (owner's decision, before the trial;
-stroke AFO first): so far only the case model is shared between domains
-(§5, `CaseCore`), and nothing orthotic is shown yet. Gait analysis,
-rehabilitation and follow-up are not started.
+stroke AFO first) and built on 2026-10-22 as drafts awaiting the owner's
+and an orthotist's review (§4.9): an orthotic intake at `/intake/orthotics`
+(exam and gait by phase), its information gaps, what the sources say about
+ankle-foot orthoses and FES, and about orthosis design and fitting, and the
+orthotist's decision in the review log. On 2026-10-23 the "Orthotics Module
+Design" canvas was applied (§4.9): modules 2-4 after the analysis, so the
+brief's four orthotics capabilities each have a page (functional case
+analysis; choosing and designing devices; linking the case to components and
+materials; the digital design workflow). Gait analysis, rehabilitation and
+follow-up are not started.
 
 ### Non-negotiable principles
 
@@ -61,8 +69,10 @@ rehabilitation and follow-up are not started.
    is met by the quote check and the AI label. Without the API the app
    shows the passages found.
 4. **Fake data only, no patient identifiers** (no name, date of birth,
-   address or record number). Cases are keyed by a random id. The case as
-   entered is sent to the cloud model (on Gemini's free tier Google uses it
+   address or record number). Cases are keyed by a random id. Part of the
+   case is sent to the cloud model with the passages: the amputation level,
+   side and recorded K-level (an orthotic case: condition, side and months
+   since onset), never what was typed (on Gemini's free tier Google uses it
    to improve its products, and human reviewers may read it).
 5. **Bilingual interface (English, Arabic right-to-left).** Quotes and
    citations stay in the source's language.
@@ -97,17 +107,30 @@ Commands:
 python app.py                  # run the web app
 python -m knowledge.ingest     # extract + chunk + embed all catalogued documents
 python -m knowledge.evaluate   # measure retrieval quality (hit@1 / hit@5)
+python -m knowledge.evaluate --orthotics  # the orthotic topic searches (data/eval/orthotic_topics.json)
 python -m knowledge.items      # knowledge items with the owner's rules applied -> data/knowledge/
 python -m intake.golden_cases  # development golden cases vs the app (gap checks need the model)
 python -m intake.golden_cases --rag  # also measure the RAG (cloud model: free-tier quota or money)
 python -m intake.golden_cases --held-out  # the frozen held-out cases (only when the owner asks)
-python -m unittest             # 379 tests, a few seconds, no model, no API
+python -m unittest             # 492 tests, about 40 s, no model, no API
 python scripts/verify_all.py   # the 0-2 checks, then the golden cases
 ```
 
 ---
 
 ## 3. What the user does (functional walk-through)
+
+Every page (since 2026-10-23) has the same header, from the orthotics design
+canvas: a domain switch (Prosthetics / Orthotics), the domain's modules and,
+on a case's pages, a case bar (the case, "test case · fake data", "the
+specialist decides"). The prosthetics map (`/prosthetics`) names the brief's
+five prosthetics capabilities and where each is: 01 تقييم حالات البتر (the
+intake and the information gaps), 02 تحليل المتطلبات الوظيفية (functional level
+and goals), 03 دعم اختيار المكونات (components), 04 دعم قرارات التصميم والتركيب
+(design and fitting), all sections of the review page, which the header links
+to (its one decision form marks them together); 05 المتابعة والتقييم
+(follow-up) is not built. The orthotics map (`/orthotics`) does the same for
+its four (§4.9).
 
 1. **Intake form** (`GET /intake`). The user enters a test case: amputation
    level (12 levels, 6 lower and 6 upper limb) and side (left, right,
@@ -379,9 +402,9 @@ language model, not by rules (FUTURE_WORK.md, "RAG").
 |---|---|---|
 | Topics | `reasoning/rag_topics.py` | gaps: each missing field (field guide query); components: functional level (lower limb) and each component of `COMPONENTS` for the level (pylon: any lower limb); fitting: each section of `SECTIONS`. Queries name the level and limb, "bilateral" for a bilateral case (left or right is never named), and the recorded K-level |
 | Search | `knowledge/retrieval.py` | one embed call; fields: top 5, ICRC manual left out; topics: top `RAG_TOP_K` = 6, nothing left out (`RAG_TOPIC_EXCLUDED_DOCUMENTS`) |
-| Ask | `reasoning/rag.py`, `writer.py` | three calls at once (gaps; functional level and components; fitting), each with `SYSTEM_PROMPT` (`PROMPT_VERSION` rag-v2), the case's amputation level, limb, side and recorded K-level only (`case_for_prompt`; nothing typed at intake; rag-v1 sent the whole case), the topics with passages, the passages with their ids; only topics with passages are asked; a part with none makes no call ("no passages") |
+| Ask | `reasoning/rag.py`, `writer.py` | three calls at once (gaps; functional level and components; fitting), each with `SYSTEM_PROMPT` (`PROMPT_VERSION` rag-v3: rag-v2 plus `FAITHFULNESS`, the source's hedges and strength kept and nothing from outside the quote, and `ARABIC_TERMS`, the page's Arabic word for each thing), the case's amputation level, limb, side and recorded K-level only (`case_for_prompt`; nothing typed at intake; rag-v1 sent the whole case), the topics with passages, the passages with their ids; only topics with passages are asked; a part with none makes no call ("no passages") |
 | Answer | structured output | `{"items": [{topic, passage_id, quote, sentence_en, sentence_ar, grade}]}`; topic and passage id limited to those given; grade one of five VA/DoD phrases or "" |
-| Check | `reasoning/quote_check.py` | quote in the passage word for word (NFKC; whitespace, quotation marks and dashes as printed), ≥ `MIN_QUOTE_WORDS` = 5, Arabic sentence present, no repeat, ≤ 1 per gap field and ≤ `MAX_ITEMS_PER_TOPIC` = 4 per section; grade kept only if printed within 300 characters after the quote; the passage's own words are shown, the page looked up in `data/extracted/` |
+| Check | `reasoning/quote_check.py` | quote in the passage word for word (NFKC; whitespace, quotation marks and dashes as printed), ≥ `MIN_QUOTE_WORDS` = 5, Arabic sentence present, no repeat, ≤ 1 per gap field and ≤ `MAX_ITEMS_PER_TOPIC` = 4 per section; grade kept only if printed within 300 characters after the quote; the passage's own words are shown, the page looked up in `data/extracted/`. Then `drop_repeats` (2026-10-23): a component or fitting quote that holds or is held by one already shown under an earlier topic is not shown again (a "repeat", not a failed check; the section says so) |
 | Show | `reasoning/rag.py` → `models.py` | items become `Gap` (gaps) and `CitedStatement` (origin "rag", id `rag-<topic>-<10 hex>`, the same in every case for the same topic and quote) in the existing sections, so the page, marks, log and trial report work unchanged |
 | Without the AI | | no key, offline, refusal, cut off, unreadable: the part is "unavailable" with the reason (banner); gaps fall back to §4.2; sections list the passages found |
 
@@ -407,15 +430,58 @@ manual is searched, 408 passages, but never ranks in the top 6). Not yet
 measured: the live answers (coverage, misquote rate, time, cost; `python -m
 intake.golden_cases --rag`).
 
+### 4.9 Orthotics: stroke ankle-foot orthosis (use case 03, drafts, 2026-10-22)
+
+The same pipeline for a second domain. The fields, which are critical, the
+topics, the prompt's rules and the golden cases are Claude's proposal,
+marked on the pages as a draft awaiting the owner's and an orthotist's
+review (FUTURE_WORK.md, "Orthotics").
+
+| Part | Where | What it does |
+|---|---|---|
+| Intake | `orthotics/routes.py`, `/intake/orthotics` | `OrthoticCase`: condition (stroke), affected side, months since onset, goals, walking (status, aid, gait speed with its test, falls, deviations ticked by gait phase), exam (dorsiflexion with the knee extended and flexed, signed; plantarflexor tone grade with its scale; strengths; knee in stance; foot posture; sensation; proprioception; skin), footwear, donning, prior orthoses or FES, the orthotist's "what the orthosis must do" lines |
+| Gaps | `shared/field_guide.py` `ORTHOTIC_FIELDS` | 23 fields; 6 marked critical (months since onset, goals, both dorsiflexion ranges, protective sensation, skin): the page marks them, hides nothing |
+| Topics | `orthotics/topics.py` | devices: AFO or FES for walking, AFO types, effects and limits, cautions; design and fitting: design, fitting and check-out, timing and training, outcome measures. Each searched in its own wording (no case words: they cost right passages) |
+| Search | `knowledge/retrieval.py` | only documents with the "orthotics" domain (`ORTHOTIC_RETRIEVAL_DOMAINS`), at most 3 passages per document (`ORTHOTIC_PASSAGES_PER_DOCUMENT`); prosthetic searches unchanged |
+| Ask | `orthotics/rag.py` (`PROFILE`, rag-ort-v1) | three parts (gaps, devices, design and fitting); only condition, limb, side and months since onset sent; never sets angles, materials, trim lines or wearing times, never says whether this patient should have an orthosis or FES; another condition's passage only where the source says it applies to stroke |
+| Show and log | `review/templates/review.html`, `decision_log.py` | the case as recorded, deviations by phase, the requirements as written, devices side by side (never ranked); `LOG_VERSION` 6 adds "domain" |
+
+Measured (2026-10-22, `python -m knowledge.evaluate --orthotics`, two fake
+cases, 13 topics each): a right passage among those the AI sees in 22 of
+26 searches, up from 10 at the first build. Still missed: protective
+sensation and plantarflexor tone, for which the library has little.
+
+**After the analysis: modules 2-4 (2026-10-23, from the design canvas).**
+Every value is the orthotist's (`orthotics/plan.py` `OrthoticPlan`, saved
+in the case file, version 3); the tool writes, suggests and ranks nothing.
+
+| Module (brief capability) | Page | What it holds |
+|---|---|---|
+| Map | `/orthotics` | the modules and the brief's capabilities they cover |
+| 2 Requirements (the bridge) | `/orthotics/<id>/requirements` | what the orthosis must do, in the orthotist's words, each tied to the case findings it comes from (gait deviations by phase, exam values, goals) and given a priority; the information still missing beside it |
+| 3 Options (choosing and designing devices; linking the case to components and materials) | `/orthotics/<id>/options` | up to three options side by side, never ranked: device type, materials and parts each tied to the requirements it serves (so a part leads back to a finding), the orthotist's yes/partly/no marks and notes; the choice with its required reason, appended to the review log ("design_choice", `LOG_VERSION` 7, with the whole plan); saving the options again keeps the choice only if the chosen option is still the same device with the same parts |
+| 4 Digital design (the digital design workflow) | `/orthotics/<id>/design` | capture, rectify, parameters, fabricate, release: status, method and notes per step; the design parameters, every save a new version |
+
+Next to each device type, part and step: what the source library says,
+found by local search on fixed wording with topic words
+(`orthotics/sources.py`), quoted as printed with its page, labelled as not
+summarised and not checked to support the case. Nothing on these pages goes
+to the AI. All orthotic pages share the canvas's look (header with the
+modules, case bar, cards; system fonts). Not built from the canvas: modules
+5-6, AI-suggested parameters and code-made judgements (principles 1-2),
+hard stops (await the owner's rules), the scan viewer and simulation.
+
 ---
 
 ## 5. Structure
 
 ```
 app.py                     Flask app: registers blueprints, language route, template helpers
+templates/                 every page's look (2026-10-23): ui_style.html, ui_header.html (domain switch,
+                           the domain's modules, case bar), ui_base.html (the map and module pages)
 shared/
-  case_schema.py           CaseCore (shared by every domain) + Case (prosthetics), enums, validation, to_dict/case_from_dict
-  field_guide.py           the 17 gap fields: label, search query, topic terms (en/de/ar)
+  case_schema.py           CaseCore (shared by every domain) + Case (prosthetics) + OrthoticCase, enums, validation, to_dict/case_from_dict
+  field_guide.py           the 17 prosthetic and 23 orthotic gap fields: label, search query, topic terms (en/de/ar)
   config.py                paths, model, chunk and search settings, threshold, disclaimer
   i18n.py                  all interface text in English and Arabic
   arabic_terms.py          Arabic term sheet: export for a prosthetist, apply corrections back
@@ -451,9 +517,12 @@ reasoning/
 review/
   routes.py                GET /review/<id>, POST /review/<id>/decision
   decision_log.py          validation, log entry building, append/read
-  trial_report.py          counts of the reviewers' marks in the log → data/trial/report.csv
+  trial_report.py          counts of the reviewers' marks in the log, one domain at a time → data/trial/report.csv
   templates/review.html
-tests/                     unittest suite (379 tests) + a tiny fake embedder and a fake AI writer
+orthotics/                 use case 03 (drafts): topics.py, rag.py (PROFILE), routes.py (/intake/orthotics),
+                           plan.py (OrthoticPlan: modules 2-4), sources.py (passages per device, part, step),
+                           modules.py (/orthotics: map, requirements, options, choice, design), templates/
+tests/                     unittest suite (492 tests) + a tiny fake embedder and a fake AI writer
 scripts/                   verify_prompts_0_2.py (checks for prompts 0-2), verify_all.py (that + golden cases)
 data/
   sources/                 catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
@@ -461,7 +530,8 @@ data/
                            (in git; regenerate after changing a guide or the rule table)
   extracted/               cleaned text per document (generated)
   vector_store/            vectors.npy, chunks.json, info.json (generated)
-  eval/retrieval_queries.json, eval/golden_cases/golden-NN.json (development),
+  eval/retrieval_queries.json, eval/orthotic_topics.json, eval/golden_cases/golden-NN.json
+                           and golden-ort-NN.json (development),
                            eval/golden_cases_held_out/golden-NN.json (held out, frozen by
                            eval/golden_cases_held_out.json)
   cases/                   one JSON file per case (local only)
@@ -490,6 +560,23 @@ Case
   -> unrecorded_fields(), unknown_fields(): dotted paths, skipping fields
      that don't apply (K-level and contralateral limb for upper limb)
 
+OrthoticCase (CaseCore; dict carries "domain": "orthotics"; §4.9)
+  condition (stroke), side (affected; required), months_since_onset, functional_goals
+  walking: Walking(status, walking_aid, gait_speed_m_s + gait_speed_test,
+      falls_last_6_months, deviations: None (not observed) | [] | [GaitDeviation], other_deviations)
+  exam: OrthoticExam(dorsiflexion_knee_extended_deg, dorsiflexion_knee_flexed_deg (±90),
+      plantarflexor_tone_scale + _grade + _notes, dorsiflexor_strength, knee_extensor_strength,
+      knee_in_stance, foot_posture, protective_sensation, proprioception, skin_condition)
+  footwear, donning, prior_orthoses: None | [] | [PriorDevice],
+  implanted_electronic_device (never a gap), requirements: [str] (the orthotist's, at intake)
+
+OrthoticPlan (orthotics/plan.py; CaseRecord.plan; case file version 3)
+  requirements: [Requirement(id "R1", text, findings: [case_findings() key], priority must/should/nice)]
+  options: [DesignOption(id A-C, device: DeviceType, parts: [OptionPart(part, requirement ids)],
+            marks {requirement id: yes/partly/no}, notes)], chosen, choice_reason
+  steps {capture|rectify|parameters|fabricate|release: StepRecord(status, method, notes)}
+  parameter_versions: [ParameterVersion(number, values {parameter: text}, note, saved_at)]
+
 Gap(field, label, status, why_needed, source_protocol_reference, evidence: ProtocolChunk, excerpt,
     summary_en, summary_ar)
 
@@ -502,7 +589,7 @@ ComponentSection(component, statements: [CitedStatement])
 ComponentSupport(functional: FunctionalLevel, sections, notes)
 FittingSupport(sections, recorded: [(field path, value)])
 
-CaseRecord(case, retrieved_chunks, gaps, knowledge_warning, components, fitting, generation)
+CaseRecord(case, retrieved_chunks, gaps, knowledge_warning, components, fitting, generation, plan)
 
 Generation(prompt_version, writer, effort, parts {gaps, components, fitting: Part})
 Part(kind, status "ok"/"unavailable"/"no passages", reason, model, usage, seconds, topics,
@@ -539,11 +626,12 @@ POST /review/<id>/decision
 | `MIN_RELEVANCE_SCORE` | 0.50 |
 | `RETRIEVAL_LANGUAGES` | en, ar |
 | `RETRIEVAL_DOMAINS` | prosthetics |
+| `ORTHOTIC_RETRIEVAL_DOMAINS` / `ORTHOTIC_PASSAGES_PER_DOCUMENT` | orthotics / 3 (orthotic searches only) |
 | `RETRIEVAL_EXCLUDED_DOCUMENTS` | the ICRC gait-analysis manual (gap search only) |
 | `RAG_TOP_K` / `RAG_TOPIC_EXCLUDED_DOCUMENTS` | 6 / none |
 | `MIN_QUOTE_WORDS` / `MAX_ITEMS_PER_TOPIC` | 5 / 4 (gap fields: 1) |
 | `LLM_MODEL` / `LLM_EFFORT` / `LLM_FALLBACKS` | `claude-opus-5-5` / medium / on |
-| `PROMPT_VERSION` | rag-v2 (2026-10-16; rag-v1 sent the whole case) |
+| `PROMPT_VERSION` | rag-v3 (2026-10-23: the source's hedges kept, the page's Arabic terms; rag-v2 2026-10-16; rag-v1 sent the whole case) |
 | `OFFLINE_ENV` | `AI_PROSTHETIC_LAB_OFFLINE`: set, the AI is never called |
 | `SOURCES_NOT_INGESTED` | registry, AI-safety/regulation references, datasets |
 
@@ -561,7 +649,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **368 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **492 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -596,7 +684,9 @@ uses a missing key.
   Since 2026-10-13, 5 of the 13 are held out (`data/eval/golden_cases_held_out/`:
   golden-06, -07, -08, -10, -11): frozen by content hash (a test fails if one
   changes), never tuned on, run only with `--held-out` when the owner asks.
-  The default run and all tuning use the other 8.
+  The default run and all tuning use the other 8. Three orthotic drafts
+  (`golden-ort-01..03`, 2026-10-22, unreviewed) are checked on their gaps
+  only, as there is no orthotic answer key; they pass with the real search.
 - **Live run checks** with the real model over HTTP. Latest (2026-10-09):
   13 English and 2 Arabic cases, 1,514 page checks, 0 failed (every
   applicable statement on the page word for word, statements for other
@@ -627,14 +717,28 @@ uses a missing key.
   free tier: daily limits Google doesn't publish, and Google may use and
   people may read what is sent; Claude: cost), and the passages plus the
   case's amputation level, side and recorded K-level leave the machine
-  (nothing typed at intake, since 2026-10-16). The Gemini path is tested offline only; its first
-  live answer is still to be checked.
+  (nothing typed at intake, since 2026-10-16). Two live runs so far, both
+  on golden-01 with `gemini-3.8-flash` (2026-10-23): no misquotes; 5 and
+  then 6 of 34 answer-key statements covered; 137 and 240 s per case while
+  Google reported high demand. In the first, three sentences said more
+  than their quote; rag-v3 fixed those, and one "need to" still became
+  "must" (FUTURE_WORK.md, "First live run").
 - Library gaps: upper-limb terminal devices and partial-hand prostheses;
   alignment and transtibial socket text come from one training manual
   (ICRC, written for its own polypropylene technology).
 - CMS 2017 is US Medicare policy; its statements are shown as written.
 - Arabic clinical terms in `shared/i18n.py` have not yet been checked by an
-  Arabic-reading prosthetist.
+  Arabic-reading prosthetist (or, for the orthotic pages, an orthotist).
+- Orthotics (§4.9) is a draft: its fields, critical flags, topics, prompt
+  and golden cases await the owner and an orthotist; it was tuned on a
+  two-case yardstick with no held-out set; protective sensation and
+  plantarflexor tone find little in the library (G03, the APTA/ANPT 2021
+  AFO/FES guideline, needs a manual download); no live orthotic AI run yet,
+  and none possible while `ORTHOTIC_CLOUD_AI` is off (owner's decision
+  2026-10-23: orthotic pages show the passages without summaries).
+  Modules 2-4 (2026-10-23) show passages for each device, part and step
+  unsummarised and unchecked; their vocabularies are drafts; modules 5-6 of
+  the canvas are not built.
 
 ---
 
@@ -654,7 +758,8 @@ uses a missing key.
   values and showing them on the review page (3e) next; 4 golden-case
   benchmark — runner and 13 cases, 3 reviewed), product (5 smart search,
   6 split `Case` — core done 2026-10-17, 7 orthotics — started 2026-10-16
-  by the owner's decision, before the trial, stroke AFO first). An
+  by the owner's decision, before the trial, stroke AFO first; built as
+  drafts on 2026-10-22 on the branch `orthotics`, not committed). An
   Arabic-reading prosthetist should also check the Arabic terms.
 - Possible: Arabic versions of quotes from the WHO implementation manual
   (it has an Arabic edition in the library); fixing the smaller limitations.

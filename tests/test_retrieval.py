@@ -66,6 +66,19 @@ class SearchTests(unittest.TestCase):
         result = self.search("phantom pain", top_k=1)[0]
         self.assertEqual(result.citation, "Title of b (2024), p. 1")
 
+    def test_per_document_limit(self):
+        store = make_store(
+            chunk_record("a-0000", "orthosis fitting check"),
+            chunk_record("a-0001", "orthosis fitting check and skin"),
+            chunk_record("a-0002", "orthosis fitting check of trim lines"),
+            chunk_record("b-0000", "phantom limb pain"),
+        )
+        vector = fake_embed(["orthosis fitting check"])[0]
+        unlimited = [r.chunk_id for r in store.search(vector, top_k=3)]
+        limited = [r.chunk_id for r in store.search(vector, top_k=3, per_document=2)]
+        self.assertEqual(unlimited, ["a-0000", "a-0001", "a-0002"])
+        self.assertEqual(sorted(limited), ["a-0000", "a-0001", "b-0000"])
+
 
 class LoadTests(unittest.TestCase):
     def setUp(self):

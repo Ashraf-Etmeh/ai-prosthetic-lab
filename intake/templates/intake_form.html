@@ -23,8 +23,12 @@
     .lang-switch button { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: LinkText; text-decoration: underline; cursor: pointer; }
     .default-submit { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
   </style>
+  {% include "ui_style.html" %}
 </head>
-<body>
+<body class="ui-page">
+  {# The header of every page (templates/ui_header.html); this form's own language button keeps what was typed. #}
+  {% with domain = 'prosthetics', module = 'evaluate', no_lang = true %}{% include "ui_header.html" %}{% endwith %}
+  <main class="ui-wrap ui-main ui-intake">
   {# Enter in a field submits the form with its first submit button. This
      invisible one comes before the language button, so Enter sends the case. #}
   <button type="submit" form="intake-form" class="default-submit" tabindex="-1" aria-hidden="true"></button>
@@ -34,6 +38,7 @@
             formnovalidate lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</button>
   </nav>
   <h1>{{ t('intake.heading') }}</h1>
+  <p class="hint"><a href="{{ url_for('orthotic_intake.show_form') }}">{{ t('intake.orthotic_link') }}</a></p>
   <div class="banner">{{ t('intake.banner') }}</div>
 
   {% if error %}
@@ -170,5 +175,6 @@
     <p class="banner">{{ t('intake.ai_note') }}</p>
     <button type="submit">{{ t('intake.submit') }}</button>
   </form>
+  </main>
 </body>
 </html>

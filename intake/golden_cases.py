@@ -29,7 +29,8 @@ and the AI, and the hand-written statements are the answer key. So:
   off, so the gaps come from the search and topic-word check, as before;
 - --rag measures the RAG against the answer key: how many expected
   statements a checked RAG quote covers (same document, a run of
-  COVER_WORDS words in common), any statement the case must not show that
+  COVER_WORDS words in common, counted for the statement it matches best:
+  counted_for), any statement the case must not show that
   one covers, what the quote check removed, the gap sources, the kept items
   the sentence checks flag (reasoning/sentence_checks.py), and the tokens,
   time and estimated cost. These are measurements (INFO, or WARN for a
@@ -59,6 +60,14 @@ and, optionally:
   twin_of                          the id of a case whose analysis this one must match exactly
                                    (statements, functional level, notes, gaps and, with the
                                    search, the passage each gap cites)
+
+An orthotic case (question with "domain": "orthotics", added 2026-10-22) is
+checked on its gaps only (evaluation_criteria ["gaps"], against
+shared/field_guide.py ORTHOTIC_FIELDS): there is no orthotic answer key yet,
+so its statements_present, statements_absent, reasoning_path and
+supporting_sources are empty and its functional_level null. It is entered
+in English (no interface_language) and has no twin_of. With --rag its
+measurements are the quote check, the gap sources and the sentence flags.
 
 Every case goes through intake/routes.py analyse_case(), the analysis behind
 POST /intake (an Arabic one through the route itself, with the case store in
@@ -96,7 +105,7 @@ from reasoning.fitting_support import fitting_support
 from reasoning.models import ORIGIN_RAG, ComponentSupport, FittingSupport, GuidelineStatement
 from reasoning.sentence_checks import item_flags
 from reasoning.writer import OfflineWriter, Writer, provider_writer
-from shared.case_schema import Case
+from shared.case_schema import Case, OrthoticCase, case_from_dict
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
@@ -107,7 +116,7 @@ from shared.config import (
     RETRIEVAL_EXCLUDED_DOCUMENTS,
     VECTOR_STORE_DIR,
 )
-from shared.field_guide import FIELDS_BY_PATH
+from shared.field_guide import fields_for
 from shared.i18n import LANGUAGE_COOKIE, LANGUAGES
 from shared.store import CaseRecord, CaseStore
 
@@ -140,7 +149,11 @@ PRICES = {"claude-opus-5-5": (4.0, 20.0)}
 class GoldenCase:
     path: Path
     data: dict
-    case: Case
+    case: Case | OrthoticCase
+
+    @property
+    def orthotic(self) -> bool:
+        return self.case.domain == "orthotics"
 
     @property
     def id(self) -> str:
@@ -213,11 +226,13 @@ def read_golden_case(path: Path) -> GoldenCase:
             raise ValueError("evaluation_criteria is empty")
         _id_list("evaluation_criteria", criteria, CRITERIA, "a check")
 
-        case = Case.from_dict(data["question"])
+        case = case_from_dict(data["question"])
         if case.to_dict() != data["question"]:
             raise ValueError("question must be exactly what Case.to_dict() gives (every field, values as stored)")
         if case.case_id != data["id"]:
             raise ValueError(f"question.case_id must be {data['id']!r}")
+        if case.domain == "orthotics":
+            _orthotic_shape(data)
 
         expected = data["expected_answer"]
         _keys("expected_answer", expected, ("gaps", "statements_present", "functional_level"))
@@ -228,7 +243,8 @@ def read_golden_case(path: Path) -> GoldenCase:
             _keys("each expected gap", gap, ("field", "source_expected"))
             if gap["source_expected"] is not None and not isinstance(gap["source_expected"], bool):
                 raise ValueError(f"gap {gap['field']}: source_expected must be true, false or null")
-        _id_list("expected_answer.gaps", [gap["field"] for gap in gaps], FIELDS_BY_PATH, "a gap field")
+        _id_list("expected_answer.gaps", [gap["field"] for gap in gaps], {info.path for info in fields_for(case)},
+                 f"a gap field of a {case.domain} case")
         _id_list("statements_present", expected["statements_present"], RULES, "a statement id")
         if expected["functional_level"] is not None and expected["functional_level"] not in K_LEVEL_IDS:
             raise ValueError(f"functional_level must be one of {sorted(K_LEVEL_IDS)} or null")
@@ -260,6 +276,20 @@ def read_golden_case(path: Path) -> GoldenCase:
     except (ValueError, TypeError, KeyError) as error:
         raise ValueError(f"{path.name}: {error}") from None
     return GoldenCase(path, data, case)
+
+
+def _orthotic_shape(data: dict) -> None:
+    """An orthotic case is checked on its gaps only: there is no orthotic answer key yet."""
+    if data["evaluation_criteria"] != ["gaps"]:
+        raise ValueError('an orthotic case has evaluation_criteria ["gaps"] only: there is no orthotic '
+                         "answer key yet (statements and functional level)")
+    expected, wrong = data["expected_answer"], data["common_wrong_answers"]
+    if (expected.get("statements_present") or expected.get("functional_level") is not None
+            or wrong.get("statements_absent") or data["supporting_sources"] or data["reasoning_path"]):
+        raise ValueError("an orthotic case has empty statements_present, statements_absent, supporting_sources "
+                         "and reasoning_path, and a null functional_level")
+    if "interface_language" in data or "twin_of" in data:
+        raise ValueError("an orthotic case is entered in English and has no twin_of")
 
 
 # ---- Checking a case ------------------------------------------------------
@@ -332,7 +362,8 @@ def check_case(golden: GoldenCase, record: CaseRecord, gaps_skipped: Optional[st
     """
     mismatch = FAIL if golden.reviewed else WARN
     criteria = golden.data["evaluation_criteria"]
-    components, fitting = reference(golden.case)
+    if "statements" in criteria or "functional_level" in criteria:
+        components, fitting = reference(golden.case)
     findings = []
 
     if "statements" in criteria:
@@ -408,12 +439,61 @@ def shares_a_run(quote: str, statement: str, n: int = COVER_WORDS) -> bool:
     return any(tuple(a[i:i + n]) in runs for i in range(len(a) - n + 1))
 
 
+def longest_run(quote: str, statement: str) -> int:
+    """The number of words in the longest run the two texts share."""
+    a, b = _words(quote), _words(statement)
+    best, previous = 0, [0] * (len(b) + 1)
+    for word in a:
+        current = [0] * (len(b) + 1)
+        for j, other in enumerate(b, 1):
+            if word == other:
+                current[j] = previous[j - 1] + 1
+                best = max(best, current[j])
+        previous = current
+    return best
+
+
+def _text(statement: GuidelineStatement) -> str:
+    return " ".join([statement.quote.text, *statement.quote.items])
+
+
+def _answer_key_by_doc() -> dict[str, list[GuidelineStatement]]:
+    by_doc: dict[str, list[GuidelineStatement]] = {}
+    for statement in (*(rule.statement for rule in RULES.values()), *K_LEVEL_BY_ID.values()):
+        by_doc.setdefault(statement.doc_id, []).append(statement)
+    return by_doc
+
+
+# Every hand-written statement a RAG quote can be counted for, by document.
+ANSWER_KEY_BY_DOC = _answer_key_by_doc()
+
+
+def counted_for(quote: str, doc_id: str) -> set[str]:
+    """The answer-key statements a RAG quote covers.
+
+    Of the statements of its document that share a run of COVER_WORDS words
+    with it: the one(s) sharing the longest run, and any it holds whole.
+    Statements of one document often share stock wording (the CMS K-level
+    descriptions; ICRC's transtibial and transfemoral alignment sentences,
+    which differ by two words), so a 6-word run alone credited one quote to
+    several statements (2026-10-23: a transtibial quote counted as the
+    transfemoral statement a transtibial case must not show). A page rule
+    would not do: VA/DoD prints each recommendation on several pages.
+    """
+    runs = {}
+    for statement in ANSWER_KEY_BY_DOC.get(doc_id, []):
+        text = _text(statement)
+        if shares_a_run(quote, text):
+            runs[statement.id] = (longest_run(quote, text), len(_words(text)))
+    best = max((run for run, _ in runs.values()), default=0)
+    return {i for i, (run, size) in runs.items() if run == best or run == size}
+
+
 def covering(statement: GuidelineStatement, record: CaseRecord) -> list[str]:
-    """The ids of the RAG statements whose quote covers a hand-written statement."""
-    text = " ".join([statement.quote.text, *statement.quote.items])
+    """The ids of the RAG statements whose quote covers a hand-written statement (counted_for)."""
     return [cited.statement.id for cited in record.shown_statements()
             if cited.origin == ORIGIN_RAG and cited.statement.doc_id == statement.doc_id
-            and shares_a_run(cited.statement.quote.text, text)]
+            and statement.id in counted_for(cited.statement.quote.text, statement.doc_id)]
 
 
 def estimated_cost(usage: dict, model: str) -> Optional[float]:
@@ -424,24 +504,29 @@ def estimated_cost(usage: dict, model: str) -> Optional[float]:
 
 
 def rag_findings(golden: GoldenCase, record: CaseRecord) -> list[Finding]:
-    """What the RAG gave for the case, measured against the answer key. Never FAIL."""
-    expected = [RULES[i].statement for i in golden.present]
-    level = golden.data["expected_answer"]["functional_level"]
-    if level:
-        expected.append(K_LEVEL_BY_ID[level])
-    covered = {statement.id: covering(statement, record) for statement in expected}
-    missed = [i for i, by in covered.items() if not by]
-    hit = len(expected) - len(missed)
-    findings = [Finding("rag coverage", INFO, [
-        f"{hit} of {len(expected)} expected statements covered by a checked RAG quote"
-        + (f" ({100 * hit // len(expected)}%)" if expected else ""), *(f"not covered: {i}" for i in missed)],
-        {"expected": len(expected), "covered": hit})]
+    """What the RAG gave for the case, measured against the answer key. Never FAIL.
 
-    forbidden = {i: by for i in golden.absent if (by := covering(RULES[i].statement, record))}
-    findings.append(Finding("rag must-not-show", WARN if forbidden else PASS, [
-        f"{len(forbidden)} statement(s) the case must not show are covered" if forbidden
-        else "none of the statements the case must not show is covered",
-        *(f"{i}: by {', '.join(by)}" for i, by in forbidden.items())], {"forbidden_shown": len(forbidden)}))
+    An orthotic case has no answer key yet: no coverage or must-not-show measure.
+    """
+    findings, covered = [], {}
+    if not golden.orthotic:
+        expected = [RULES[i].statement for i in golden.present]
+        level = golden.data["expected_answer"]["functional_level"]
+        if level:
+            expected.append(K_LEVEL_BY_ID[level])
+        covered = {statement.id: covering(statement, record) for statement in expected}
+        missed = [i for i, by in covered.items() if not by]
+        hit = len(expected) - len(missed)
+        findings.append(Finding("rag coverage", INFO, [
+            f"{hit} of {len(expected)} expected statements covered by a checked RAG quote"
+            + (f" ({100 * hit // len(expected)}%)" if expected else ""), *(f"not covered: {i}" for i in missed)],
+            {"expected": len(expected), "covered": hit}))
+
+        forbidden = {i: by for i in golden.absent if (by := covering(RULES[i].statement, record))}
+        findings.append(Finding("rag must-not-show", WARN if forbidden else PASS, [
+            f"{len(forbidden)} statement(s) the case must not show are covered" if forbidden
+            else "none of the statements the case must not show is covered",
+            *(f"{i}: by {', '.join(by)}" for i, by in forbidden.items())], {"forbidden_shown": len(forbidden)}))
 
     rag = [cited for cited in record.shown_statements() if cited.origin == ORIGIN_RAG]
     used = {i for by in covered.values() for i in by}
@@ -705,6 +790,10 @@ def case_paths(files: list[Path], held_out: bool) -> list[Path]:
 
 def describe(golden: GoldenCase) -> str:
     case = golden.case
+    if golden.orthotic:
+        months = f", {case.months_since_onset:g} months" if case.months_since_onset is not None else ""
+        return (f"{golden.id}  [{golden.data['review_status']}]  orthotics: "
+                f"{case.condition.value}, {case.side.value}{months}")
     k_level = f", {case.activity.k_level.value}" if case.activity.k_level else ", no K-level"
     if not case.is_lower_limb:
         k_level = ""

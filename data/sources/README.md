@@ -61,7 +61,8 @@ broken (letters in the wrong order or shape).
 | `doi` / `url` | Where to get the document. `null` if none. |
 | `notes` | Optional. |
 | `source_type` | One of the brief's six: `protocol`, `scientific_reference`, `professional_knowledge`, `applied_case`, `structured_data`, `specialist_expertise`. |
-| `domains` | One or more of: `prosthetics`, `orthotics`, `gait`, `rehabilitation`. v1 (use case 01) searches `prosthetics` only. |
+| `domains` | One or more of: `prosthetics`, `orthotics`, `gait`, `rehabilitation`. A prosthetic case searches `prosthetics` only, an orthotic case (since 2026-10-22) `orthotics` only. |
 | `language` | `en`, `ar` or `de`. |
 | `limbs` | Optional. `["lower"]`, `["upper"]` or both: which amputations the document is about. An upper-limb case never cites a `["lower"]`-only document. Leave it out if the document isn't limb-specific. |
 | `licence` | Optional. The licence the document states, copied exactly from the manifest's `licence` column (a test checks they match); leave it out when the manifest records none ("not shown", US federal works). When set, the review page shows the authors and the licence under the citation, as Creative Commons licences ask. |
+| `split_ligatures` | Optional, `true` only for a PDF whose extracted text has a space after every ligature ("fi tting", "Th e"): extraction then rejoins those words. Check `data/extracted/<id>.txt` before setting it; in other documents the same pattern is ordinary text ("cut off the"). |
