@@ -1,0 +1,143 @@
+{% extends "ui_base.html" %}
+{# Module 5 (the canvas's screen 5): fit, tune and train. Every row is the orthotist's or the physiotherapist's,
+   kept as written: the check-out (starting from the chosen option's checks at fitting and the requirements),
+   the tuning, the walking measures before and after (starting from the intake), the training plan and the
+   patient leaflet, written in Arabic and English by the orthotist. #}
+{% block title %}{{ t('fit.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=5) }}{% endblock %}
+{% block brief %}ربط الجهاز بالأداء وبالتدريب الوظيفي{% endblock %}
+{% block content %}
+{% macro sent(f, name, saved_value) %}{{ f.get(name, '') if f else (saved_value or '') }}{% endmacro %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set action = form.get('action') if form else none %}
+{% set fit = plan.fit %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    {# Check-out #}
+    {% set f = form if action == 'checkout' else none %}
+    {% set items = fit.checkout or start.checkout %}
+    {% set n_rows = (f.get('check_rows') | int) if f else (items | length) + new_rows %}
+    <form method="post" action="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">
+      <input type="hidden" name="action" value="checkout"><input type="hidden" name="check_rows" value="{{ n_rows }}">
+      <section class="ui-card">
+        <h2>{{ t('fit.checkout') }}</h2>
+        {% if not fit.checkout and start.checkout %}<p class="ui-note">{{ t('fit.checkout_start') }}</p>{% endif %}
+        <div style="display: flex; flex-direction: column; margin-top: 0.5rem">
+          {% for n in range(1, n_rows + 1) %}{% set item = items[n - 1] if (not f and n <= items | length) else none %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; min-height: 44px; padding: 0.3rem 0; border-bottom: 1px solid var(--ui-line-soft)">
+            <input type="checkbox" name="check_{{ n }}_done" value="1" aria-label="{{ t('fit.done') }}" style="width: 20px; height: 20px; accent-color: var(--ui-accent)"{{ " checked" if (f.get('check_' ~ n ~ '_done') if f else (item.done if item else false)) }}>
+            <input type="text" name="check_{{ n }}_text" dir="auto" aria-label="{{ t('fit.check_item') }}" value="{{ sent(f, 'check_' ~ n ~ '_text', item.text if item else '') }}" style="flex: 3 1 260px">
+            <input type="text" name="check_{{ n }}_note" dir="auto" aria-label="{{ t('fit.check_note') }}" placeholder="{{ t('fit.check_note') }}" value="{{ sent(f, 'check_' ~ n ~ '_note', item.note if item else '') }}" style="flex: 1 1 160px">
+          </div>
+          {% endfor %}
+        </div>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fit.save_checkout') }}</button></div>
+      </section>
+    </form>
+
+    {# Tuning #}
+    {% set f = form if action == 'tuning' else none %}
+    {% set n_rows = (f.get('tune_rows') | int) if f else (fit.tuning | length) + new_rows %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('fit.tuning') }}</h2><span class="ui-note" style="margin: 0">{{ t('fit.tuning_note') }}</span></div>
+      {% if fit.tuning %}
+      <div class="ui-scroll" style="margin-top: 0.75rem"><table class="ui-table" style="min-width: 480px">
+        <thead><tr><th scope="col">{{ t('fit.tune_step') }}</th><th scope="col">{{ t('fit.tune_change') }}</th><th scope="col">{{ t('fit.tune_seen') }}</th></tr></thead>
+        <tbody>{% for row in fit.tuning %}<tr><td style="font-weight: 600"><bdi>{{ row.step }}</bdi></td><td><bdi>{{ row.change }}</bdi></td><td><bdi>{{ row.seen or '' }}</bdi></td></tr>{% endfor %}</tbody>
+      </table></div>
+      {% endif %}
+      <details{% if f or not fit.tuning %} open{% endif %}><summary>{{ t('fit.tuning_edit') }}</summary>
+        <form method="post" action="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">
+          <input type="hidden" name="action" value="tuning"><input type="hidden" name="tune_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set row = fit.tuning[n - 1] if (not f and n <= fit.tuning | length) else none %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem">
+            {% for col, label in [('step', t('fit.tune_step')), ('change', t('fit.tune_change')), ('seen', t('fit.tune_seen'))] %}<label style="flex: 1 1 160px">{{ label }}<input type="text" name="tune_{{ n }}_{{ col }}" dir="auto" value="{{ sent(f, 'tune_' ~ n ~ '_' ~ col, row[col] if row else '') }}"></label>{% endfor %}
+          </div>
+          {% endfor %}
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fit.save_tuning') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    {# Before and after #}
+    {% set f = form if action == 'measures' else none %}
+    {% set starting = [] %}
+    {% if not fit.measures %}
+      {% if case.walking.gait_speed_m_s is not none %}{% set _ = starting.append({'measure': case.walking.gait_speed_test or t('fit.gait_speed'), 'before': ("%g" | format(case.walking.gait_speed_m_s)) ~ ' m/s', 'after': '', 'note': case.walking.walking_aid or ''}) %}{% endif %}
+      {% for d in case.walking.deviations or [] %}{% set _ = starting.append({'measure': value_label(d), 'before': t('fit.present'), 'after': '', 'note': ''}) %}{% endfor %}
+    {% endif %}
+    {% set rows_saved = fit.measures or starting %}
+    {% set n_rows = (f.get('ba_rows') | int) if f else (rows_saved | length) + new_rows %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('fit.before_after') }}</h2><span class="ui-note" style="margin: 0">{{ t('fit.before_after_note') }}</span></div>
+      {% if fit.measures %}
+      <div class="ui-tiles">
+        {% for m in fit.measures %}<div><div class="ui-note" style="margin: 0"><bdi>{{ m.measure }}</bdi></div><div class="ui-big"><bdi>{{ m.before or '—' }}</bdi> {{ '←' if lang == 'ar' else '→' }} <bdi>{{ m.after or '—' }}</bdi></div>{% if m.note %}<div class="ui-note" style="margin: 0"><bdi>{{ m.note }}</bdi></div>{% endif %}</div>{% endfor %}
+      </div>
+      {% elif starting %}<p class="ui-note">{{ t('fit.measures_start') }}</p>{% endif %}
+      <details{% if f or not fit.measures %} open{% endif %}><summary>{{ t('fit.measures_edit') }}</summary>
+        <form method="post" action="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">
+          <input type="hidden" name="action" value="measures"><input type="hidden" name="ba_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set row = rows_saved[n - 1] if (not f and n <= rows_saved | length) else none %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem">
+            {% for col, label in [('measure', t('fit.ba_measure')), ('before', t('fit.ba_before')), ('after', t('fit.ba_after')), ('note', t('fit.ba_note'))] %}<label style="flex: 1 1 130px">{{ label }}<input type="text" name="ba_{{ n }}_{{ col }}" dir="auto" value="{{ sent(f, 'ba_' ~ n ~ '_' ~ col, row[col] if row else '') }}"></label>{% endfor %}
+          </div>
+          {% endfor %}
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fit.save_measures') }}</button></div>
+        </form>
+      </details>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    {% set f = form if action == 'delivered' else none %}
+    <form class="ui-card" method="post" action="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">
+      <input type="hidden" name="action" value="delivered">
+      <label>{{ t('fit.delivered_on') }}<input type="date" name="delivered_on" value="{{ sent(f, 'delivered_on', fit.delivered_on) }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+      <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('fit.save_delivered') }}</button></div>
+    </form>
+
+    {% set f = form if action == 'training' else none %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('fit.training') }}</h2>{% if fit.training_by %}<span class="ui-note" style="margin: 0">{{ t('fit.set_by', who=fit.training_by) }}</span>{% endif %}</div>
+      {% if fit.wearing %}<h3>{{ t('fit.wearing') }}</h3><ul class="ui-plain">{% for line in fit.wearing %}<li><bdi>{{ line }}</bdi></li>{% endfor %}</ul>{% endif %}
+      {% if fit.practice %}<h3>{{ t('fit.practice') }}</h3><ul class="ui-plain">{% for line in fit.practice %}<li><bdi>{{ line }}</bdi></li>{% endfor %}</ul>{% endif %}
+      {% if not fit.wearing and not fit.practice %}<p class="ui-note">{{ t('fit.no_training') }}</p>{% endif %}
+      <details{% if f %} open{% endif %}><summary>{{ t('fit.training_edit') }}</summary>
+        <form method="post" action="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">
+          <input type="hidden" name="action" value="training">
+          {% for name in ['wearing', 'practice'] %}<label style="display: block; margin-top: 0.5rem">{{ t('fit.' ~ name) }} <span class="ui-note" style="display: inline">{{ t('mod.one_per_line') }}</span>
+            <textarea name="{{ name }}" rows="3" dir="auto">{{ f.get(name, '') if f else (fit[name] | join('\n')) }}</textarea></label>{% endfor %}
+          <label style="display: block; margin-top: 0.5rem">{{ t('fit.training_by') }}<input type="text" name="training_by" dir="auto" value="{{ sent(f, 'training_by', fit.training_by) }}"></label>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fit.save_training') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    {% set f = form if action == 'leaflet' else none %}
+    <section class="ui-card">
+      <h2>{{ t('fit.leaflet') }}</h2>
+      {% if fit.leaflet_ar or fit.leaflet_en %}
+      <div class="ui-tabs" role="group" aria-label="{{ t('fit.leaflet_language') }}" style="margin-top: 0.6rem">
+        <input type="radio" name="leaflet-lang" id="leaflet-ar" checked><label for="leaflet-ar">{{ t('lang_name.ar') }}</label>
+        <input type="radio" name="leaflet-lang" id="leaflet-en"><label for="leaflet-en">{{ t('lang_name.en') }}</label>
+        <div class="ui-tab ui-tab-1"><div class="ui-leaflet" lang="ar" dir="rtl">{{ fit.leaflet_ar or t('fit.leaflet_empty') }}</div></div>
+        <div class="ui-tab ui-tab-2"><div class="ui-leaflet" lang="en" dir="ltr">{{ fit.leaflet_en or t('fit.leaflet_empty') }}</div></div>
+      </div>
+      {% else %}<p class="ui-note">{{ t('fit.no_leaflet') }}</p>{% endif %}
+      <p class="ui-note">{{ t('fit.leaflet_check') }}{% if fit.leaflet_checked_by %} {{ t('fit.checked_by_who', who=fit.leaflet_checked_by) }}{% endif %}</p>
+      {% if fit.leaflet_ar or fit.leaflet_en %}<a class="ui-btn ui-btn-quiet" style="width: 100%; box-sizing: border-box; margin-top: 0.5rem" href="{{ url_for('orthotic_modules.leaflet', case_id=case.case_id, lang='ar' if fit.leaflet_ar else 'en') }}">{{ t('fit.print_leaflet') }}</a>{% endif %}
+      <details{% if f or not (fit.leaflet_ar or fit.leaflet_en) %} open{% endif %}><summary>{{ t('fit.leaflet_edit') }}</summary>
+        <form method="post" action="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">
+          <input type="hidden" name="action" value="leaflet">
+          <label style="display: block; margin-top: 0.5rem">{{ t('fit.leaflet_ar') }}<textarea name="leaflet_ar" rows="6" lang="ar" dir="rtl">{{ sent(f, 'leaflet_ar', fit.leaflet_ar) }}</textarea></label>
+          <label style="display: block; margin-top: 0.5rem">{{ t('fit.leaflet_en') }}<textarea name="leaflet_en" rows="6" lang="en" dir="ltr">{{ sent(f, 'leaflet_en', fit.leaflet_en) }}</textarea></label>
+          <label style="display: block; margin-top: 0.5rem">{{ t('fit.checked_by') }}<input type="text" name="leaflet_checked_by" dir="auto" value="{{ sent(f, 'leaflet_checked_by', fit.leaflet_checked_by) }}"></label>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fit.save_leaflet') }}</button></div>
+        </form>
+      </details>
+    </section>
+    <a class="ui-btn" href="{{ url_for('orthotic_modules.follow_up', case_id=case.case_id) }}" style="min-height: 52px; font-size: 1rem">{{ t('fit.to_follow_up') }}</a>
+  </aside>
+</div>
+{% endblock %}

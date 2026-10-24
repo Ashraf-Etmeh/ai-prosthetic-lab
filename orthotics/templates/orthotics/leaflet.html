@@ -1,0 +1,17 @@
+{% extends "ui_base.html" %}
+{# The patient leaflet, to print: the orthotist's own text in the language asked for, and the next review's date
+   from the follow-up visits. The tool writes none of it. #}
+{% block title %}{{ t('fit.leaflet') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=5) }}{% endblock %}
+{% block content %}
+{% set text = plan.fit.leaflet_ar if leaflet_lang == 'ar' else plan.fit.leaflet_en %}
+<div class="ui-print">
+  <p class="ui-note ui-noprint">{{ t('print.note') }} <a href="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">{{ t('print.back') }}</a>
+    · <a href="{{ url_for('orthotic_modules.leaflet', case_id=case.case_id, lang='en' if leaflet_lang == 'ar' else 'ar') }}" lang="{{ 'en' if leaflet_lang == 'ar' else 'ar' }}">{{ t('lang_name.en') if leaflet_lang == 'ar' else t('lang_name.ar') }}</a></p>
+  {% if not plan.fit.leaflet_checked_by and leaflet_lang == 'ar' %}<div class="ui-draft ui-noprint">{{ t('print.not_checked') }}</div>{% endif %}
+  <section class="ui-card" style="margin-top: 1rem" lang="{{ leaflet_lang }}" dir="{{ 'rtl' if leaflet_lang == 'ar' else 'ltr' }}">
+    <div class="ui-leaflet" style="margin-top: 0; background: #FFFFFF; border: 0; padding: 0">{{ text or t('fit.leaflet_empty') }}</div>
+    {% if next_review %}<p style="margin-top: 1rem; color: var(--ui-muted-2)">{{ next_review_label }}: <bdi>{{ next_review.date or next_review.name }}</bdi></p>{% endif %}
+  </section>
+</div>
+{% endblock %}

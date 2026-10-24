@@ -1,0 +1,32 @@
+{% extends "ui_base.html" %}
+{# The fabrication sheet (the design's "Export the fabrication sheet"): the chosen option, its parts and the current
+   parameters with their basis and approval, as recorded. Printed from the browser; nothing is sent anywhere. #}
+{% block title %}{{ t('sheet.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=4) }}{% endblock %}
+{% block content %}
+<div class="ui-print">
+  <p class="ui-note ui-noprint">{{ t('print.note') }} <a href="{{ url_for('orthotic_modules.design', case_id=case.case_id) }}">{{ t('print.back') }}</a></p>
+  <section class="ui-card" style="margin-top: 1rem">
+    <h2>{{ t('mod.case', id=case.case_id) }} · {{ value_label(case.condition) }} · {{ t('mod.side', side=value_label(case.side)) }}</h2>
+    <p class="ui-note">{{ t('mod.fake_data') }}</p>
+    {% if chosen %}
+    <h3>{{ t('options.option', id=chosen.id) }} · {{ t('device.' ~ chosen.device.value) }}</h3>
+    {% if chosen.summary %}<p style="margin: 0"><bdi>{{ chosen.summary }}</bdi></p>{% endif %}
+    {% if chosen.parts %}<ul class="ui-plain">{% for p in chosen.parts %}<li>{{ t('part.' ~ p.part.value) }}{% if p.note %}: <bdi>{{ p.note }}</bdi>{% endif %}</li>{% endfor %}</ul>{% endif %}
+    {% else %}<p class="ui-note">{{ t('design.no_choice') }}</p>{% endif %}
+    <h3>{{ t('design.parameters_heading') }}{% if plan.current %} · {{ t('mod.design_version', n=plan.current.number) }}{% endif %}</h3>
+    {% if plan.current and plan.current.values %}
+    <table class="ui-table">
+      <tbody>{% for key in parameters if key in plan.current.values %}
+        <tr><td>{{ t('param.' ~ key) }}</td><td style="font-weight: 600"><bdi>{{ plan.current.values[key] }}</bdi></td>
+          <td>{% if plan.current.basis.get(key) %}{{ t('basis.' ~ plan.current.basis[key]) }}{% endif %}{% if plan.current.basis_notes.get(key) %} <bdi>{{ plan.current.basis_notes[key] }}</bdi>{% endif %}</td>
+          <td>{{ t('design.approved') if plan.approved(key) else t('design.to_approve') }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% else %}<p class="ui-note">{{ t('design.no_versions') }}</p>{% endif %}
+    {% if plan.hot_spots %}<h3>{{ t('design.hot_spots') }}</h3><p style="margin: 0"><bdi>{{ plan.hot_spots | join(' · ') }}</bdi></p>{% endif %}
+    {% if plan.relief_note %}<p class="ui-note"><bdi>{{ plan.relief_note }}</bdi></p>{% endif %}
+    {% if plan.to_approve() %}<p class="ui-critical" style="margin-top: 0.75rem">{{ t('sheet.not_approved') }}</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

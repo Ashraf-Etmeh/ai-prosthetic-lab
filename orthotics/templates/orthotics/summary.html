@@ -1,0 +1,41 @@
+{% extends "ui_base.html" %}
+{# The summary for the physiotherapist (the design's button in module 6): what was recorded for the case, from the
+   requirements to the last visit, as recorded. No judgement of the change is added. #}
+{% block title %}{{ t('summary.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=6) }}{% endblock %}
+{% block content %}
+<div class="ui-print">
+  <p class="ui-note ui-noprint">{{ t('print.note') }} <a href="{{ url_for('orthotic_modules.follow_up', case_id=case.case_id) }}">{{ t('print.back') }}</a></p>
+  <section class="ui-card" style="margin-top: 1rem">
+    <h2>{{ t('mod.case', id=case.case_id) }} · {{ value_label(case.condition) }} · {{ t('mod.side', side=value_label(case.side)) }}{% if case.months_since_onset is not none %} · {{ t('mod.months', n="%g" | format(case.months_since_onset)) }}{% endif %}</h2>
+    <p class="ui-note">{{ t('mod.fake_data') }} · {{ t('mod.pseudonymous') }}</p>
+
+    <h3>{{ t('req.title') }}</h3>
+    {% if plan.requirements %}<ul class="ui-plain">{% for r in plan.requirements %}<li><b>{{ r.id }}</b> <bdi>{{ r.text }}</bdi>{% if r.priority %} · {{ t('priority.' ~ r.priority.value) }}{% endif %}</li>{% endfor %}</ul>{% else %}<p class="ui-note">—</p>{% endif %}
+
+    <h3>{{ t('options.choice_heading') }}</h3>
+    <p style="margin: 0">{% if chosen %}{{ t('options.option', id=chosen.id) }} · {{ t('device.' ~ chosen.device.value) }}{% elif plan.chosen == fes_id %}{{ t('options.fes_chosen') }}{% else %}{{ t('options.not_chosen') }}{% endif %}{% if plan.choice_reason %}: “<bdi>{{ plan.choice_reason }}</bdi>”{% endif %}</p>
+
+    <h3>{{ t('fit.title') }}</h3>
+    {% set fit = plan.fit %}
+    {% if fit.delivered_on %}<p style="margin: 0">{{ t('mod.delivered', date=fit.delivered_on) }}</p>{% endif %}
+    {% if fit.tuning %}<ul class="ui-plain">{% for row in fit.tuning %}<li><bdi>{{ row.step }}</bdi>: <bdi>{{ row.change }}</bdi>{% if row.seen %} · <bdi>{{ row.seen }}</bdi>{% endif %}</li>{% endfor %}</ul>{% endif %}
+    {% if fit.measures %}<ul class="ui-plain">{% for m in fit.measures %}<li><bdi>{{ m.measure }}</bdi>: <bdi>{{ m.before or '—' }}</bdi> {{ '←' if lang == 'ar' else '→' }} <bdi>{{ m.after or '—' }}</bdi></li>{% endfor %}</ul>{% endif %}
+    {% if fit.wearing or fit.practice %}<p style="margin: 0.4rem 0 0">{{ t('fit.training') }}{% if fit.training_by %} ({{ t('fit.set_by', who=fit.training_by) }}){% endif %}:</p>
+    <ul class="ui-plain">{% for line in fit.wearing + fit.practice %}<li><bdi>{{ line }}</bdi></li>{% endfor %}</ul>{% endif %}
+
+    <h3>{{ t('fu.title') }}</h3>
+    {% set follow = plan.follow_up %}
+    {% if follow.visits %}
+    <table class="ui-table">
+      <thead><tr><th scope="col">{{ t('fu.visit') }}</th><th scope="col">{{ t('fu.date') }}</th>{% for m in follow.measures %}<th scope="col"><bdi>{{ m.name }}</bdi></th>{% endfor %}<th scope="col">{{ t('fu.wearing') }}</th></tr></thead>
+      <tbody>{% for v in follow.visits %}<tr><td><bdi>{{ v.name }}</bdi> · {{ t('visit_status.' ~ v.status.value) }}</td><td><bdi>{{ v.date or '' }}</bdi></td>{% for m in follow.measures %}<td><bdi>{{ v.values.get(m.name, '') }}</bdi></td>{% endfor %}<td><bdi>{{ v.wearing or '' }}</bdi></td></tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="ui-note">—</p>{% endif %}
+    {% if next_review %}<p style="margin: 0.5rem 0 0">{{ t('fu.review_due', visit=next_review.name, date=next_review.date or t('fu.no_date')) }}</p>{% endif %}
+    {% set open_alerts = follow.alerts | rejectattr('resolved') | list %}
+    {% if open_alerts %}<ul class="ui-plain">{% for a in open_alerts %}<li><bdi>{{ a.text }}</bdi></li>{% endfor %}</ul>{% endif %}
+    <p class="ui-note" style="margin-top: 0.75rem">{{ t('fu.as_recorded') }}</p>
+  </section>
+</div>
+{% endblock %}

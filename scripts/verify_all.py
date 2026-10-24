@@ -6,8 +6,8 @@
 
 Each runs in its own process, exactly as when started by hand:
   1. python scripts/verify_prompts_0_2.py [--with-model]
-  2. python -m intake.golden_cases [--no-search]
-Neither writes to data/cases/, the review logs or data/trial/. Exit status 1
+  2. python -m quality.golden_cases [--no-search]
+Neither writes to data/records/cases/, the review logs or data/quality/trial/. Exit status 1
 if either reports a failure.
 """
 
@@ -26,7 +26,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     steps = [
         ("checks for prompts 0-2", ["scripts/verify_prompts_0_2.py", *(["--with-model"] if args.with_model else [])]),
-        ("golden cases", ["-m", "intake.golden_cases", *([] if args.with_model else ["--no-search"])]),
+        ("golden cases", ["-m", "quality.golden_cases", *([] if args.with_model else ["--no-search"])]),
     ]
     results = []
     for name, command in steps:

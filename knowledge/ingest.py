@@ -1,14 +1,14 @@
-"""Ingestion: source documents -> chunks -> vectors in data/vector_store/.
+"""Ingestion: source documents -> chunks -> vectors in data/knowledge/vector_store/.
 
 Run:  python -m knowledge.ingest
 
 1. Extracts the text of every catalogued document (knowledge/extract.py),
-   writing data/extracted/<id>.txt.
+   writing data/knowledge/extracted/<id>.txt.
 2. Cuts each document into overlapping chunks of about CHUNK_SIZE_CHARS
    characters, ending at sentence ends, and remembers the page each chunk
    starts and ends on.
 3. Turns every chunk into a vector with the embedding model.
-4. Saves three files in data/vector_store/:
+4. Saves three files in data/knowledge/vector_store/:
      vectors.npy  one row per chunk: row 17 belongs to chunk 17 in chunks.json
      chunks.json  each chunk's id, text, page and citation details
      info.json    the model and settings used; retrieval checks it

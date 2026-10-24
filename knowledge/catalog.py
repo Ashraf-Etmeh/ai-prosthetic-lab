@@ -1,7 +1,7 @@
 """The source catalog: which documents the knowledge layer uses, and what they are.
 
-data/sources/catalog.json is written by hand (its fields are explained in
-data/sources/README.md). This module loads it and checks every entry, so a
+data/knowledge/sources/catalog.json is written by hand (its fields are explained in
+data/knowledge/sources/README.md). This module loads it and checks every entry, so a
 typo fails loudly here instead of turning up later in search results.
 """
 
@@ -13,7 +13,7 @@ from typing import Optional
 
 from shared.config import CATALOG_PATH
 
-# Allowed values. Keep in sync with data/sources/README.md.
+# Allowed values. Keep in sync with data/knowledge/sources/README.md.
 SOURCE_TYPES = frozenset({
     "protocol",
     "scientific_reference",
@@ -46,7 +46,7 @@ class SourceDocument:
     # None: not limb-specific (e.g. orthotics, or service standards).
     limbs: Optional[list[str]] = None
     # The licence the document states, copied as written from the sources
-    # manifest (data/sources/00_registry/sources_manifest.csv); None when the
+    # manifest (data/knowledge/sources/00_registry/sources_manifest.csv); None when the
     # manifest records none (e.g. US federal works, or "not shown").
     licence: Optional[str] = None
     # True for a PDF whose text comes out with a space after every "fi", "fl",

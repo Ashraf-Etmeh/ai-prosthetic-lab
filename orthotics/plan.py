@@ -1,25 +1,33 @@
-"""The orthotist's work on an orthotic case after its analysis: modules 2-4 (added 2026-10-23).
+"""The orthotist's work on an orthotic case after its analysis: modules 2-6 (2026-10-23).
 
-The brief's orthotics capabilities, after "functional case analysis" (module 1:
-the intake form and the review page):
+From the owner's "Orthotics Module Design" canvas, after module 1 (functional case
+analysis: the intake form and the analysis page):
 - Module 2, requirements: what the orthosis must do, in the orthotist's words,
-  each tied to the case findings it comes from (a gait deviation, an exam
-  value, a goal) and given a priority by the orthotist.
+  each tied to what it comes from in the case (a gait deviation, an exam value, a
+  goal, or a value not recorded yet: the requirement is then provisional), with
+  the orthotist's priority, and the conflicts between requirements as the
+  orthotist notes them.
 - Module 3, design options ("choosing and designing orthotic devices" and
   "linking the case to components and materials"): up to three options, each a
-  device type with its materials and parts, each part tied to the requirements
-  it serves, the orthotist's own marks of which requirements the option
-  addresses, and their notes. Shown side by side in the order entered, never
-  ranked; the orthotist chooses one and gives the reason (review log).
-- Module 4, digital design ("supporting the digital design workflow"): the
-  steps from capture to release with their status and method, and the design
-  parameters as the orthotist sets them, every save kept as a new version.
+  device type with its materials and parts (each part tied to the requirements
+  it serves), the orthotist's marks of which requirements it addresses, what it
+  costs the patient, the clinic's stock and what to check at fitting; and the
+  referral to discuss FES with the rehabilitation team. Shown side by side in
+  the order entered, never ranked; the orthotist chooses and gives the reason
+  (review log).
+- Module 4, digital design ("supporting the digital design workflow"): six steps
+  from capture to release, the simulation results and pressure hot spots as
+  entered from the CAD tool, and the design parameters, each with its basis and
+  the requirements it serves, every save a new version, each value approved by
+  the orthotist; sending to manufacture once all are approved.
+- Modules 5 and 6: orthotics/fit.py and orthotics/followup.py.
 
 Nothing here is written, chosen or suggested by code or the AI: every value is
-the orthotist's. The vocabularies below (device types, parts, steps, methods,
-parameters) are a PROPOSAL awaiting the owner and an orthotist, like the
-intake fields; only their fixed words are ever searched (orthotics/sources.py),
-never what the orthotist typed.
+the orthotist's (owner's decision 2026-10-23: the design's screens, filled by the
+orthotist where the design shows a suggestion). The vocabularies below (device
+types, parts, steps, methods, parameters, bases) are a PROPOSAL awaiting the
+owner and an orthotist; only their fixed words are ever searched
+(orthotics/sources.py), never what the orthotist typed.
 """
 
 from dataclasses import dataclass, field
@@ -27,7 +35,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from shared.case_schema import OrthoticCase
+from orthotics.case import OrthoticCase
+from orthotics.fit import FitRecord
+from orthotics.followup import FollowUp
 
 
 class Priority(str, Enum):
@@ -72,12 +82,13 @@ class Part(str, Enum):
 
 
 class Step(str, Enum):
-    """The design and fabrication workflow, in order."""
+    """The design and fabrication workflow, in order (the design's six steps)."""
 
     CAPTURE = "capture"
     RECTIFY = "rectify"
     PARAMETERS = "parameters"
-    FABRICATE = "fabricate"
+    SIMULATE = "simulate"  # added 2026-10-23 (the design's step 4)
+    FABRICATE = "fabricate"  # shown as "Manufacture"
     RELEASE = "release"
 
 
@@ -94,9 +105,18 @@ class Method(str, Enum):
     MEASUREMENTS = "measurements"
     PLASTER_MODEL = "plaster_model"
     CAD = "cad"
+    FEA = "fea"  # a finite-element or pressure simulation in the CAD tool
     THERMOFORMING = "thermoforming"
     PRINTING_3D = "printing_3d"
     PREFABRICATED = "prefabricated"
+
+
+class Basis(str, Enum):
+    """Where a parameter value comes from, as the orthotist records it (the design's tags)."""
+
+    ORTHOTIST = "orthotist"  # set by the orthotist
+    PRACTICE_RULE = "practice_rule"  # a practice rule, named in the basis note
+    SCAN = "scan"  # measured on the scan
 
 
 # The methods a step can be done with (a step with none has no method to choose).
@@ -104,16 +124,19 @@ STEP_METHODS: dict[Step, tuple[Method, ...]] = {
     Step.CAPTURE: (Method.PLASTER_CAST, Method.SCAN_3D, Method.MEASUREMENTS),
     Step.RECTIFY: (Method.PLASTER_MODEL, Method.CAD),
     Step.PARAMETERS: (),
+    Step.SIMULATE: (Method.FEA,),
     Step.FABRICATE: (Method.THERMOFORMING, Method.PRINTING_3D, Method.PREFABRICATED),
     Step.RELEASE: (),
 }
 
 # Design parameters the orthotist records, in the order shown. Values are as typed.
-PARAMETERS = ("ankle_angle", "plantarflexion_stop", "trim_lines", "footplate", "shell", "lining", "closure",
-              "joints", "heel_wedge")
+PARAMETERS = ("ankle_angle", "plantarflexion_stop", "joint_axis", "trim_lines", "footplate", "shell", "lining",
+              "closure", "joints", "heel_wedge")
 
 OPTION_IDS = ("A", "B", "C")
+FES_REFERRAL = "F"  # the referral to discuss FES: chosen like an option (the design's fourth card)
 MAX_PARTS_PER_OPTION = 6
+MAX_LIST = 8  # lines in a typed list (costs, checks at fitting)
 MAX_TEXT = 500  # characters in one typed value (a requirement, a note, a parameter)
 
 
@@ -125,6 +148,10 @@ def _enum(cls, value):
     return None if value is None else cls(value)
 
 
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
 def _design(option: "DesignOption") -> tuple:
     """What an option is: its device and its parts (not the orthotist's marks or notes on it)."""
     return option.device, sorted(part.part.value for part in option.parts)
@@ -134,7 +161,8 @@ def _design(option: "DesignOption") -> tuple:
 class Requirement:
     id: str  # "R1", "R2", ...: kept when the text changes
     text: str  # the orthotist's words
-    findings: list[str] = field(default_factory=list)  # case_findings() keys it comes from
+    # What it comes from: case_findings() keys (a deviation, or a value's path, recorded or not).
+    findings: list[str] = field(default_factory=list)
     priority: Optional[Priority] = None
 
     def __post_init__(self) -> None:
@@ -142,9 +170,19 @@ class Requirement:
 
 
 @dataclass
+class Conflict:
+    """Two requirements that pull against each other, and the orthotist's note on it."""
+
+    first: str  # requirement ids
+    second: str
+    note: str
+
+
+@dataclass
 class OptionPart:
     part: Part
     requirements: list[str] = field(default_factory=list)  # the requirement ids it serves
+    note: Optional[str] = None  # e.g. "thickness by body weight (practice rule)"
 
     def __post_init__(self) -> None:
         self.part = Part(self.part)
@@ -156,7 +194,12 @@ class DesignOption:
     device: DeviceType
     parts: list[OptionPart] = field(default_factory=list)
     marks: dict[str, Mark] = field(default_factory=dict)  # requirement id -> the orthotist's mark
-    notes: Optional[str] = None  # costs to the patient, checks at fitting: the orthotist's words
+    notes: Optional[str] = None
+    summary: Optional[str] = None  # under the device's name, e.g. "Stop set at the calf length, dorsiflexion free"
+    mark_notes: dict[str, str] = field(default_factory=dict)  # requirement id -> e.g. "adjustable", "with lining"
+    costs: list[str] = field(default_factory=list)  # what it costs the patient
+    checks: list[str] = field(default_factory=list)  # what to check at fitting
+    stock: Optional[str] = None  # the clinic's stock, e.g. "joints in stock", "6-week order"
 
     def __post_init__(self) -> None:
         self.device = DeviceType(self.device)
@@ -166,6 +209,17 @@ class DesignOption:
     def unaddressed(self, requirements: list[Requirement]) -> list[Requirement]:
         """The Must requirements the orthotist marked this option as not addressing."""
         return [r for r in requirements if r.priority is Priority.MUST and self.marks.get(r.id) is Mark.NO]
+
+    def has(self, part: Part) -> bool:
+        return any(p.part is part for p in self.parts)
+
+
+@dataclass
+class FesReferral:
+    """The referral to discuss FES with the rehabilitation team (the design's FES card)."""
+
+    checks: list[str] = field(default_factory=list)  # what to check first, in the orthotist's words
+    note: Optional[str] = None
 
 
 @dataclass
@@ -180,21 +234,48 @@ class StepRecord:
 
 
 @dataclass
+class SimulationRow:
+    item: str  # what was simulated, e.g. "Stop stiffness against the target from R3"
+    result: str  # as the CAD tool reported it, e.g. "within range"
+
+
+@dataclass
 class ParameterVersion:
     number: int  # 1, 2, ...: a save never changes an earlier version
     values: dict[str, str]  # parameter key -> value as typed
     note: Optional[str]
     saved_at: str
+    basis: dict[str, str] = field(default_factory=dict)  # key -> a Basis value
+    basis_notes: dict[str, str] = field(default_factory=dict)  # key -> e.g. "thickness by body weight"
+    links: dict[str, list[str]] = field(default_factory=dict)  # key -> the requirement ids it serves
+    by: Optional[str] = None  # who saved it, as written ("orthotist", "technician")
+
+    def __post_init__(self) -> None:
+        self.basis = {key: Basis(value).value for key, value in self.basis.items()}
+
+    def same_as(self, other: "ParameterVersion") -> bool:
+        return (self.values, self.basis, self.basis_notes, self.links) == (
+            other.values, other.basis, other.basis_notes, other.links)
 
 
 @dataclass
 class OrthoticPlan:
     requirements: list[Requirement] = field(default_factory=list)
     options: list[DesignOption] = field(default_factory=list)
-    chosen: Optional[str] = None  # the option id the orthotist chose
+    chosen: Optional[str] = None  # the option id the orthotist chose, or FES_REFERRAL
     choice_reason: Optional[str] = None
     steps: dict[str, StepRecord] = field(default_factory=dict)  # Step value -> its record
     parameter_versions: list[ParameterVersion] = field(default_factory=list)
+    conflicts: list[Conflict] = field(default_factory=list)
+    fes: FesReferral = field(default_factory=FesReferral)
+    simulation: list[SimulationRow] = field(default_factory=list)
+    hot_spots: list[str] = field(default_factory=list)  # pressure hot spots, as entered
+    relief_note: Optional[str] = None  # e.g. "Relief added at all three in v3 (R6)"
+    # parameter key -> {"version": n, "at": time}: the orthotist approved the value it had in version n.
+    approvals: dict[str, dict] = field(default_factory=dict)
+    sent_to_manufacture_at: Optional[str] = None
+    fit: FitRecord = field(default_factory=FitRecord)
+    follow_up: FollowUp = field(default_factory=FollowUp)
 
     # ---- Reading ----------------------------------------------------------
 
@@ -208,9 +289,25 @@ class OrthoticPlan:
         return self.steps.get(step.value) or StepRecord()
 
     @property
+    def current(self) -> Optional[ParameterVersion]:
+        return self.parameter_versions[-1] if self.parameter_versions else None
+
+    @property
     def parameters(self) -> dict[str, str]:
         """The latest saved parameter values ({} before the first save)."""
-        return self.parameter_versions[-1].values if self.parameter_versions else {}
+        return self.current.values if self.current else {}
+
+    def approved(self, key: str) -> bool:
+        """Whether the orthotist approved this parameter's current value (a later change undoes it)."""
+        approval = self.approvals.get(key)
+        if approval is None or key not in self.parameters:
+            return False
+        approved_in = self.parameter_versions[approval["version"] - 1]
+        return approved_in.values.get(key) == self.parameters[key]
+
+    def to_approve(self) -> list[str]:
+        """The current parameters the orthotist hasn't approved yet, in PARAMETERS order."""
+        return [key for key in PARAMETERS if key in self.parameters and not self.approved(key)]
 
     def next_requirement_id(self) -> str:
         numbers = [int(r.id[1:]) for r in self.requirements if r.id[1:].isdigit()]
@@ -229,11 +326,22 @@ class OrthoticPlan:
             if unknown:
                 raise PlanError(f"{r.id}: not a finding of this case: {sorted(unknown)}")
         self.requirements = requirements
-        # Marks and part links to a requirement that is gone go with it.
+        # Marks, part links, parameter links and conflicts to a requirement that is gone go with it.
         for option in self.options:
             option.marks = {req: mark for req, mark in option.marks.items() if req in ids}
+            option.mark_notes = {req: note for req, note in option.mark_notes.items() if req in ids}
             for part in option.parts:
                 part.requirements = [req for req in part.requirements if req in ids]
+        self.conflicts = [c for c in self.conflicts if c.first in ids and c.second in ids]
+
+    def set_conflicts(self, conflicts: list[Conflict]) -> None:
+        known = {r.id for r in self.requirements}
+        for c in conflicts:
+            if {c.first, c.second} - known or c.first == c.second:
+                raise PlanError("a conflict is between two different requirements of this plan")
+            if not c.note.strip():
+                raise PlanError("a conflict without a note")
+        self.conflicts = conflicts
 
     def set_options(self, options: list[DesignOption]) -> None:
         ids = [o.id for o in options]
@@ -243,11 +351,16 @@ class OrthoticPlan:
         for option in options:
             if len(option.parts) > MAX_PARTS_PER_OPTION:
                 raise PlanError(f"option {option.id}: more than {MAX_PARTS_PER_OPTION} parts")
-            linked = set(option.marks) | {req for part in option.parts for req in part.requirements}
+            if len(option.costs) > MAX_LIST or len(option.checks) > MAX_LIST:
+                raise PlanError(f"option {option.id}: more than {MAX_LIST} lines")
+            linked = set(option.marks) | set(option.mark_notes) | {req for part in option.parts
+                                                                    for req in part.requirements}
             if linked - known:
                 raise PlanError(f"option {option.id}: not a requirement: {sorted(linked - known)}")
         before = self.option(self.chosen)
         self.options = options
+        if self.chosen == FES_REFERRAL:
+            return  # the referral isn't one of the options
         after = self.option(self.chosen)
         # The reason was given for that device and those parts: if the chosen option was
         # removed or became another device or other parts, the choice goes with it (the
@@ -255,8 +368,13 @@ class OrthoticPlan:
         if before is None or after is None or _design(after) != _design(before):
             self.chosen, self.choice_reason = None, None
 
+    def set_fes(self, referral: FesReferral) -> None:
+        if len(referral.checks) > MAX_LIST:
+            raise PlanError(f"more than {MAX_LIST} lines")
+        self.fes = referral
+
     def choose(self, option_id: str, reason: str) -> None:
-        if self.option(option_id) is None:
+        if option_id != FES_REFERRAL and self.option(option_id) is None:
             raise PlanError(f"no option {option_id!r}")
         if not reason.strip():
             raise PlanError("a choice needs its reason")
@@ -268,18 +386,47 @@ class OrthoticPlan:
                 raise PlanError(f"{step.value}: {record.method.value} is not one of its methods")
         self.steps = {step.value: record for step, record in steps.items()}
 
-    def save_parameters(self, values: dict[str, str], note: Optional[str]) -> ParameterVersion:
+    def set_simulation(self, rows: list[SimulationRow], hot_spots: list[str], relief_note: Optional[str]) -> None:
+        if len(rows) > MAX_LIST or len(hot_spots) > MAX_LIST:
+            raise PlanError(f"more than {MAX_LIST} lines")
+        self.simulation, self.hot_spots, self.relief_note = rows, hot_spots, relief_note
+
+    def save_parameters(self, values: dict[str, str], note: Optional[str], basis: Optional[dict[str, str]] = None,
+                        basis_notes: Optional[dict[str, str]] = None, links: Optional[dict[str, list[str]]] = None,
+                        by: Optional[str] = None) -> ParameterVersion:
         """Keep the values as a new version. Values left empty are not kept; nothing new is not saved."""
-        unknown = set(values) - set(PARAMETERS)
+        unknown = set(values) | set(basis or {}) | set(basis_notes or {}) | set(links or {})
+        unknown -= set(PARAMETERS)
         if unknown:
             raise PlanError(f"not a design parameter: {sorted(unknown)}")
         values = {key: value.strip() for key, value in values.items() if value and value.strip()}
-        if values == self.parameters:
+        keep = lambda d: {key: v for key, v in (d or {}).items() if key in values and v}  # noqa: E731
+        requirement_ids = {r.id for r in self.requirements}
+        links = {key: [rid for rid in ids if rid in requirement_ids] for key, ids in keep(links).items()}
+        version = ParameterVersion(len(self.parameter_versions) + 1, values, (note or "").strip() or None, _now(),
+                                   keep(basis), {k: v.strip() for k, v in keep(basis_notes).items() if v.strip()},
+                                   {k: v for k, v in links.items() if v}, (by or "").strip() or None)
+        if self.current is not None and version.same_as(self.current):
             raise PlanError("no change since the last version")
-        version = ParameterVersion(len(self.parameter_versions) + 1, values, (note or "").strip() or None,
-                                   datetime.now(timezone.utc).isoformat(timespec="seconds"))
+        if self.current is None and not values:
+            raise PlanError("no change since the last version")
         self.parameter_versions.append(version)
         return version
+
+    def approve(self, key: str) -> None:
+        """The orthotist approves a parameter's current value."""
+        if key not in self.parameters:
+            raise PlanError(f"no current value for {key!r}")
+        self.approvals[key] = {"version": self.current.number, "at": _now()}
+
+    def send_to_manufacture(self) -> None:
+        """Only with parameters saved and every one approved; the manufacture step is then in progress."""
+        if not self.parameters or self.to_approve():
+            raise PlanError("every parameter must be approved first")
+        self.sent_to_manufacture_at = _now()
+        record = self.step(Step.FABRICATE)
+        if record.status in (StepStatus.NOT_STARTED, StepStatus.NOT_NEEDED):
+            self.steps[Step.FABRICATE.value] = StepRecord(StepStatus.IN_PROGRESS, record.method, record.notes)
 
     # ---- Files --------------------------------------------------------------
 
@@ -288,19 +435,34 @@ class OrthoticPlan:
             "requirements": [{"id": r.id, "text": r.text, "findings": list(r.findings),
                               "priority": r.priority.value if r.priority else None} for r in self.requirements],
             "options": [{"id": o.id, "device": o.device.value,
-                         "parts": [{"part": p.part.value, "requirements": list(p.requirements)} for p in o.parts],
-                         "marks": {req: mark.value for req, mark in o.marks.items()}, "notes": o.notes}
+                         "parts": [{"part": p.part.value, "requirements": list(p.requirements), "note": p.note}
+                                   for p in o.parts],
+                         "marks": {req: mark.value for req, mark in o.marks.items()}, "notes": o.notes,
+                         "summary": o.summary, "mark_notes": dict(o.mark_notes), "costs": list(o.costs),
+                         "checks": list(o.checks), "stock": o.stock}
                         for o in self.options],
             "chosen": self.chosen,
             "choice_reason": self.choice_reason,
             "steps": {name: {"status": s.status.value, "method": s.method.value if s.method else None,
                              "notes": s.notes} for name, s in self.steps.items()},
             "parameter_versions": [{"number": v.number, "values": dict(v.values), "note": v.note,
-                                    "saved_at": v.saved_at} for v in self.parameter_versions],
+                                    "saved_at": v.saved_at, "basis": dict(v.basis), "basis_notes": dict(v.basis_notes),
+                                    "links": {k: list(ids) for k, ids in v.links.items()}, "by": v.by}
+                                   for v in self.parameter_versions],
+            "conflicts": [{"first": c.first, "second": c.second, "note": c.note} for c in self.conflicts],
+            "fes": {"checks": list(self.fes.checks), "note": self.fes.note},
+            "simulation": [{"item": r.item, "result": r.result} for r in self.simulation],
+            "hot_spots": list(self.hot_spots),
+            "relief_note": self.relief_note,
+            "approvals": {key: dict(a) for key, a in self.approvals.items()},
+            "sent_to_manufacture_at": self.sent_to_manufacture_at,
+            "fit": self.fit.to_dict(),
+            "follow_up": self.follow_up.to_dict(),
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "OrthoticPlan":
+        """A saved plan; one saved before a key existed gets its default (case file version 3, log 7-8)."""
         return cls(
             requirements=[Requirement(**r) for r in data.get("requirements", [])],
             options=[DesignOption(**o) for o in data.get("options", [])],
@@ -308,6 +470,15 @@ class OrthoticPlan:
             choice_reason=data.get("choice_reason"),
             steps={name: StepRecord(**s) for name, s in data.get("steps", {}).items()},
             parameter_versions=[ParameterVersion(**v) for v in data.get("parameter_versions", [])],
+            conflicts=[Conflict(**c) for c in data.get("conflicts", [])],
+            fes=FesReferral(**(data.get("fes") or {})),
+            simulation=[SimulationRow(**r) for r in data.get("simulation", [])],
+            hot_spots=list(data.get("hot_spots", [])),
+            relief_note=data.get("relief_note"),
+            approvals={key: dict(a) for key, a in (data.get("approvals") or {}).items()},
+            sent_to_manufacture_at=data.get("sent_to_manufacture_at"),
+            fit=FitRecord.from_dict(data.get("fit")),
+            follow_up=FollowUp.from_dict(data.get("follow_up")),
         )
 
     @classmethod
@@ -322,9 +493,9 @@ class OrthoticPlan:
 @dataclass(frozen=True)
 class Finding:
     key: str  # "deviation.toe_drag", "exam.foot_posture", "functional_goals", ...
-    group: str  # "gait", "exam" or "other": how the requirements page groups them
+    group: str  # "gait", "exam", "other" or "missing": how the requirements page groups them
     path: Optional[str]  # the field path whose label names it (None: a gait deviation)
-    value: Any  # as recorded: a GaitDeviation, an enum, a number or text
+    value: Any  # as recorded: a GaitDeviation, an enum, a number or text; None: not recorded yet
 
 
 # Recorded values a requirement may come from, by group (the gait deviations come first).
@@ -332,28 +503,51 @@ _EXAM_PATHS = ("exam.dorsiflexion_knee_extended_deg", "exam.dorsiflexion_knee_fl
                "exam.plantarflexor_tone_grade", "exam.dorsiflexor_strength", "exam.knee_extensor_strength",
                "exam.knee_in_stance", "exam.foot_posture", "exam.protective_sensation", "exam.proprioception",
                "exam.skin_condition")
-_OTHER_PATHS = ("functional_goals", "walking.status", "walking.gait_speed_m_s", "walking.falls_last_6_months",
-                "footwear", "donning", "body_weight_kg")
+_OTHER_PATHS = ("functional_goals", "goal_participation", "goal_body_function", "walking.status",
+                "walking.gait_speed_m_s", "walking.falls_last_6_months", "footwear", "donning", "body_weight_kg")
+FINDING_PATHS = _EXAM_PATHS + _OTHER_PATHS
 
 
-def _value_at(case: OrthoticCase, path: str):
+def value_at(case: OrthoticCase, path: str):
     value = case
     for name in path.split("."):
         value = getattr(value, name)
     return value
 
 
+def recorded(value) -> bool:
+    return value is not None and getattr(value, "value", None) != "unknown"
+
+
 def case_findings(case: OrthoticCase) -> list[Finding]:
     """What the case recorded that a requirement can come from: gait deviations, exam values, goals.
 
-    Only recorded values: a field left empty or "unknown" is an information
-    gap (module 1), not a finding.
+    Only recorded values; a field left empty or "unknown" is an information gap
+    (module 1). missing_findings() lists those, for a requirement that waits on one.
     """
     findings = [Finding(f"deviation.{d.value}", "gait", None, d) for d in case.walking.deviations or []]
     for group, paths in (("exam", _EXAM_PATHS), ("other", _OTHER_PATHS)):
         for path in paths:
-            value = _value_at(case, path)
-            if value is None or getattr(value, "value", None) == "unknown":
-                continue
-            findings.append(Finding(path, group, path, value))
+            value = value_at(case, path)
+            if recorded(value):
+                findings.append(Finding(path, group, path, value))
     return findings
+
+
+def missing_findings(case: OrthoticCase) -> list[Finding]:
+    """The values a requirement can come from that aren't recorded yet (module 2: "provisional")."""
+    return [Finding(path, "missing", path, None) for path in FINDING_PATHS if not recorded(value_at(case, path))]
+
+
+def linkable(case: OrthoticCase) -> set[str]:
+    """Every key a requirement may name: the recorded deviations and every value, recorded or not."""
+    return {f.key for f in case_findings(case)} | set(FINDING_PATHS)
+
+
+def waiting_on(requirement: Requirement, case: OrthoticCase) -> list[str]:
+    """The values the requirement names that aren't recorded yet: while any is, it is provisional."""
+    return [key for key in requirement.findings if key in FINDING_PATHS and not recorded(value_at(case, key))]
+
+
+# The class a saved plan is read back with (shared/store.py, through shared/domains.py).
+PLAN = OrthoticPlan

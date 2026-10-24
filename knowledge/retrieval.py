@@ -23,7 +23,7 @@ import numpy as np
 from knowledge.embedding import embed_texts
 from knowledge.ingest import CHUNKS_FILE, INFO_FILE, VECTORS_FILE
 from knowledge.models import ProtocolChunk
-from shared.case_schema import Case
+from prosthetics.case import Case
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,

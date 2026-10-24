@@ -1,0 +1,67 @@
+{# Shared pieces of the orthotic module pages. #}
+
+{# A recorded value, as recorded: a choice by its label, an angle in degrees, a number as typed. #}
+{% macro recorded(path, value) -%}
+  {%- if value is none %}—
+  {%- elif value.value is defined %}{{ value_label(value) }}
+  {%- elif path and path.endswith('_deg') %}<bdi>{{ t('ort.degrees', n="%g" | format(value)) }}</bdi>
+  {%- elif value is number %}<bdi>{{ "%g" | format(value) }}</bdi>
+  {%- else %}<bdi>{{ value }}</bdi>{% endif -%}
+{%- endmacro %}
+
+{# The name of a value of the case (module 1's exam table and module 2's findings). #}
+{% macro value_name(path) -%}{{ t('exam_row.' ~ path | replace('.', '__')) }}{%- endmacro %}
+
+{# A case finding (orthotics/plan.py Finding): what it is, then its value, or that it isn't recorded yet. #}
+{% macro finding_label(finding) -%}
+  {%- if finding.path is none %}{{ t('phase.' ~ finding.value.phase) }}: {{ value_label(finding.value) }}
+  {%- elif finding.value is none %}{{ value_name(finding.path) }}: {{ t('status.not recorded') }}
+  {%- else %}{{ value_name(finding.path) }}: {{ recorded(finding.path, finding.value) }}{% endif -%}
+{%- endmacro %}
+
+{# A hard-stop check's status (orthotics/hard_stops.py), as the design draws it: a tick, a warning, an
+   "orthotist to judge" mark, a dashed "not checked" ring, or a stop. #}
+{% macro status_icon(status) -%}
+  {%- if status == 'clear' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B5C60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.clear') }}"><path d="M5 12l4 4 10-10"></path></svg>
+  {%- elif status == 'warn' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4430E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.warn') }}"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>
+  {%- elif status == 'judge' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A4B00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.judge') }}"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+  {%- elif status == 'stop' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8F3510" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.stop') }}"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"></path><path d="M9 9l6 6"></path><path d="M15 9l-6 6"></path></svg>
+  {%- else -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.not_checked') }}"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"></circle></svg>
+  {%- endif -%}
+{%- endmacro %}
+
+{# An option card's drawing of its device type (the design's side views; FES: an electrode). #}
+{% macro device_icon(device) -%}
+<svg width="64" height="64" viewBox="0 0 120 120" fill="none" stroke="#0B5C60" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {%- if device in ('hinged_afo',) %}<path d="M44 12h26v58H44z"></path><circle cx="57" cy="80" r="7"></circle><path d="M50 88q4 4 18 4h40q6 0 6 6v4H40q-6 0-6-6v-6q0-4 6-4z"></path>
+  {%- elif device in ('posterior_leaf_spring', 'carbon_afo', 'flexible_afo') %}<path d="M54 12h8v70q0 8 10 8h36q6 0 6 6v4H44q-6 0-6-6v-2q0-4 8-6q8-2 8-12z"></path><path d="M50 22h16"></path>
+  {%- elif device == 'fes' %}<rect x="34" y="20" width="52" height="34" rx="8"></rect><path d="M48 54v26"></path><path d="M72 54v26"></path><circle cx="48" cy="88" r="7"></circle><circle cx="72" cy="88" r="7"></circle>
+  {%- else %}<path d="M44 12h26v66q0 10 10 12h28q6 0 6 6v4H40q-6 0-6-6V12z"></path><path d="M44 30h26"></path><path d="M44 52h26"></path>
+  {%- endif %}
+</svg>
+{%- endmacro %}
+
+{# What the source library says about one item: the passages the local search found, quoted as printed. #}
+{% macro passages_for(chunks, heading) %}
+  <details>
+    <summary>{{ heading }} ({{ chunks | length }})</summary>
+    {% if chunks %}
+    <ul class="ui-passages">
+      {% for chunk in chunks %}
+      <li>
+        <div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>
+        {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
+        <blockquote dir="auto" lang="{{ chunk.language }}">{{ chunk.text }}</blockquote>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="ui-note">{{ t('mod.no_passage') }}</p>
+    {% endif %}
+  </details>
+{% endmacro %}

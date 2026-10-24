@@ -4,11 +4,11 @@
   ready for specialist evaluation (reasoning/gap_analysis.py).
 - ComponentSupport: what the guidelines in the library say about the
   prosthetic components for this case, and the functional level they depend
-  on (reasoning/component_support.py). Every statement is quoted word for
+  on (prosthetics/component_support.py). Every statement is quoted word for
   word with its source and grade; none is the system's own advice.
 - FittingSupport: what the sources say about design and fitting for this
   case: readiness, preparatory or definitive prosthesis, fitting and
-  alignment (reasoning/fitting_support.py). Quoted the same way.
+  alignment (prosthetics/fitting_support.py). Quoted the same way.
 
 None of them is a prescription: see shared/config.py DISCLAIMER. The
 specialist decides.
@@ -26,7 +26,7 @@ from typing import Optional
 from knowledge.models import ProtocolChunk
 
 FUNCTIONAL_LEVEL = "functional_level"  # the section of the K-level statements
-ORIGIN_GUIDE = "guide"  # hand-written: reasoning/component_guide.py, fitting_guide.py
+ORIGIN_GUIDE = "guide"  # hand-written: prosthetics/component_guide.py, fitting_guide.py
 ORIGIN_RAG = "rag"  # found by the search, summarised by the AI, quote checked
 
 
@@ -79,8 +79,8 @@ class GuidelineStatement:
     """What one source says, quoted word for word. Never the system's own words."""
 
     id: str  # stable, e.g. "va_dod_ll_17_microprocessor_knee"; logged, and names the review choice
-    # A reasoning/component_guide.py COMPONENTS key, "functional_level", or a
-    # reasoning/fitting_guide.py SECTIONS key.
+    # A prosthetics/component_guide.py COMPONENTS key, "functional_level", or a
+    # prosthetics/fitting_guide.py SECTIONS key.
     component: str
     doc_id: str  # catalog id of the source document
     grade: Optional[str]  # the source's own strength, e.g. "Weak for"; None if it gives none

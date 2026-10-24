@@ -4,19 +4,19 @@ Every sentence the model writes (reasoning/rag.py) must carry a quote copied
 from one retrieved passage. Before anything is shown, this module checks it:
 
 1. The quote is found in the passage, compared the way the quote tests
-   compare text (tests/test_component_guide.py): line breaks and runs of
+   compare text (prosthetics/tests/test_component_guide.py): line breaks and runs of
    spaces count as one space, and both texts are NFKC-normalised, as the
    extracted text is. Curly and straight quotation marks and the dash
    characters are also taken as the same, since they print alike; any
    other difference, even one letter, and the quote is refused.
 2. What is shown is then the passage's own text at that place, not the
    model's copy of it.
-3. The page is looked up in data/extracted/<doc_id>.txt, the text the quote
+3. The page is looked up in data/knowledge/extracted/<doc_id>.txt, the text the quote
    tests read; if the file is missing, the passage's own pages are used.
 
 A grade (e.g. "Weak for") is kept only if the passage prints it after the
 quote, as the VA/DoD guidelines print a recommendation's grade after it
-(the same rule tests/test_component_guide.py checks for the hand-written
+(the same rule prosthetics/tests/test_component_guide.py checks for the hand-written
 statements).
 """
 

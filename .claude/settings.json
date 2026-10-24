@@ -1,14 +1,14 @@
 {
   "permissions": {
     "ask": [
-      "Edit(data/eval/golden_cases/**)",
-      "Edit(data/eval/golden_cases_held_out/**)",
-      "Edit(data/eval/golden_cases_held_out.json)",
-      "Edit(reasoning/component_guide.py)",
-      "Edit(reasoning/fitting_guide.py)",
+      "Edit(data/quality/golden_cases/**)",
+      "Edit(data/quality/golden_cases_held_out/**)",
+      "Edit(data/quality/golden_cases_held_out.json)",
+      "Edit(prosthetics/component_guide.py)",
+      "Edit(prosthetics/fitting_guide.py)",
       "Edit(data/knowledge/evidence_rules.csv)",
-      "Edit(data/review_log.jsonl)",
-      "Edit(data/review_log.test.jsonl)"
+      "Edit(data/records/review_log.jsonl)",
+      "Edit(data/records/review_log.test.jsonl)"
     ]
   },
   "hooks": {

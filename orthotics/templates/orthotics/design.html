@@ -1,0 +1,207 @@
+{% extends "ui_base.html" %}
+{% from "orthotics/macros.html" import passages_for with context %}
+{# Module 4 (the canvas's screen 4): six steps from capture to release; the viewer (a schematic of the device
+   type, the hot spots and a comparison of versions: no scan reaches the app); the simulation results as
+   entered from the CAD tool; the parameters with their basis and the requirements they serve, each approved
+   by the orthotist; the versions; and sending to manufacture once every parameter is approved. #}
+{% block title %}{{ t('design.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=4) }}{% endblock %}
+{% block brief %}دعم سير عمل التصميم الرقمي{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% if chosen_logged %}<div class="ui-saved" role="status">{{ t('options.chosen_logged') }}</div>{% endif %}
+{% if library_warning %}<div class="ui-error">{{ t('review.not_searched') }} <span lang="en" dir="ltr">{{ library_warning }}</span></div>{% endif %}
+{% if not chosen %}<p class="ui-note" style="font-size: 0.95rem">{% if plan.chosen == fes_id %}{{ t('design.fes_chosen') }}{% else %}{{ t('design.no_choice') }}{% endif %} <a href="{{ url_for('orthotic_modules.options', case_id=case.case_id) }}">{{ t('mod.options') }}</a></p>{% endif %}
+{% set waiting = plan.to_approve() %}
+
+<ol class="ui-steps" aria-label="{{ t('design.steps_heading') }}">
+  {% for step in steps %}
+  {% set rec = plan.step(step) %}
+  <li class="{{ rec.status.value }}"{% if rec.status.value == 'in_progress' %} aria-current="step"{% endif %}><b>{{ loop.index }} {{ t('step.' ~ step.value) }}</b>
+    {%- if step.value == 'parameters' and waiting %}{{ t('design.n_to_approve', n=waiting | length) }}
+    {%- else %}{{ t('step_status.' ~ rec.status.value) }}{% if rec.method %} · {{ t('method.' ~ rec.method.value) }}{% endif %}{% endif %}</li>
+  {% endfor %}
+</ol>
+
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <div class="ui-tabs" role="group" aria-label="{{ t('design.viewer') }}">
+        <input type="radio" name="viewer" id="viewer-side" checked><label for="viewer-side">{{ t('design.view_side') }}</label>
+        <input type="radio" name="viewer" id="viewer-spots"><label for="viewer-spots">{{ t('design.view_spots') }}</label>
+        <input type="radio" name="viewer" id="viewer-compare"><label for="viewer-compare">{{ t('design.view_compare') }}</label>
+        <div class="ui-tab ui-tab-1">
+          <div class="ui-viewer">
+            {% set device = chosen.device.value if chosen else 'solid_afo' %}
+            <svg width="520" height="440" viewBox="0 0 520 440" role="img" aria-label="{{ t('design.schematic_label', device=t('device.' ~ device)) }}" style="max-width: 100%; height: auto">
+              <path d="M228 24 C220 120 214 220 222 300 C226 330 222 350 214 362 L140 388 C120 394 118 412 136 416 L440 416 C462 416 466 398 446 392 L330 362 C306 352 300 330 300 300 C306 220 300 120 292 24" fill="#DCE5E3" stroke="#93A6A2" stroke-width="2"></path>
+              <path d="M206 70 L206 300 C206 318 212 334 222 342" fill="none" stroke="#0B5C60" stroke-width="10" stroke-linecap="round"></path>
+              <path d="M206 70 L292 70" fill="none" stroke="#0B5C60" stroke-width="10" stroke-linecap="round"></path>
+              <path d="M222 342 C190 362 150 380 132 396 L444 402" fill="none" stroke="#0B5C60" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+              {% if device == 'hinged_afo' %}<circle cx="250" cy="336" r="16" fill="#FFFFFF" stroke="#0B5C60" stroke-width="5"></circle>
+              <text x="290" y="330" font-size="14" fill="#3F4846">{{ t('param.joint_axis') }}</text>{% endif %}
+              <path d="M196 92 L304 92" fill="none" stroke="#5E6B68" stroke-width="2" stroke-dasharray="6 6"></path>
+              <text x="312" y="96" font-size="14" fill="#3F4846">{{ t('param.trim_lines') }}</text>
+            </svg>
+          </div>
+          <p class="ui-note">{{ t('design.schematic_note') }}{% if plan.step(steps[0]).notes %} {{ t('design.capture_note') }} <bdi>{{ plan.step(steps[0]).notes }}</bdi>{% endif %}</p>
+        </div>
+        <div class="ui-tab ui-tab-2">
+          {% if plan.hot_spots %}
+          <ul class="ui-plain" style="margin-top: 0.9rem">{% for spot in plan.hot_spots %}<li><bdi>{{ spot }}</bdi></li>{% endfor %}</ul>
+          {% if plan.relief_note %}<p class="ui-note"><bdi>{{ plan.relief_note }}</bdi></p>{% endif %}
+          {% else %}<p class="ui-note">{{ t('design.no_hot_spots') }}</p>{% endif %}
+        </div>
+        <div class="ui-tab ui-tab-3">
+          {% if plan.parameter_versions | length > 1 %}
+          {% set new, old = plan.parameter_versions[-1], plan.parameter_versions[-2] %}
+          <table class="ui-table" style="margin-top: 0.9rem">
+            <thead><tr><th scope="col"></th><th scope="col">v{{ old.number }}</th><th scope="col">v{{ new.number }}</th></tr></thead>
+            <tbody>{% for key in parameters if old.values.get(key) != new.values.get(key) %}
+              <tr><td>{{ t('param.' ~ key) }}</td><td><bdi>{{ old.values.get(key, '—') }}</bdi></td><td style="font-weight: 600"><bdi>{{ new.values.get(key, '—') }}</bdi></td></tr>
+            {% else %}<tr><td colspan="3">{{ t('design.same_values') }}</td></tr>{% endfor %}</tbody>
+          </table>
+          {% else %}<p class="ui-note">{{ t('design.nothing_to_compare') }}</p>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('design.simulation') }}</h2><span class="ui-tag ui-tag-warn">{{ t('design.simulation_badge') }}</span></div>
+      {% if plan.simulation %}
+      <div style="margin-top: 0.75rem; font-size: 0.875rem">
+        {% for row in plan.simulation %}<div style="display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--ui-line-soft)"><bdi>{{ row.item }}</bdi><b><bdi>{{ row.result }}</bdi></b></div>{% endfor %}
+      </div>
+      {% else %}<p class="ui-note">{{ t('design.no_simulation') }}</p>{% endif %}
+      {% if plan.hot_spots %}<div style="margin-top: 0.75rem; font-size: 0.875rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem"><span>{{ t('design.hot_spots') }}</span><b><bdi>{{ plan.hot_spots | join(' · ') }}</bdi></b></div>{% endif %}
+      {% if plan.relief_note %}<div class="ui-note"><bdi>{{ plan.relief_note }}</bdi></div>{% endif %}
+      {% set sim_form = form if (form and form.get('action') == 'simulation') else none %}
+      {% set sim_rows = (sim_form.get('sim_rows') | int) if sim_form else (plan.simulation | length) + new_rows %}
+      <details{% if sim_form %} open{% endif %}><summary>{{ t('design.simulation_edit') }}</summary>
+        <form method="post" action="{{ url_for('orthotic_modules.design', case_id=case.case_id) }}">
+          <input type="hidden" name="action" value="simulation"><input type="hidden" name="sim_rows" value="{{ sim_rows }}">
+          {% for n in range(1, sim_rows + 1) %}{% set row = plan.simulation[n - 1] if (not sim_form and n <= plan.simulation | length) else none %}
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.4rem">
+            <label style="flex: 2">{{ t('design.sim_item') }}<input type="text" name="sim_{{ n }}_item" dir="auto" value="{{ sim_form.get('sim_' ~ n ~ '_item', '') if sim_form else (row.item if row else '') }}"></label>
+            <label style="flex: 1">{{ t('design.sim_result') }}<input type="text" name="sim_{{ n }}_result" dir="auto" value="{{ sim_form.get('sim_' ~ n ~ '_result', '') if sim_form else (row.result if row else '') }}"></label>
+          </div>
+          {% endfor %}
+          <label style="display: block; margin-top: 0.6rem">{{ t('design.hot_spots') }} <span class="ui-note" style="display: inline">{{ t('mod.one_per_line') }}</span>
+            <textarea name="hot_spots" rows="3" dir="auto">{{ sim_form.get('hot_spots', '') if sim_form else (plan.hot_spots | join('\n')) }}</textarea></label>
+          <label style="display: block; margin-top: 0.6rem">{{ t('design.relief_note') }}
+            <input type="text" name="relief_note" dir="auto" value="{{ sim_form.get('relief_note', '') if sim_form else (plan.relief_note or '') }}"></label>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('design.save_simulation') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    {% set steps_form = form if (form and form.get('action') == 'steps') else none %}
+    <form method="post" action="{{ url_for('orthotic_modules.design', case_id=case.case_id) }}">
+      <input type="hidden" name="action" value="steps">
+      <details class="ui-card"{% if steps_form %} open{% endif %}>
+        <summary style="font-size: 1.05rem; font-weight: 600">{{ t('design.steps_edit') }}</summary>
+        {% for step in steps %}
+        {% set rec = plan.step(step) %}
+        {% set prefix = 'step_' ~ step.value ~ '_' %}
+        {% set status = steps_form.get(prefix ~ 'status', '') if steps_form else rec.status.value %}
+        {% set method = steps_form.get(prefix ~ 'method', '') if steps_form else (rec.method.value if rec.method else '') %}
+        <div class="ui-row">
+          <div style="flex: 1 1 160px; font-weight: 600">{{ loop.index }} · {{ t('step.' ~ step.value) }}</div>
+          <label style="flex: 1 1 160px">{{ t('design.status') }}
+            <select name="{{ prefix }}status">
+              {% for s in statuses %}<option value="{{ s.value }}"{{ " selected" if s.value == status }}>{{ t('step_status.' ~ s.value) }}</option>{% endfor %}
+            </select>
+          </label>
+          {% if step_methods[step] %}
+          <label style="flex: 1 1 180px">{{ t('design.method') }}
+            <select name="{{ prefix }}method">
+              <option value="">{{ t('design.method_unset') }}</option>
+              {% for m in step_methods[step] %}<option value="{{ m.value }}"{{ " selected" if m.value == method }}>{{ t('method.' ~ m.value) }}</option>{% endfor %}
+            </select>
+          </label>
+          {% else %}<div style="flex: 1 1 180px"></div>{% endif %}
+          <label style="flex: 2 1 260px">{{ t('design.notes') }}
+            <input type="text" name="{{ prefix }}notes" dir="auto" value="{{ steps_form.get(prefix ~ 'notes', '') if steps_form else (rec.notes or '') }}">
+          </label>
+          <div style="flex: 1 1 100%">{{ passages_for(passages.get('step.' ~ step.value, []), t('design.step_sources')) }}</div>
+        </div>
+        {% endfor %}
+        <p class="ui-note">{{ t('mod.passages_note') }}</p>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('design.save_steps') }}</button></div>
+      </details>
+    </form>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('design.parameters_heading') }}</h2>
+      {% set current = plan.current %}
+      {% if current and current.values %}
+      {% for key in parameters if key in current.values %}
+      <div class="ui-param">
+        <div class="ui-param-head"><span>{{ t('param.' ~ key) }}</span><b><bdi>{{ current.values[key] }}</bdi></b></div>
+        <div class="ui-tags">
+          {% if current.basis.get(key) %}<span class="ui-tag">{{ t('basis.' ~ current.basis[key]) }}{% if current.basis_notes.get(key) %}: <bdi>{{ current.basis_notes[key] }}</bdi>{% endif %}</span>{% elif current.basis_notes.get(key) %}<span class="ui-tag"><bdi>{{ current.basis_notes[key] }}</bdi></span>{% endif %}
+          {% for rid in current.links.get(key, []) %}{% set r = plan.requirement(rid) %}{% if r %}<span class="ui-tag"><bdi>{{ r.text }}</bdi> ({{ r.id }})</span>{% endif %}{% endfor %}
+          {% if plan.approved(key) %}<span class="ui-tag ui-tag-accent">{{ t('design.approved') }}</span>
+          {% else %}<span class="ui-tag ui-tag-warn">{{ t('design.to_approve') }}</span>
+          <form class="ui-inline-form" method="post" action="{{ url_for('orthotic_modules.design', case_id=case.case_id) }}"><input type="hidden" name="action" value="approve"><input type="hidden" name="key" value="{{ key }}"><button type="submit">{{ t('design.approve') }}</button></form>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}<p class="ui-note">{{ t('design.no_versions') }}</p>{% endif %}
+
+      {% set params_form = form if (form and form.get('action') == 'parameters') else none %}
+      <details{% if params_form or not current %} open{% endif %}><summary>{{ t('design.parameters_edit') }}</summary>
+        <form method="post" action="{{ url_for('orthotic_modules.design', case_id=case.case_id) }}">
+          <input type="hidden" name="action" value="parameters">
+          <p class="ui-note">{{ t('design.parameters_note') }}</p>
+          {% for key in parameters %}
+          {% set basis = params_form.get('param_' ~ key ~ '_basis', '') if params_form else (current.basis.get(key, '') if current else '') %}
+          {% set serves = params_form.getlist('param_' ~ key ~ '_req') if params_form else (current.links.get(key, []) if current else []) %}
+          <fieldset style="border: 1px solid var(--ui-line); border-radius: 10px; padding: 0.5rem 0.75rem; margin-top: 0.6rem">
+            <legend style="font-weight: 600; font-size: 0.875rem">{{ t('param.' ~ key) }}</legend>
+            <label>{{ t('design.value') }}<input type="text" name="param_{{ key }}" dir="auto" value="{{ params_form.get('param_' ~ key, '') if params_form else plan.parameters.get(key, '') }}"></label>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.3rem">
+              <label style="flex: 1">{{ t('design.basis') }}<select name="param_{{ key }}_basis"><option value="">{{ t('design.basis_unset') }}</option>
+                {% for b in bases %}<option value="{{ b.value }}"{{ " selected" if b.value == basis }}>{{ t('basis.' ~ b.value) }}</option>{% endfor %}</select></label>
+              <label style="flex: 1">{{ t('design.basis_note') }}<input type="text" name="param_{{ key }}_basis_note" dir="auto" value="{{ params_form.get('param_' ~ key ~ '_basis_note', '') if params_form else (current.basis_notes.get(key, '') if current else '') }}"></label>
+            </div>
+            {% if plan.requirements %}<div class="ui-checks">{% for r in plan.requirements %}<label><input type="checkbox" name="param_{{ key }}_req" value="{{ r.id }}"{{ " checked" if r.id in serves }}><span>{{ t('options.serves') }} {{ r.id }}</span></label>{% endfor %}</div>{% endif %}
+          </fieldset>
+          {% endfor %}
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem">
+            <label style="flex: 2">{{ t('design.version_note') }}<input type="text" name="param_note" dir="auto" value="{{ params_form.get('param_note', '') if params_form else '' }}"></label>
+            <label style="flex: 1">{{ t('design.by') }}<input type="text" name="param_by" dir="auto" value="{{ params_form.get('param_by', '') if params_form else '' }}"></label>
+          </div>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('design.save_parameters') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('design.versions', n=plan.parameter_versions | length) }}</h2>
+      {% if plan.parameter_versions %}
+      <ol style="list-style: none; margin: 0.75rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.875rem">
+        {% for version in plan.parameter_versions | reverse %}
+        <li style="display: flex; gap: 0.75rem"><b style="min-width: 1.8rem; color: {{ 'var(--ui-accent)' if loop.first else 'var(--ui-muted)' }}">v{{ version.number }}</b>
+          <span>{% if version.note %}<bdi>{{ version.note }}</bdi>{% else %}{{ t('design.values', n=version.values | length) }}{% endif %}{% if version.by %} · <bdi>{{ version.by }}</bdi>{% endif %}{% if loop.first %} · {{ t('design.current') }}{% endif %}<br><span class="ui-note"><bdi>{{ version.saved_at }}</bdi></span></span></li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="ui-note">{{ t('design.no_versions') }}</p>{% endif %}
+    </section>
+
+    <div style="display: flex; flex-direction: column; gap: 0.6rem">
+      {% if plan.sent_to_manufacture_at %}
+      <div class="ui-saved" style="margin: 0">{{ t('design.sent', at=plan.sent_to_manufacture_at) }}</div>
+      {% else %}
+      <form method="post" action="{{ url_for('orthotic_modules.design', case_id=case.case_id) }}"><input type="hidden" name="action" value="manufacture">
+        <button class="ui-btn" type="submit" style="width: 100%; min-height: 52px; font-size: 1rem">{{ t('design.send') }}</button></form>
+      {% if waiting or not plan.parameters %}<p class="ui-note" style="margin: 0">{{ t('design.send_note') }}</p>{% endif %}
+      {% endif %}
+      <a class="ui-btn ui-btn-quiet" href="{{ url_for('orthotic_modules.fabrication_sheet', case_id=case.case_id) }}">{{ t('design.export_sheet') }}</a>
+      <a class="ui-btn ui-btn-quiet" style="border-color: transparent" href="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">{{ t('design.to_fit') }}</a>
+    </div>
+  </aside>
+</div>
+{% endblock %}

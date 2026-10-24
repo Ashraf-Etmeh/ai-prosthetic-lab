@@ -1,0 +1,128 @@
+{% extends "ui_base.html" %}
+{% from "orthotics/macros.html" import recorded, status_icon, value_name with context %}
+{# Module 1, functional case analysis (the canvas's screen 1): the condition module, goals by ICF level,
+   the structured exam with how each value was measured, gait phase by phase, the information needed (each
+   with the source's own words or the AI's checked summary) and the owner's hard-stop checks. #}
+{% block title %}{{ t('analysis.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=1) }}{% endblock %}
+{% block brief %}تحليل الحالات الوظيفية{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set stops = checks | selectattr('status', 'equalto', 'stop') | list %}
+{% if stops %}<div class="ui-stopflag" role="alert" style="margin-top: 1rem">{{ status_icon('stop') }}<span><b>{{ t('hard.stop_banner') }}</b> {% for c in stops %}{{ t('hard.' ~ c.rule) }}{{ '; ' if not loop.last }}{% endfor %}</span></div>{% endif %}
+
+<div class="ui-conds" role="group" aria-label="{{ t('analysis.conditions') }}">
+  {% for key in conditions %}
+  <span{% if key == case.condition.value %} aria-current="true"{% else %} title="{{ t('analysis.condition_later') }}"{% endif %}>{{ t('cond.' ~ key) }}</span>
+  {% endfor %}
+</div>
+
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card ui-goals">
+      <h2>{{ t('analysis.goals') }}</h2>
+      {% for key, value in [('participation', case.goal_participation), ('activity', case.functional_goals), ('body_function', case.goal_body_function)] %}
+      <div><span class="ui-kicker">{{ t('icf.' ~ key) }}</span>{% if value %}<bdi>{{ value }}</bdi>{% else %}<span style="color: var(--ui-muted)">{{ t('status.not recorded') }}</span>{% endif %}</div>
+      {% endfor %}
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('analysis.exam') }}</h2><span class="ui-note" style="margin: 0">{{ t('analysis.exam_note') }}</span></div>
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 640px">
+          <thead><tr><th scope="col">{{ t('analysis.col_measure') }}</th><th scope="col">{{ t('analysis.col_value') }}</th><th scope="col">{{ t('analysis.col_how') }}</th><th scope="col">{{ t('analysis.col_status') }}</th></tr></thead>
+          <tbody>
+            {% for path, how_kind, value in exam_rows %}
+            {% set unknown = value is not none and value.value is defined and value.value == 'unknown' %}
+            <tr>
+              <td>{{ value_name(path) }}</td>
+              <td style="font-weight: 600">
+                {% if path == 'exam.plantarflexor_tone_grade' %}{{ recorded(path, value) }}
+                {% elif path == 'walking.gait_speed_m_s' %}{% if value is not none %}<bdi>{{ "%g" | format(value) }} m/s</bdi>{% else %}—{% endif %}
+                {% elif path == 'prior_orthoses' %}{% if value is none %}—{% elif not value %}{{ t('analysis.none') }}{% else %}<bdi>{{ value | map(attribute='device_description') | join('; ') }}</bdi>{% endif %}
+                {% else %}{{ recorded(path, value) }}{% endif %}
+              </td>
+              <td style="color: var(--ui-muted)">
+                {% if how_kind == 'tone' %}{% if case.exam.plantarflexor_tone_scale %}{{ value_label(case.exam.plantarflexor_tone_scale) }}{% endif %}{% if case.exam.plantarflexor_tone_notes %}, <bdi>{{ case.exam.plantarflexor_tone_notes }}</bdi>{% endif %}{% if not case.exam.plantarflexor_tone_scale and not case.exam.plantarflexor_tone_notes %}—{% endif %}
+                {% elif how_kind == 'speed' %}{% if case.walking.gait_speed_test %}<bdi>{{ case.walking.gait_speed_test }}</bdi>{% if case.walking.walking_aid %}, <bdi>{{ case.walking.walking_aid }}</bdi>{% endif %}{% else %}—{% endif %}
+                {% elif how_kind == 'status' %}{% if case.walking.walking_aid %}<bdi>{{ case.walking.walking_aid }}</bdi>{% if case.measured_how.get(path) %}; {% endif %}{% endif %}{% if case.measured_how.get(path) %}<bdi>{{ case.measured_how[path] }}</bdi>{% elif not case.walking.walking_aid %}—{% endif %}
+                {% elif how_kind == 'implant' %}{{ t('analysis.implant_how') }}
+                {% else %}{% if case.measured_how.get(path) %}<bdi>{{ case.measured_how[path] }}</bdi>{% else %}—{% endif %}{% endif %}
+              </td>
+              <td>
+                {% if how_kind == 'implant' and value is none %}<span class="ui-tag">{{ t('analysis.not_asked') }}</span>
+                {% elif value is none %}<span class="ui-tag ui-tag-alert">{{ t('status.not recorded') }}</span>
+                {% elif unknown %}<span class="ui-tag ui-tag-warn">{{ t('status.recorded as unknown') }}</span>
+                {% else %}<span class="ui-tag">{{ t('analysis.recorded') }}</span>{% endif %}
+                {% if path in critical and (value is none or unknown) %} <span class="ui-critical" style="font-size: 0.75rem">{{ t('ort.critical') }}</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('analysis.gait') }}</h2><span class="ui-note" style="margin: 0">{{ t('analysis.gait_note') }}{% if case.footwear %} · <bdi>{{ case.footwear }}</bdi>{% endif %}</span></div>
+      {% if case.walking.deviations is none %}
+      <p class="ui-note">{{ t('ort.not_observed') }}</p>
+      {% else %}
+      <div class="ui-phases">
+        {% for phase in gait_phases %}
+        {% set seen = case.walking.deviations | selectattr('phase', 'equalto', phase) | list %}
+        <div class="ui-phase"><div class="ui-phase-name">{{ t('phase.' ~ phase) }}</div>
+          {% for d in seen %}<span class="ui-dev{{ ' ui-dev-comp' if d.value == 'circumduction' }}">{{ value_label(d) }}</span> {% endfor %}
+          {% if not seen %}<div class="ui-note">{{ t('analysis.no_deviation') }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% if case.walking.other_deviations %}<p class="ui-note">{{ t('ort.other_deviations') }}: <bdi>{{ case.walking.other_deviations }}</bdi></p>{% endif %}
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('analysis.needed') }}</h2>
+      <p class="ui-note">{{ t('analysis.needed_note') }}</p>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.9rem">
+        {% for gap in record.gaps %}
+        {% set summary = gap.summary(lang) %}
+        <div class="ui-need {{ 'ui-need-not' if gap.status == 'not recorded' else 'ui-need-unknown' }}">
+          <div class="ui-need-head"><b>{{ field_label(gap.field) }}</b><span class="ui-need-status"{% if gap.status != 'not recorded' %} style="color: var(--ui-warn-ink)"{% endif %}>{{ t('status.' ~ gap.status) }}</span></div>
+          {% if gap.field in critical %}<div class="ui-critical" style="font-size: 0.75rem">{{ t('ort.critical') }}</div>{% endif %}
+          {% if summary %}
+          <div style="margin-top: 0.3rem"><span class="ui-tag ui-tag-warn">{{ t('analysis.ai_label') }}</span> <span dir="auto">{{ summary }}</span></div>
+          {% endif %}
+          {% if gap.excerpt and gap.evidence %}
+          <blockquote dir="auto" lang="{{ gap.evidence.language }}" style="margin: 0.4rem 0 0; padding-inline-start: 0.6rem; border-inline-start: 3px solid #B7D9D5; color: var(--ui-muted-2); font-size: 0.8rem">{{ gap.excerpt }}</blockquote>
+          <div class="ui-note" dir="auto" style="margin-top: 0.2rem">{{ gap.evidence.citation }}</div>
+          <a href="{{ url_for('review.show_case', case_id=case.case_id) }}#gaps" style="display: inline-block; margin-top: 0.3rem; font-weight: 600">{{ t('analysis.source_passage') }}</a>
+          {% else %}<div class="ui-note">{{ t('analysis.no_source') }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        {% if case.implanted_electronic_device is none %}
+        <div class="ui-need"><div class="ui-need-head"><b>{{ t('ort.implanted_short') }}</b><span class="ui-need-status" style="color: var(--ui-muted)">{{ t('analysis.not_asked') }}</span></div>
+          <div class="ui-note">{{ t('analysis.implant_note') }}</div></div>
+        {% endif %}
+        {% if not record.gaps %}<p class="ui-note">{{ t('req.missing_none') }}</p>{% endif %}
+      </div>
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('hard.checks_heading') }}</h2>
+      <ul class="ui-checklist">
+        {% for check in checks %}
+        <li>{{ status_icon(check.status) }}<span><b>{{ t('hard.' ~ check.rule) }}</b><br><span style="color: var(--ui-muted)">{{ t('hard_detail.' ~ check.detail, **check.params) }}</span></span></li>
+        {% endfor %}
+      </ul>
+      <p class="ui-note">{{ t('hard.owners_rules') }}</p>
+    </section>
+
+    <a class="ui-btn" href="{{ url_for('orthotic_modules.requirements', case_id=case.case_id) }}" style="min-height: 52px; font-size: 1rem">{{ t('analysis.continue') }}</a>
+    <a class="ui-btn ui-btn-quiet" href="{{ url_for('review.show_case', case_id=case.case_id) }}">{{ t('analysis.to_review') }}</a>
+    <a class="ui-btn ui-btn-quiet" href="{{ url_for('orthotic_intake.show_form', case=case.case_id) }}">{{ t('analysis.reassess') }}</a>
+  </aside>
+</div>
+{% endblock %}

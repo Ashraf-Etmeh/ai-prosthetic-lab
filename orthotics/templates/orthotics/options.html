@@ -1,0 +1,228 @@
+{% extends "ui_base.html" %}
+{% from "orthotics/macros.html" import device_icon, status_icon with context %}
+{# Module 3 (the canvas's screen 3): up to three option cards side by side in the order written, never ranked,
+   each with what it addresses (the orthotist's marks), what it costs the patient, what the source library says
+   (quoted, never summarised here), its materials and parts tied to the requirements, the clinic's stock and
+   what to check at fitting; the referral to discuss FES; and the orthotist's choice with its reason. #}
+{% block title %}{{ t('options.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=3) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('options.intro') }}</p>{% endblock %}
+{% block brief %}اختيار وتصميم الأجهزة التقويمية{% endblock %}
+
+{% block content %}
+{% macro evidence(chunks) %}
+  {% if chunks %}
+  <div style="display: flex; flex-direction: column; gap: 0.4rem">
+    {% for chunk in chunks %}{% set kind = source_types.get(chunk.doc_id, 'scientific_reference') %}
+    <details class="ui-ev{{ ' ui-ev-guideline' if kind == 'protocol' }}">
+      <summary style="color: inherit; min-height: 0"><b>{{ t('source_type.' ~ kind) }}</b>{% if kind == 'professional_knowledge' %} · {{ t('options.no_outcome_evidence') }}{% endif %} · <span dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</span></summary>
+      {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
+      <blockquote dir="auto" lang="{{ chunk.language }}" style="margin: 0.4rem 0 0; white-space: pre-line">{{ chunk.text }}</blockquote>
+    </details>
+    {% endfor %}
+  </div>
+  {% else %}<p class="ui-note" style="margin: 0">{{ t('mod.no_passage') }}</p>{% endif %}
+{% endmacro %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% if library_warning %}<div class="ui-error">{{ t('review.not_searched') }} <span lang="en" dir="ltr">{{ library_warning }}</span></div>{% endif %}
+{% set stops = checks | selectattr('status', 'equalto', 'stop') | list %}
+{% if stops %}<div class="ui-stopflag" role="alert" style="margin-top: 1rem">{{ status_icon('stop') }}<span><b>{{ t('hard.stop_banner') }}</b> {% for c in stops %}{{ t('hard.' ~ c.rule) }}{{ '; ' if not loop.last }}{% endfor %}</span></div>{% endif %}
+
+{# The requirements, as written in module 2. #}
+{% if plan.requirements %}
+<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; font-size: 0.8rem">
+  {% for r in plan.requirements %}
+  <span style="padding: 0.4rem 0.65rem; border-radius: 8px; background: #FFFFFF; border: 1px solid var(--ui-line)"><b>{{ r.id }}</b> <bdi>{{ r.text }}</bdi>{% if r.priority %} · {{ t('priority.' ~ r.priority.value) }}{% endif %}</span>
+  {% endfor %}
+</div>
+{% else %}
+<p class="ui-note">{{ t('options.no_requirements') }} <a href="{{ url_for('orthotic_modules.requirements', case_id=case.case_id) }}">{{ t('mod.requirements') }}</a></p>
+{% endif %}
+
+{# The cards and the choice: one form, so choosing a card and writing the reason are recorded together. #}
+{% set choice_form = form if (form and form.get('form') == 'choice') else none %}
+{% set chosen = choice_form.get('chosen', '') if choice_form else (plan.chosen or '') %}
+<form method="post" action="{{ url_for('orthotic_modules.choice', case_id=case.case_id) }}">
+  <input type="hidden" name="form" value="choice">
+  {% if plan.options %}
+  <div class="ui-options">
+    {% for option in plan.options %}
+    <article class="ui-option">
+      <div class="ui-option-head">{{ device_icon(option.device.value) }}
+        <div><div class="ui-kicker">{{ t('options.option', id=option.id) }}</div><h2>{{ t('device.' ~ option.device.value) }}</h2>
+          {% if option.summary %}<div style="font-size: 0.875rem; color: var(--ui-muted)"><bdi>{{ option.summary }}</bdi></div>{% endif %}</div>
+      </div>
+      {% if lacks_lining.get(option.id) %}
+      <div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('hard.option_insensate') }}</span></div>
+      {% endif %}
+      {% set unmet = option.unaddressed(plan.requirements) %}
+      {% if unmet %}
+      <div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('options.unaddressed', ids='') }} {% for r in unmet %}<b>{{ r.id }} <bdi>{{ r.text }}</bdi></b>{{ ', ' if not loop.last }}{% endfor %}</span></div>
+      {% endif %}
+
+      <div><h3>{{ t('options.addresses') }}</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem">
+          {% for r in plan.requirements %}{% set mark = option.marks.get(r.id) %}
+          <span class="ui-mark ui-mark-{{ mark.value if mark else 'none' }}">{{ r.id }} {{ option.mark_notes.get(r.id) or (t('mark.' ~ mark.value) if mark else t('options.mark_unset')) }}</span>
+          {% endfor %}
+        </div></div>
+
+      {% if option.costs %}<div><h3>{{ t('options.costs') }}</h3><ul>{% for c in option.costs %}<li><bdi>{{ c }}</bdi></li>{% endfor %}</ul></div>{% endif %}
+
+      <div><h3>{{ t('options.evidence') }}</h3>{{ evidence(passages.get('device.' ~ option.device.value, [])) }}</div>
+
+      <div><h3>{{ t('options.parts_for_case') }}</h3>
+        {% if option.parts %}
+        <ul>
+          {% for p in option.parts %}
+          <li>{{ t('part.' ~ p.part.value) }}{% if p.note %}: <bdi>{{ p.note }}</bdi>{% endif %}
+            {% if p.requirements %}<span class="ui-note" style="display: inline"> · {{ t('options.serves') }} {% for rid in p.requirements %}{% set r = plan.requirement(rid) %}{{ r.id }}{{ ', ' if not loop.last }}{% endfor %}</span>{% endif %}
+            {% if passages.get('part.' ~ p.part.value) %}<details><summary style="font-size: 0.8rem">{{ t('options.part_sources', n=passages['part.' ~ p.part.value] | length) }}</summary>{{ evidence(passages['part.' ~ p.part.value]) }}</details>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="ui-note" style="margin: 0">{{ t('options.no_parts') }}</p>{% endif %}
+        {% if option.stock %}<div style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 600; color: var(--ui-accent)">{{ t('options.stock') }}: <bdi>{{ option.stock }}</bdi></div>{% endif %}
+      </div>
+
+      {% if option.checks %}<div><h3>{{ t('options.checks') }}</h3><ul>{% for c in option.checks %}<li><bdi>{{ c }}</bdi></li>{% endfor %}</ul></div>{% endif %}
+      {% if option.notes %}<div><h3>{{ t('options.other_notes') }}</h3><p style="margin: 0; font-size: 0.875rem; white-space: pre-line"><bdi>{{ option.notes }}</bdi></p></div>{% endif %}
+
+      <label class="ui-pick"><input type="radio" name="chosen" value="{{ option.id }}"{{ " checked" if option.id == chosen }}>
+        <span><span class="ui-pick-off">{{ t('options.choose_option', id=option.id) }}</span><span class="ui-pick-on">{{ t('options.chosen_by') }}</span></span></label>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <section class="ui-fes">
+    <div style="flex: 2 1 420px; min-width: 0">
+      <div class="ui-kicker">{{ t('options.fes_kicker') }}</div>
+      <h2 style="margin: 0.15rem 0 0.4rem; font-size: 1.25rem">{{ t('options.fes_title') }}</h2>
+      {{ evidence(passages.get('device.fes', [])) }}
+    </div>
+    <div style="flex: 1 1 300px; min-width: 0; font-size: 0.875rem; line-height: 1.35rem">
+      <b>{{ t('options.check_first') }}</b>
+      <ul class="ui-plain" style="margin-top: 0.3rem">
+        <li>{{ t('ort.implanted_short') }}: {% if case.implanted_electronic_device %}{{ value_label(case.implanted_electronic_device) }}{% else %}{{ t('analysis.not_asked') }}{% endif %}</li>
+        {% for c in plan.fes.checks %}<li><bdi>{{ c }}</bdi></li>{% endfor %}
+      </ul>
+      {% if plan.fes.note %}<p class="ui-note"><bdi>{{ plan.fes.note }}</bdi></p>{% endif %}
+      {% for c in checks if c.rule == 'fes_implant' and c.status in ('stop', 'warn') %}<div class="ui-stopflag" style="margin-top: 0.5rem">{{ status_icon(c.status) }}<span>{{ t('hard_detail.' ~ c.detail) }}</span></div>{% endfor %}
+    </div>
+    <label class="ui-pick" style="flex: 0 0 auto; margin: 0"><input type="radio" name="chosen" value="{{ fes_id }}"{{ " checked" if chosen == fes_id }}>
+      <span><span class="ui-pick-off">{{ t('options.choose_referral') }}</span><span class="ui-pick-on">{{ t('options.referral_chosen') }}</span></span></label>
+  </section>
+
+  <section class="ui-dark" style="margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 1rem 1.75rem; align-items: flex-end">
+    <div style="flex: 1 1 280px; min-width: 0">
+      <div class="ui-kicker">{{ t('options.choice_heading') }}</div>
+      {% set current = plan.option(plan.chosen) %}
+      <div style="margin-top: 0.35rem; font-size: 1.25rem; line-height: 1.75rem; font-weight: 600">
+        {% if current %}{{ t('options.option', id=current.id) }} · {{ t('device.' ~ current.device.value) }}{% elif plan.chosen == fes_id %}{{ t('options.fes_chosen') }}{% else %}{{ t('options.not_chosen') }}{% endif %}</div>
+      <div class="ui-note" style="color: var(--ui-header-ink)">{{ t('options.choice_note') }}</div>
+    </div>
+    <label style="flex: 2 1 380px; min-width: 0">{{ t('options.reason') }}
+      <textarea name="reason" rows="2" dir="auto">{{ choice_form.get('reason', '') if choice_form else (plan.choice_reason or '') }}</textarea></label>
+    <button class="ui-btn" type="submit" style="background: #FFFFFF; color: var(--ui-header) !important; border-color: #FFFFFF">{{ t('options.record_and_design') }}</button>
+  </section>
+</form>
+{% if logged_choices %}
+<section class="ui-card" style="margin-top: 1.25rem">
+  <h2>{{ t('options.logged', n=logged_choices | length) }}</h2>
+  <ol style="margin: 0.5rem 0 0; padding-inline-start: 1.2rem; font-size: 0.85rem">
+    {% for entry in logged_choices %}
+    <li><bdi>{{ entry.logged_at }}</bdi> · {% if entry.plan.chosen == fes_id %}{{ t('options.fes_chosen') }}{% else %}{{ t('options.option', id=entry.plan.chosen) }}{% endif %} · “<bdi>{{ entry.note }}</bdi>”</li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+
+{# Writing or changing the options and the referral. A refused form comes back as it was sent. #}
+{% set opt_form = form if (form and form.get('form') == 'options') else none %}
+<form method="post" action="{{ url_for('orthotic_modules.options', case_id=case.case_id) }}">
+  <input type="hidden" name="form" value="options">
+  <details class="ui-card" style="margin-top: 1.5rem"{% if not plan.options or opt_form %} open{% endif %}>
+    <summary style="font-size: 1.05rem; font-weight: 600">{{ t('options.edit_heading') }}</summary>
+    <p class="ui-note">{{ t('options.edit_note') }}</p>
+    <div class="ui-grid">
+      {% for oid in option_ids %}
+      {% set saved_option = plan.option(oid) %}
+      {% set prefix = 'opt_' ~ oid ~ '_' %}
+      <fieldset style="border: 1px solid var(--ui-line); border-radius: 12px; padding: 0.75rem 1rem; min-width: 0">
+        <legend style="font-weight: 600">{{ t('options.option', id=oid) }}</legend>
+        {% set device = opt_form.get(prefix ~ 'device', '') if opt_form else (saved_option.device.value if saved_option else '') %}
+        <label>{{ t('options.device') }}
+          <select name="{{ prefix }}device">
+            <option value="">{{ t('options.none') }}</option>
+            {% for d in devices if d.value != 'fes' %}<option value="{{ d.value }}"{{ " selected" if d.value == device }}>{{ t('device.' ~ d.value) }}</option>{% endfor %}
+          </select>
+        </label>
+        <label style="display: block; margin-top: 0.5rem">{{ t('options.summary') }}
+          <input type="text" name="{{ prefix }}summary" dir="auto" value="{{ opt_form.get(prefix ~ 'summary', '') if opt_form else (saved_option.summary or '' if saved_option else '') }}"></label>
+        {% if plan.requirements %}
+        <h3>{{ t('options.addresses') }}</h3>
+        {% for r in plan.requirements %}
+        {% set mark = opt_form.get(prefix ~ 'mark_' ~ r.id, '') if opt_form else (saved_option.marks[r.id].value if saved_option and r.id in saved_option.marks else '') %}
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.3rem; align-items: flex-end">
+          <label style="flex: 1 1 50%"><span class="ui-rid">{{ r.id }}</span><bdi>{{ r.text }}</bdi>
+            <select name="{{ prefix }}mark_{{ r.id }}">
+              <option value="">{{ t('options.mark_unset') }}</option>
+              {% for m in marks %}<option value="{{ m.value }}"{{ " selected" if m.value == mark }}>{{ t('mark.' ~ m.value) }}</option>{% endfor %}
+            </select></label>
+          <label style="flex: 1 1 50%">{{ t('options.mark_note') }}
+            <input type="text" name="{{ prefix }}marknote_{{ r.id }}" dir="auto" value="{{ opt_form.get(prefix ~ 'marknote_' ~ r.id, '') if opt_form else (saved_option.mark_notes.get(r.id, '') if saved_option else '') }}"></label>
+        </div>
+        {% endfor %}
+        {% endif %}
+        <h3>{{ t('options.parts_for_case') }}</h3>
+        {% for k in range(1, max_parts + 1) %}
+        {% set saved_part = saved_option.parts[k - 1] if saved_option and k <= saved_option.parts | length else none %}
+        {% set part = opt_form.get(prefix ~ 'part_' ~ k, '') if opt_form else (saved_part.part.value if saved_part else '') %}
+        {% set serves = opt_form.getlist(prefix ~ 'part_' ~ k ~ '_req') if opt_form else (saved_part.requirements if saved_part else []) %}
+        <div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px dashed var(--ui-line)">
+          <label>{{ t('options.part', n=k) }}
+            <select name="{{ prefix }}part_{{ k }}">
+              <option value="">{{ t('options.none') }}</option>
+              {% for p in parts %}<option value="{{ p.value }}"{{ " selected" if p.value == part }}>{{ t('part.' ~ p.value) }}</option>{% endfor %}
+            </select>
+          </label>
+          <label style="display: block; margin-top: 0.3rem">{{ t('options.part_note') }}
+            <input type="text" name="{{ prefix }}part_{{ k }}_note" dir="auto" value="{{ opt_form.get(prefix ~ 'part_' ~ k ~ '_note', '') if opt_form else (saved_part.note or '' if saved_part else '') }}"></label>
+          {% if plan.requirements %}
+          <div class="ui-checks" aria-label="{{ t('options.serves') }}">
+            {% for r in plan.requirements %}
+            <label><input type="checkbox" name="{{ prefix }}part_{{ k }}_req" value="{{ r.id }}"{{ " checked" if r.id in serves }}><span>{{ t('options.serves') }} {{ r.id }}</span></label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% for name in ['costs', 'checks'] %}
+        <label style="display: block; margin-top: 0.8rem">{{ t('options.' ~ name) }} <span class="ui-note" style="display: inline">{{ t('mod.one_per_line') }}</span>
+          <textarea name="{{ prefix }}{{ name }}" rows="3" dir="auto">{{ opt_form.get(prefix ~ name, '') if opt_form else ((saved_option[name] | join('\n')) if saved_option else '') }}</textarea></label>
+        {% endfor %}
+        <label style="display: block; margin-top: 0.6rem">{{ t('options.stock') }}
+          <input type="text" name="{{ prefix }}stock" dir="auto" value="{{ opt_form.get(prefix ~ 'stock', '') if opt_form else (saved_option.stock or '' if saved_option else '') }}"></label>
+        <label style="display: block; margin-top: 0.6rem">{{ t('options.other_notes') }}
+          <textarea name="{{ prefix }}notes" rows="2" dir="auto">{{ opt_form.get(prefix ~ 'notes', '') if opt_form else (saved_option.notes or '' if saved_option else '') }}</textarea></label>
+      </fieldset>
+      {% endfor %}
+    </div>
+    <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('options.save') }}</button></div>
+  </details>
+</form>
+{% set fes_form = form if (form and form.get('form') == 'fes') else none %}
+<form method="post" action="{{ url_for('orthotic_modules.options', case_id=case.case_id) }}">
+  <input type="hidden" name="form" value="fes">
+  <details class="ui-card" style="margin-top: 1rem"{% if fes_form %} open{% endif %}>
+    <summary style="font-size: 1.05rem; font-weight: 600">{{ t('options.fes_edit') }}</summary>
+    <label style="display: block; margin-top: 0.6rem">{{ t('options.fes_checks') }} <span class="ui-note" style="display: inline">{{ t('mod.one_per_line') }}</span>
+      <textarea name="fes_checks" rows="3" dir="auto">{{ fes_form.get('fes_checks', '') if fes_form else (plan.fes.checks | join('\n')) }}</textarea></label>
+    <label style="display: block; margin-top: 0.6rem">{{ t('options.fes_note') }}
+      <input type="text" name="fes_note" dir="auto" value="{{ fes_form.get('fes_note', '') if fes_form else (plan.fes.note or '') }}"></label>
+    <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('options.fes_save') }}</button></div>
+  </details>
+</form>
+<p class="ui-note">{{ t('mod.passages_note') }}</p>
+{% endblock %}

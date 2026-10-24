@@ -1,7 +1,7 @@
 """Case store for the prototype: in memory, with one JSON file per case on disk.
 
 There is no database. A case is created by intake, analysed once, kept in
-memory and written to data/cases/<case_id>.json, so its review page still
+memory and written to data/records/cases/<case_id>.json, so its review page still
 works after the server restarts: a case that is not in memory is read from
 its file the first time it is asked for.
 
@@ -26,13 +26,13 @@ import os
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from knowledge.models import ProtocolChunk
-from orthotics.plan import OrthoticPlan
 from reasoning.models import ComponentSupport, FittingSupport, Gap
 from reasoning.rag import Generation, components_from, fitting_from
-from shared.case_schema import Case, case_from_dict
+from shared import domains
+from shared.case_schema import CaseCore, case_from_dict
 from shared.config import CASES_DIR
 
 # Raise when the shape of a case file changes, and keep reading older files.
@@ -40,7 +40,12 @@ from shared.config import CASES_DIR
 # retrieved also hold the component, fitting and functional-level topics.
 # 3 (2026-10-23): adds "plan", an orthotic case's work after the analysis
 # (orthotics/plan.py); null for a prosthetic case or before any is saved.
-CASE_FILE_VERSION = 3
+# 4 (2026-10-23, the design canvas's screens): the plan gains conflicts, the
+# FES referral, the option cards' costs, checks and stock, the simulation,
+# parameter bases and approvals, "fit" (module 5) and "follow_up" (module 6);
+# the orthotic case gains goals by ICF level, "measured_how" and the ulcer
+# check. Older files read with the new keys empty.
+CASE_FILE_VERSION = 4
 
 # What a case id may look like to be used as a file name (generated ids are
 # 12 hexadecimal characters). Anything else is never looked up on disk.
@@ -49,7 +54,7 @@ _SAFE_CASE_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 @dataclass
 class CaseRecord:
-    case: Case
+    case: CaseCore
     # Passages retrieved for the case, keyed by dotted field path (a missing
     # field) or topic key ("knee", "alignment", ...: reasoning/rag_topics.py).
     retrieved_chunks: dict[str, list[ProtocolChunk]] = field(default_factory=dict)
@@ -62,9 +67,10 @@ class CaseRecord:
     fitting: Optional[FittingSupport] = None
     # The AI's answer, as kept after the quote check (None: made before the RAG).
     generation: Optional[Generation] = None
-    # An orthotic case's requirements, design options and design workflow, as the
-    # orthotist saved them (None: nothing saved yet, or a prosthetic case).
-    plan: Optional[OrthoticPlan] = None
+    # The specialist's work after the analysis, in its domain's plan class (<domain>/plan.py
+    # PLAN; so far orthotics/plan.py OrthoticPlan: requirements, design options, design workflow,
+    # fit and follow-up). None: nothing saved yet, or a domain without a plan.
+    plan: Optional[Any] = None
 
     def shown_statements(self) -> list:
         """Every component and fitting statement on the review page (CitedStatement)."""
@@ -107,7 +113,8 @@ def record_from_dict(data: dict) -> CaseRecord:
         components=components_from(case, generation) if generation else None,
         fitting=fitting_from(case, generation) if generation else None,
         generation=generation,
-        plan=OrthoticPlan.from_dict(data["plan"]) if data.get("plan") else None,  # none before version 3
+        # none before version 3
+        plan=domains.part(case.domain, "plan").PLAN.from_dict(data["plan"]) if data.get("plan") else None,
     )
 
 

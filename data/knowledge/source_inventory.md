@@ -1,8 +1,8 @@
 # Source inventory of the knowledge items
 
-Facts only, for writing the evidence rule table. Built from `data/knowledge/items.json` (last changed in commit `5f45499`, 59 items) and `data/sources/catalog.json`. Documents are listed alphabetically by catalog id.
+Facts only, for writing the evidence rule table. Built from `data/knowledge/items.json` (last changed in commit `5f45499`, 59 items) and `data/knowledge/sources/catalog.json`. Documents are listed alphabetically by catalog id.
 
-- **Component / fitting:** the item's statement is in `reasoning/component_guide.py` (component rules, K-level descriptions and cautions) or `reasoning/fitting_guide.py`.
+- **Component / fitting:** the item's statement is in `prosthetics/component_guide.py` (component rules, K-level descriptions and cautions) or `prosthetics/fitting_guide.py`.
 - **Grade:** `grade_as_printed` exactly as stored; "no grade" where it is empty.
 - **Page:** the page of the item's quote as numbered in a PDF viewer, from its citation.
 - **Quote:** the first 120 characters of `statement` (… where it goes on). Where the statement introduces a list, the number of list items follows in brackets; the items are in `items.json`.

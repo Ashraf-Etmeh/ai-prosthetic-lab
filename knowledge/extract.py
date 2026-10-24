@@ -1,14 +1,14 @@
 """Text extraction: source documents -> cleaned text, page by page.
 
 The first half of ingestion (step 3). For every document in
-data/sources/catalog.json, this pulls the text out of the PDF (or .txt),
-cleans it, and writes it to data/extracted/<id>.txt. Open those files to see
+data/knowledge/sources/catalog.json, this pulls the text out of the PDF (or .txt),
+cleans it, and writes it to data/knowledge/extracted/<id>.txt. Open those files to see
 exactly what the system reads. Chunking and embedding (knowledge/ingest.py)
 start from these files.
 
 Run:  python -m knowledge.extract
 
-Running it again overwrites data/extracted/, so hand edits there are lost.
+Running it again overwrites data/knowledge/extracted/, so hand edits there are lost.
 """
 
 import logging
@@ -317,7 +317,7 @@ def extract_document(doc: SourceDocument, sources_dir: Path = SOURCES_DIR) -> Ex
 
 
 def write_extracted(extracted: ExtractedDocument, out_dir: Path = EXTRACTED_DIR) -> Path:
-    """Write data/extracted/<id>.txt: a short header, then each page's text."""
+    """Write data/knowledge/extracted/<id>.txt: a short header, then each page's text."""
     doc = extracted.document
     lines = [
         f"# id: {doc.id}",

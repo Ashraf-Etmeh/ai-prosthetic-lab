@@ -6,7 +6,7 @@ can't answer (no key, offline, refused), and explain_gap() words every gap's
 opening sentence. It was the only gap analysis from 2026-10-06, chosen then
 because a model call was a cloud service and language models often cite
 sources that don't support what they say (Wu et al. 2025,
-data/sources/04_ai_safety_regulation); the RAG answers that with a quote
+data/knowledge/sources/04_ai_safety_regulation); the RAG answers that with a quote
 check (reasoning/quote_check.py).
 
 For each missing field (shared/field_guide.py: empty, or recorded as
@@ -31,8 +31,8 @@ import re
 from typing import Optional
 
 from knowledge.models import ProtocolChunk
+from prosthetics.case import Case
 from reasoning.models import Gap
-from shared.case_schema import Case
 from shared.config import MIN_RELEVANCE_SCORE
 from shared.field_guide import NOT_RECORDED, FieldInfo, MissingField, missing_fields
 from shared.i18n import field_label, t

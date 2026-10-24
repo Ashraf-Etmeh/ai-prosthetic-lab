@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient record: Consent, access and data governance</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Arabic:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}
+a{color:#0B5C60}a:hover{color:#073F42}
+button,input,select,textarea{font:inherit}</style>
+</head>
+<body>
+<div style="background: #0A2224; color: #D3E6E4; font: 13px/20px 'IBM Plex Sans', system-ui, sans-serif; padding: 8px 32px"><a href="../index.html" style="color: #FFFFFF; font-weight: 600">All parts</a> · Patient record · Consent, access and data governance · design proposal, fake data</div>
+<div style="box-sizing: border-box; width: 100%; background: #F4F5F2; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #15211F; padding-bottom: 56px">
+<header style="background: #0E2F31; color: #FFFFFF">
+<div style="max-width: 1376px; margin: 0 auto; padding: 10px 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px">
+<div style="display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7FC4BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v8l-3 7h9"></path><path d="M9 11h4"></path><circle cx="17" cy="18" r="2"></circle></svg>
+<span>AI Prosthetic Lab</span><span style="font-weight: 500; color: #BFDAD7">/ Patient record</span>
+</div>
+<nav aria-label="Pages" style="display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto">
+<a href="Main.html" style="color: #D3E6E4; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px">1 Record and follow-up</a>
+<a href="Governance.html" aria-current="page" style="color: #0E2F31; background: #FFFFFF; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px; font-weight: 600">2 Consent and governance</a>
+</nav>
+<div style="display: flex; gap: 6px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #FFFFFF; background: #FFFFFF; color: #0E2F31; font-weight: 600">EN</button>
+<button type="button" aria-pressed="false" lang="ar" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #5E8B88; background: transparent; color: #FFFFFF; font-family: 'IBM Plex Sans Arabic', sans-serif">العربية</button>
+</div>
+</div>
+</header>
+<div style="background: #FFFFFF; border-bottom: 1px solid #D7DDDA">
+<div style="max-width: 1376px; margin: 0 auto; padding: 14px 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; font-size: 14px; line-height: 20px">
+<span style="font-size: 16px; font-weight: 700">Person P-3F9A</span>
+<span>Consent recorded 4 Mar 2026 · changed 12 Aug 2026</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #ECEEEB; color: #3F4846; font-size: 13px; font-weight: 600">Test record · fake data</span>
+<span style="margin-left: auto; padding: 4px 10px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-size: 13px; font-weight: 600">The person decides what is shared</span>
+</div>
+</div>
+<main style="max-width: 1376px; margin: 0 auto; padding: 28px 32px 0; box-sizing: border-box">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px">
+<div>
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: #4A5553">PRIVACY BY DESIGN</div>
+<h1 style="margin: 4px 0 0; font-size: 30px; line-height: 38px; font-weight: 700">Consent, access and data governance</h1>
+<p style="margin: 6px 0 0; font-size: 16px; line-height: 24px; color: #4A5553">What the person agreed to, who may see what, what ever leaves the clinic, and the trail of every look.</p>
+</div>
+<div lang="ar" dir="rtl" style="font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 18px; color: #0B5C60; font-weight: 600">الموافقة والخصوصية وحوكمة البيانات</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 24px; align-items: flex-start">
+<section style="flex: 1 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 18px; line-height: 26px">Consent</h2><span style="font-size: 13px; color: #4A5553">Each item separate; each can be withdrawn</span></div>
+<ul style="margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; font-size: 14px; line-height: 20px">
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid #ECEEEB"><div style="flex: 1 1 260px; min-width: 0"><b>Keep a care record</b><div style="font-size: 13px; color: #4A5553">Needed to use the tool for this person</div></div><span style="padding: 2px 10px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-size: 13px; font-weight: 600">Agreed 4 Mar</span></li>
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid #ECEEEB"><div style="flex: 1 1 260px; min-width: 0"><b>Send coded fields to the cloud language model</b><div style="font-size: 13px; color: #4A5553">Level, side, recorded K-level; never typed notes</div></div><span style="padding: 2px 10px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-size: 13px; font-weight: 600">Agreed 4 Mar</span><button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #C5CECB; background: #FFFFFF; color: #15211F">Withdraw</button></li>
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid #ECEEEB"><div style="flex: 1 1 260px; min-width: 0"><b>De-identified use for quality measures</b><div style="font-size: 13px; color: #4A5553">Counts and marks, never the record</div></div><span style="padding: 2px 10px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-size: 13px; font-weight: 600">Agreed 4 Mar</span><button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #C5CECB; background: #FFFFFF; color: #15211F">Withdraw</button></li>
+<li style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0"><div style="flex: 1 1 260px; min-width: 0"><b>Use as the basis of a teaching case</b><div style="font-size: 13px; color: #4A5553">Teaching cases are rewritten so no one can be recognised</div></div><span style="padding: 2px 10px; border-radius: 999px; background: #FBE9DF; color: #8F3510; font-size: 13px; font-weight: 600">Declined 12 Aug</span></li>
+</ul>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 19px; color: #4A5553">Consent text shown to the person in Arabic or English, as they chose. A change is a new line in the record; the old one stays.</p>
+</section>
+
+<section style="flex: 1 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 18px; line-height: 26px">Where each piece of data goes</h2><span style="font-size: 13px; color: #4A5553">Set by the owner, per domain</span></div>
+<div style="overflow-x: auto; margin-top: 12px">
+<table style="width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead><tr style="text-align: left; color: #4A5553; font-size: 13px"><th scope="col" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #D7DDDA; font-weight: 600">Data</th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Clinic server</th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Cloud model</th><th scope="col" style="padding: 8px 0 8px 10px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Quality reports</th></tr></thead>
+<tbody>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Name, birth date, file number</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Never: clinic system only</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Never</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Never</td></tr>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Coded case fields</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Kept</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">With consent</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Counts only</td></tr>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Typed notes</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Kept</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Never</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Never</td></tr>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Gait recordings and scans</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Kept</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Never</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Never</td></tr>
+<tr><td style="padding: 8px 10px 8px 0">Specialists' marks</td><td style="padding: 8px 10px">Kept</td><td style="padding: 8px 10px">Never</td><td style="padding: 8px 0 8px 10px">Counts only</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 24px; align-items: flex-start">
+<section style="flex: 999 1 640px; min-width: 0; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 18px; line-height: 26px">Who may see what</h2><span style="font-size: 13px; color: #4A5553">Roles set by the owner</span></div>
+<div style="overflow-x: auto; margin-top: 12px">
+<table style="width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead><tr style="text-align: left; color: #4A5553; font-size: 13px"><th scope="col" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #D7DDDA; font-weight: 600">Role</th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Record</th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Notes</th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Sign</th><th scope="col" style="padding: 8px 0 8px 10px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Export</th></tr></thead>
+<tbody>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Treating prosthetist or orthotist</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Yes</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Yes</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Own domain</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">With a reason</td></tr>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Physiotherapist</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Yes</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Yes</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Rehabilitation</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">No</td></tr>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Gait lab</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Sessions only</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">No</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Gait reports</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">No</td></tr>
+<tr><td style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB">Educator</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">No</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">No</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">No</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">No</td></tr>
+<tr><td style="padding: 8px 10px 8px 0">Owner and quality lead</td><td style="padding: 8px 10px">Counts only</td><td style="padding: 8px 10px">No</td><td style="padding: 8px 10px">Rules and releases</td><td style="padding: 8px 0 8px 10px">Reports</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<aside style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Access trail</h2>
+<ul style="margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; font-size: 14px; line-height: 20px">
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEEB"><span>Prosthetist · opened the record</span><span style="color: #4A5553">22 Oct 09:14</span></li>
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEEB"><span>Physiotherapist · added a session</span><span style="color: #4A5553">20 Oct 15:02</span></li>
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0"><span>Prosthetist · exported for referral</span><span style="color: #4A5553">3 Sep 11:30</span></li>
+</ul>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 19px; color: #4A5553">Append-only. The person can ask for this list.</p>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Retention and requests</h2>
+<ul style="margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; font-size: 14px; line-height: 20px">
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEEB"><span>Kept for</span><b>[period under local law]</b></li>
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEEB"><span>Law it follows</span><b>[local data protection law]</b></li>
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0"><span>Open requests</span><b>None</b></li>
+</ul>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #0B5C60; background: #FFFFFF; color: #0B5C60; font-weight: 600">Give the person a copy</button>
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #C5CECB; background: #FFFFFF; color: #15211F">Record a deletion request</button>
+</div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 19px; color: #4A5553">A deletion removes the content and keeps a line saying when and on whose request.</p>
+</section>
+</aside>
+</div>
+</main>
+</div>
+
+</body>
+</html>

@@ -15,19 +15,19 @@ The orthotist decides, and writes the choice and its reason in the decision.
 
 import json
 
-from reasoning.fitting_support import recorded_value
-from reasoning.models import ComponentSection, ComponentSupport, FittingSupport
-from reasoning.rag import FAITHFULNESS, GRADE_PHRASES, Generation, Profile, _statements, terms_line
-from reasoning.rag_topics import GAPS
-from shared.case_schema import OrthoticCase
-from shared.config import MAX_ITEMS_PER_TOPIC
+from orthotics.case import OrthoticCase
 from orthotics.topics import DESIGN_FITTING, DESIGN_SECTIONS, DEVICE_SECTIONS, DEVICES, PARTS
+from reasoning.models import ComponentSection, ComponentSupport, FittingSupport
+from reasoning.rag import FAITHFULNESS, GRADE_PHRASES, Generation, Profile, statements_for, terms_line
+from reasoning.rag_topics import GAPS
+from shared.case_schema import recorded_value
+from shared.config import MAX_ITEMS_PER_TOPIC
 
 # Changes whenever these instructions change; logged with every decision. rag-ort-v2
 # (2026-10-23): reasoning/rag.py FAITHFULNESS and the page's Arabic terms, as rag-v3.
 PROMPT_VERSION = "rag-ort-v2"
 
-# The orthotic review page's Arabic terms (shared/i18n.py; checked in tests/test_orthotics.py).
+# The orthotic review page's Arabic terms (shared/i18n.py; checked in orthotics/tests/test_orthotics.py).
 ARABIC_TERMS = (
     ("ankle-foot orthosis, AFO", "جهاز تقويم الكاحل والقدم"),
     ("orthosis", "الجهاز التقويمي"),
@@ -128,11 +128,11 @@ PROFILE = Profile(PARTS, SYSTEM_PROMPT, TASKS, MAX_ITEMS, case_for_prompt, CASE_
 def components_from(case: OrthoticCase, generation: Generation) -> ComponentSupport:
     """The orthosis and FES options, section by section (no functional level: that is a prosthetic K-level)."""
     part = generation.part(DEVICES)
-    return ComponentSupport(None, [ComponentSection(key, _statements(part, key)) for key in DEVICE_SECTIONS])
+    return ComponentSupport(None, [ComponentSection(key, statements_for(part, key)) for key in DEVICE_SECTIONS])
 
 
 def fitting_from(case: OrthoticCase, generation: Generation) -> FittingSupport:
     """Design and fitting, section by section, with the intake values they speak about."""
     part = generation.part(DESIGN_FITTING)
-    sections = [ComponentSection(key, _statements(part, key)) for key in DESIGN_SECTIONS]
+    sections = [ComponentSection(key, statements_for(part, key)) for key in DESIGN_SECTIONS]
     return FittingSupport(sections, [(path, recorded_value(case, path)) for path in RECORDED_FIELDS])

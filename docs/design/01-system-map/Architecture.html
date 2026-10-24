@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System map: 2 · Architecture and data flow</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Arabic:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}
+a{color:#0B5C60}a:hover{color:#073F42}
+button,input,select,textarea{font:inherit}</style>
+</head>
+<body>
+<div style="background: #0A2224; color: #D3E6E4; font: 13px/20px 'IBM Plex Sans', system-ui, sans-serif; padding: 8px 32px"><a href="../index.html" style="color: #FFFFFF; font-weight: 600">All parts</a> · System map · 2 · Architecture and data flow · design proposal, fake data</div>
+<div style="box-sizing: border-box; width: 100%; background: #F4F5F2; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #15211F; padding-bottom: 56px">
+<header style="background: #0E2F31; color: #FFFFFF">
+<div style="max-width: 1376px; margin: 0 auto; padding: 10px 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px">
+<div style="display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7FC4BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v8l-3 7h9"></path><path d="M9 11h4"></path><circle cx="17" cy="18" r="2"></circle></svg>
+<span>AI Prosthetic Lab</span><span style="font-weight: 500; color: #BFDAD7">/ System map</span>
+</div>
+<nav aria-label="Pages" style="display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto">
+<a href="Main.html" style="color: #D3E6E4; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px">1 System map</a>
+<a href="Architecture.html" aria-current="page" style="color: #0E2F31; background: #FFFFFF; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px; font-weight: 600">2 Architecture</a>
+</nav>
+<div style="display: flex; gap: 6px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #FFFFFF; background: #FFFFFF; color: #0E2F31; font-weight: 600">EN</button>
+<button type="button" aria-pressed="false" lang="ar" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #5E8B88; background: transparent; color: #FFFFFF; font-family: 'IBM Plex Sans Arabic', sans-serif">العربية</button>
+</div>
+</div>
+</header>
+<main style="max-width: 1376px; margin: 0 auto; padding: 28px 32px 0; box-sizing: border-box">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px">
+<div>
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: #4A5553">HOW IT IS BUILT</div>
+<h1 style="margin: 4px 0 0; font-size: 30px; line-height: 38px; font-weight: 700">Architecture and data flow</h1>
+<p style="margin: 6px 0 0; font-size: 16px; line-height: 24px; color: #4A5553">Six layers, one clinic server, and one narrow door to a language model. A new domain adds its own section, never a new pipeline.</p>
+</div>
+<div lang="ar" dir="rtl" style="font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 18px; color: #0B5C60; font-weight: 600">البنية وتدفق البيانات</div>
+</div>
+
+<section aria-label="Layers" style="margin-top: 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 14px 16px">
+<div style="flex: 0 0 200px; display: flex; flex-direction: column; justify-content: center"><div style="font-size: 12px; font-weight: 600; color: #4A5553">LAYER 1</div><b style="font-size: 16px">People</b></div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Prosthetists and orthotists</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Physiotherapists and the gait lab</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Learners and educators</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Owner, curator, quality lead</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 14px 16px">
+<div style="flex: 0 0 200px; display: flex; flex-direction: column; justify-content: center"><div style="font-size: 12px; font-weight: 600; color: #4A5553">LAYER 2</div><b style="font-size: 16px">Interface</b></div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">One header: domain switch, module pages, case bar</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">English and Arabic, right to left</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Works on a clinic tablet</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">AI text always labelled, over its quote</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 14px 16px">
+<div style="flex: 0 0 200px; display: flex; flex-direction: column; justify-content: center"><div style="font-size: 12px; font-weight: 600; color: #4A5553">LAYER 3</div><b style="font-size: 16px">Domain modules</b><span style="font-size: 13px; color: #4A5553">Each: intake, topics, answer key, clinic rules</span></div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Prosthetics</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Orthotics</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Gait analysis</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Rehabilitation</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; background: #E3F0EE; border: 1px solid #B7D9D5; border-radius: 14px; padding: 14px 16px; color: #073F42">
+<div style="flex: 0 0 200px; display: flex; flex-direction: column; justify-content: center"><div style="font-size: 12px; font-weight: 600">LAYER 4</div><b style="font-size: 16px">Shared services</b></div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #FFFFFF; border: 1px solid #B7D9D5; font-size: 14px">Case core and person record</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #FFFFFF; border: 1px solid #B7D9D5; font-size: 14px">Reasoning pathway: gaps, search, writer, quote check, hard stops</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #FFFFFF; border: 1px solid #B7D9D5; font-size: 14px">Review, signature, append-only log</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #FFFFFF; border: 1px solid #B7D9D5; font-size: 14px">Search and learning</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 14px 16px">
+<div style="flex: 0 0 200px; display: flex; flex-direction: column; justify-content: center"><div style="font-size: 12px; font-weight: 600; color: #4A5553">LAYER 5</div><b style="font-size: 16px">Knowledge</b></div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Source library and extracted pages</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Local search index (multilingual embeddings)</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Knowledge items with the owner's evidence rules</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Glossary, graph, golden cases</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 14px 16px">
+<div style="flex: 0 0 200px; display: flex; flex-direction: column; justify-content: center"><div style="font-size: 12px; font-weight: 600; color: #4A5553">LAYER 6</div><b style="font-size: 16px">Platform and governance</b></div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Clinic server; identity stays in the clinic's system</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Consent, access roles, access trail</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">Tests, held-out cases, release gate</div>
+<div style="flex: 1 1 160px; padding: 10px 12px; border-radius: 10px; background: #F7F9F8; border: 1px solid #ECEEEB; font-size: 14px">One swap point to the language model</div>
+</div>
+</section>
+
+<section style="margin-top: 24px; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 18px; line-height: 26px">One answer, end to end</h2><span style="font-size: 13px; color: #4A5553">The shaded step is the only one outside the clinic</span></div>
+<div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; margin-top: 14px">
+<div style="flex: 1 1 140px; padding: 12px; border-radius: 12px; border: 1px solid #D7DDDA; background: #F7F9F8; font-size: 13px; line-height: 19px"><b style="display: block; font-size: 14px">Coded case</b>Fields and how each was measured</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="align-self: center"><path d="M9 6l6 6-6 6"></path></svg>
+<div style="flex: 1 1 140px; padding: 12px; border-radius: 12px; border: 1px solid #D7DDDA; background: #F7F9F8; font-size: 13px; line-height: 19px"><b style="display: block; font-size: 14px">Local search</b>Passages per topic, with pages</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="align-self: center"><path d="M9 6l6 6-6 6"></path></svg>
+<div style="flex: 1 1 140px; padding: 12px; border-radius: 12px; border: 1px dashed #4B3A86; background: #EDE8F7; color: #2E2257; font-size: 13px; line-height: 19px"><b style="display: block; font-size: 14px">Language model</b>Sentences, each with a quote</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="align-self: center"><path d="M9 6l6 6-6 6"></path></svg>
+<div style="flex: 1 1 140px; padding: 12px; border-radius: 12px; border: 1px solid #D7DDDA; background: #F7F9F8; font-size: 13px; line-height: 19px"><b style="display: block; font-size: 14px">Checks</b>Quote word for word, advice, hard stops</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="align-self: center"><path d="M9 6l6 6-6 6"></path></svg>
+<div style="flex: 1 1 140px; padding: 12px; border-radius: 12px; border: 1px solid #D7DDDA; background: #F7F9F8; font-size: 13px; line-height: 19px"><b style="display: block; font-size: 14px">Specialist review</b>Marks with reasons</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="align-self: center"><path d="M9 6l6 6-6 6"></path></svg>
+<div style="flex: 1 1 140px; padding: 12px; border-radius: 12px; border: 1px solid #B7D9D5; background: #E3F0EE; color: #073F42; font-size: 13px; line-height: 19px"><b style="display: block; font-size: 14px">Signed record</b>Everything shown, kept once</div>
+</div>
+<p style="margin: 14px 0 0; font-size: 14px; line-height: 21px; color: #3F4846">Without the language model the same page still works: it shows the passages without summaries.</p>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 24px; margin-top: 24px; align-items: start">
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Adding a domain</h2>
+<ol style="margin: 10px 0 0; padding-left: 20px; font-size: 14px; line-height: 22px; color: #3F4846">
+<li>Its section of the case, on the shared core</li>
+<li>Its topics and searches over the same library</li>
+<li>Its answer key and golden cases, from the owner</li>
+<li>Its clinic rules and hard stops, versioned</li>
+<li>Its pages under the shared header</li>
+</ol>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Who owns what</h2>
+<ul style="margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; font-size: 14px; line-height: 20px">
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEEB"><span>Evidence rules, hard stops, releases</span><b>Owner</b></li>
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEEB"><span>Sources and their pages</span><b>Curator</b></li>
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ECEEEB"><span>Every clinical decision</span><b>Specialist</b></li>
+<li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0"><span>Teaching cases and panel answers</span><b>Educator</b></li>
+</ul>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Open questions for the owner</h2>
+<ul style="margin: 10px 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: #3F4846">
+<li>Local or cloud language model in the clinic</li>
+<li>Which outcome measures each domain records</li>
+<li>Gait data formats and the lab's equipment</li>
+<li>Retention period and the law it follows</li>
+</ul>
+</section>
+</div>
+</main>
+</div>
+
+</body>
+</html>

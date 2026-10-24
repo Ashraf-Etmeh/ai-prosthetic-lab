@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ text_dir }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ t('ort.page_title') }}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    h1 { font-size: 1.3rem; }
+    fieldset { margin-bottom: 1.2rem; border: 1px solid #ccc; border-radius: 6px; }
+    label { display: block; margin-top: 0.6rem; font-weight: 600; font-size: 0.9rem; }
+    input, select, textarea { width: 100%; padding: 0.4rem; margin-top: 0.2rem; box-sizing: border-box; }
+    textarea { resize: vertical; min-height: 3rem; }
+    .required::after { content: " *"; color: #b00; }
+    button { margin-top: 1rem; padding: 0.6rem 1.2rem; font-size: 1rem; cursor: pointer; }
+    .banner { background: #fff8e1; border: 1px solid #e0c46c; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
+    .draft { background: #fbe9df; border: 1px solid #e3a587; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; }
+    .error { background: #fbe6e6; border: 1px solid #d99; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.9rem; margin-bottom: 1rem; }
+    .hint { font-size: 0.8rem; color: #666; margin: 0.3rem 0 0; }
+    label.checkbox { font-weight: normal; }
+    label.checkbox input { width: auto; margin-inline-end: 0.4rem; }
+    .phase { margin-top: 0.6rem; font-size: 0.85rem; font-weight: 600; color: #444; }
+    .device { border-top: 1px dashed #ddd; margin-top: 0.8rem; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 0.8rem; }
+    .lang-switch { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; }
+    .lang-switch button { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: LinkText; text-decoration: underline; cursor: pointer; }
+    .default-submit { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
+  </style>
+  {% include "ui_style.html" %}
+</head>
+<body class="ui-page">
+  {% with domain = 'orthotics', module = 'analyse', no_lang = true %}{% include "ui_header.html" %}{% endwith %}
+  <main class="ui-wrap ui-main ui-intake">
+  {# Enter in a field submits the form with its first submit button: this invisible one sends the case. #}
+  <button type="submit" form="orthotic-form" class="default-submit" tabindex="-1" aria-hidden="true"></button>
+  <nav class="lang-switch">
+    <a href="{{ url_for('prosthetic_intake.show_form') }}">{{ t('ort.prosthetic_link') }}</a>
+    {# Posts the form: it comes back filled in, in the other language; nothing is saved. #}
+    <button type="submit" form="orthotic-form" name="switch_language" value="{{ t('nav.other_code') }}"
+            formnovalidate lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</button>
+  </nav>
+  <h1>{{ t('ort.reassess_heading', id=editing) if editing else t('ort.heading') }}</h1>
+  <div class="banner">{{ t('ort.banner') }}</div>
+  {% if editing %}<div class="banner">{{ t('ort.reassess_note') }}</div>{% endif %}
+  <div class="draft">{{ t('ort.draft_note') }}</div>
+
+  {% if error %}
+  <div class="error">{{ t('intake.not_saved') }} <bdi>{{ error }}</bdi></div>
+  {% endif %}
+
+  {% macro sent(name) %}{{ form.get(name, "") }}{% endmacro %}
+  {# How a value was measured (module 1's exam table: "Every value keeps how it was measured"). #}
+  {% macro how(path) %}
+  <label for="{{ how_field(path) }}" style="font-weight: normal; font-size: 0.8rem; color: #555">{{ t('ort.how_measured') }}</label>
+  <input type="text" id="{{ how_field(path) }}" name="{{ how_field(path) }}" dir="auto" value="{{ sent(how_field(path)) }}" placeholder="{{ t('ort.how_placeholder') }}">
+  {% endmacro %}
+  {% macro options(name, choices, empty_label, required=False) %}
+  {% set chosen = form.get(name, "") %}
+  <option value=""{{ " disabled" if required }}{{ " selected" if chosen not in choices | map(attribute="value") | list }}>{{ empty_label }}</option>
+  {% for choice in choices %}
+  <option value="{{ choice.value }}"{{ " selected" if chosen == choice.value }}>{{ value_label(choice) }}</option>
+  {% endfor %}
+  {% endmacro %}
+
+  <form id="orthotic-form" method="post" action="{{ url_for('orthotic_intake.submit_form') }}">
+    {% if editing %}<input type="hidden" name="case_id" value="{{ editing }}">{% endif %}
+    <fieldset>
+      <legend>{{ t('ort.case') }}</legend>
+      <label class="required" for="condition">{{ t('ort.condition') }}</label>
+      <select id="condition" name="condition" required>
+        {{ options("condition", conditions, t('intake.select'), required=True) }}
+      </select>
+
+      <label class="required" for="side">{{ t('ort.side') }}</label>
+      <select id="side" name="side" required>
+        {{ options("side", sides, t('intake.select'), required=True) }}
+      </select>
+
+      <label for="months_since_onset">{{ t('ort.months_since_onset') }}</label>
+      <input type="number" step="0.1" min="0" id="months_since_onset" name="months_since_onset" value="{{ sent('months_since_onset') }}">
+
+      <p class="hint">{{ t('ort.goals_hint') }}</p>
+      <label for="goal_participation">{{ t('ort.goal_participation') }}</label>
+      <input type="text" id="goal_participation" name="goal_participation" dir="auto" value="{{ sent('goal_participation') }}">
+
+      <label for="functional_goals">{{ t('ort.functional_goals') }}</label>
+      <textarea id="functional_goals" name="functional_goals" dir="auto">{{ sent('functional_goals') }}</textarea>
+
+      <label for="goal_body_function">{{ t('ort.goal_body_function') }}</label>
+      <input type="text" id="goal_body_function" name="goal_body_function" dir="auto" value="{{ sent('goal_body_function') }}">
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ t('intake.demographics') }}</legend>
+      <label for="age_years">{{ t('intake.age') }}</label>
+      <input type="number" min="0" id="age_years" name="age_years" value="{{ sent('age_years') }}">
+
+      <label for="body_weight_kg">{{ t('intake.body_weight') }}</label>
+      <input type="number" step="0.1" min="0.1" id="body_weight_kg" name="body_weight_kg" value="{{ sent('body_weight_kg') }}">
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ t('ort.walking') }}</legend>
+      <label for="walking_status">{{ t('ort.walking_status') }}</label>
+      <select id="walking_status" name="walking_status">
+        {{ options("walking_status", walking_statuses, t('intake.not_recorded')) }}
+      </select>
+      {{ how('walking.status') }}
+
+      <label for="walking_aid">{{ t('ort.walking_aid') }}</label>
+      <input type="text" id="walking_aid" name="walking_aid" dir="auto" value="{{ sent('walking_aid') }}">
+
+      <div class="pair">
+        <div>
+          <label for="gait_speed_m_s">{{ t('ort.gait_speed') }}</label>
+          <input type="number" step="0.01" min="0" id="gait_speed_m_s" name="gait_speed_m_s" value="{{ sent('gait_speed_m_s') }}">
+        </div>
+        <div>
+          <label for="gait_speed_test">{{ t('ort.gait_speed_test') }}</label>
+          <input type="text" id="gait_speed_test" name="gait_speed_test" dir="auto" value="{{ sent('gait_speed_test') }}">
+        </div>
+      </div>
+      <p class="hint">{{ t('ort.gait_speed_hint') }}</p>
+
+      <label for="falls">{{ t('ort.falls') }}</label>
+      <input type="number" min="0" id="falls" name="falls" value="{{ sent('falls') }}">
+      {{ how('walking.falls_last_6_months') }}
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ t('ort.gait') }}</legend>
+      <p class="hint">{{ t('ort.gait_hint') }}</p>
+      <label class="checkbox"><input type="checkbox" name="no_deviations" value="1"{{ " checked" if form.get("no_deviations") }}>{{ t('ort.no_deviations') }}</label>
+      {% for phase in gait_phases %}{% set in_phase = deviations | selectattr('phase', 'equalto', phase) | list %}{% if in_phase %}
+      <div class="phase">{{ t('phase.' ~ phase) }}</div>
+      {% for deviation in in_phase %}
+      <label class="checkbox"><input type="checkbox" name="deviation" value="{{ deviation.value }}"{{ " checked" if deviation.value in ticked_deviations }}>{{ value_label(deviation) }}</label>
+      {% endfor %}
+      {% endif %}{% endfor %}
+      <label for="other_deviations">{{ t('ort.other_deviations') }}</label>
+      <input type="text" id="other_deviations" name="other_deviations" dir="auto" value="{{ sent('other_deviations') }}">
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ t('ort.exam') }}</legend>
+      <div class="pair">
+        <div>
+          <label for="df_knee_ext">{{ t('ort.df_knee_ext') }}</label>
+          <input type="number" step="1" min="-90" max="90" id="df_knee_ext" name="df_knee_ext" value="{{ sent('df_knee_ext') }}">
+          {{ how('exam.dorsiflexion_knee_extended_deg') }}
+        </div>
+        <div>
+          <label for="df_knee_flex">{{ t('ort.df_knee_flex') }}</label>
+          <input type="number" step="1" min="-90" max="90" id="df_knee_flex" name="df_knee_flex" value="{{ sent('df_knee_flex') }}">
+          {{ how('exam.dorsiflexion_knee_flexed_deg') }}
+        </div>
+      </div>
+      <p class="hint">{{ t('ort.angle_hint') }}</p>
+
+      <div class="pair">
+        <div>
+          <label for="tone_scale">{{ t('ort.tone_scale') }}</label>
+          <select id="tone_scale" name="tone_scale">
+            {{ options("tone_scale", tone_scales, t('intake.not_recorded')) }}
+          </select>
+        </div>
+        <div>
+          <label for="tone_grade">{{ t('ort.tone_grade') }}</label>
+          <input type="text" id="tone_grade" name="tone_grade" dir="auto" value="{{ sent('tone_grade') }}">
+        </div>
+      </div>
+      <label for="tone_notes">{{ t('ort.tone_notes') }}</label>
+      <input type="text" id="tone_notes" name="tone_notes" dir="auto" value="{{ sent('tone_notes') }}">
+      <p class="hint">{{ t('ort.tone_hint') }}</p>
+
+      <label for="df_strength">{{ t('ort.df_strength') }}</label>
+      <input type="text" id="df_strength" name="df_strength" dir="auto" value="{{ sent('df_strength') }}">
+      {{ how('exam.dorsiflexor_strength') }}
+
+      <label for="ke_strength">{{ t('ort.ke_strength') }}</label>
+      <input type="text" id="ke_strength" name="ke_strength" dir="auto" value="{{ sent('ke_strength') }}">
+      {{ how('exam.knee_extensor_strength') }}
+
+      <label for="knee_in_stance">{{ t('ort.knee_in_stance') }}</label>
+      <select id="knee_in_stance" name="knee_in_stance">
+        {{ options("knee_in_stance", knee_choices, t('intake.not_recorded')) }}
+      </select>
+      {{ how('exam.knee_in_stance') }}
+
+      <label for="foot_posture">{{ t('ort.foot_posture') }}</label>
+      <input type="text" id="foot_posture" name="foot_posture" dir="auto" value="{{ sent('foot_posture') }}">
+      {{ how('exam.foot_posture') }}
+
+      <label for="protective_sensation">{{ t('ort.protective_sensation') }}</label>
+      <select id="protective_sensation" name="protective_sensation">
+        {{ options("protective_sensation", sensations, t('intake.not_recorded')) }}
+      </select>
+      {{ how('exam.protective_sensation') }}
+
+      <label for="proprioception">{{ t('ort.proprioception') }}</label>
+      <select id="proprioception" name="proprioception">
+        {{ options("proprioception", sensations, t('intake.not_recorded')) }}
+      </select>
+      {{ how('exam.proprioception') }}
+
+      <label for="skin_condition">{{ t('ort.skin') }}</label>
+      <input type="text" id="skin_condition" name="skin_condition" dir="auto" value="{{ sent('skin_condition') }}">
+      {{ how('exam.skin_condition') }}
+
+      <label for="ulcer">{{ t('ort.ulcer') }}</label>
+      <select id="ulcer" name="ulcer">
+        {{ options("ulcer", yes_no_unknown, t('intake.not_recorded')) }}
+      </select>
+      <p class="hint">{{ t('ort.ulcer_hint') }}</p>
+      {{ how('exam.ulcer_infection_or_poor_blood_supply') }}
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ t('ort.devices') }}</legend>
+      <label for="footwear">{{ t('ort.footwear') }}</label>
+      <input type="text" id="footwear" name="footwear" dir="auto" value="{{ sent('footwear') }}">
+      {{ how('footwear') }}
+
+      <label for="donning">{{ t('ort.donning') }}</label>
+      <select id="donning" name="donning">
+        {{ options("donning", donning_choices, t('intake.not_recorded')) }}
+      </select>
+      {{ how('donning') }}
+
+      <label for="implanted">{{ t('ort.implanted') }}</label>
+      <select id="implanted" name="implanted">
+        {{ options("implanted", yes_no_unknown, t('intake.not_recorded')) }}
+      </select>
+
+      <div class="phase">{{ t('ort.prior_orthoses') }}</div>
+      <label class="checkbox"><input type="checkbox" name="no_prior_orthoses" value="1"{{ " checked" if form.get("no_prior_orthoses") }}>{{ t('ort.no_prior') }}</label>
+      <p class="hint">{{ t('ort.no_prior_hint') }}</p>
+      {{ how('prior_orthoses') }}
+      {% for n in range(1, max_prior_devices + 1) %}
+      {% set row = "device_" ~ n ~ "_" %}
+      <div class="device">
+        <label for="{{ row }}description">{{ t('intake.device', n=n) }}</label>
+        <input type="text" id="{{ row }}description" name="{{ row }}description" dir="auto"
+               placeholder="{{ t('ort.device_placeholder') }}" value="{{ sent(row ~ 'description') }}">
+        <div class="pair">
+          <div>
+            <label for="{{ row }}years">{{ t('intake.years_used') }}</label>
+            <input type="number" step="0.1" min="0" id="{{ row }}years" name="{{ row }}years" value="{{ sent(row ~ 'years') }}">
+          </div>
+          <div>
+            <label for="{{ row }}current">{{ t('intake.currently_using') }}</label>
+            {% set current = form.get(row ~ "current", "") %}
+            <select id="{{ row }}current" name="{{ row }}current">
+              <option value=""{{ " selected" if current not in ("yes", "no") }}>{{ t('intake.not_recorded') }}</option>
+              <option value="yes"{{ " selected" if current == "yes" }}>{{ t('intake.yes') }}</option>
+              <option value="no"{{ " selected" if current == "no" }}>{{ t('intake.no') }}</option>
+            </select>
+          </div>
+        </div>
+        <label for="{{ row }}issues">{{ t('intake.device_issues') }}</label>
+        <input type="text" id="{{ row }}issues" name="{{ row }}issues" dir="auto" value="{{ sent(row ~ 'issues') }}">
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ t('ort.requirements') }}</legend>
+      <p class="hint">{{ t('ort.requirements_hint') }}</p>
+      <textarea id="requirements" name="requirements" dir="auto" aria-label="{{ t('ort.requirements') }}">{{ sent('requirements') }}</textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ t('intake.other_context') }}</legend>
+      <label for="comorbidities">{{ t('intake.comorbidities') }}</label>
+      <textarea id="comorbidities" name="comorbidities" dir="auto">{{ sent('comorbidities') }}</textarea>
+
+      <label for="cognitive_status">{{ t('intake.cognitive') }}</label>
+      <input type="text" id="cognitive_status" name="cognitive_status" dir="auto" value="{{ sent('cognitive_status') }}">
+
+      <label for="intake_notes">{{ t('intake.notes') }}</label>
+      <textarea id="intake_notes" name="intake_notes" dir="auto">{{ sent('intake_notes') }}</textarea>
+    </fieldset>
+
+    <p class="banner">{{ t('ort.ai_note') }}</p>
+    <button type="submit">{{ t('intake.submit') }}</button>
+  </form>
+  </main>
+</body>
+</html>

@@ -12,8 +12,8 @@ Each check prints one line: PASS / FAIL / SKIP / MANUAL, its id and the
 evidence; details are indented below it. The MANUAL checks are described in
 docs/manual_checks_prompts_0_2.md.
 
-Safety. Nothing here writes to data/review_log.jsonl,
-data/review_log.test.jsonl, data/cases/, data/trial/ or shared/i18n.py:
+Safety. Nothing here writes to data/records/review_log.jsonl,
+data/records/review_log.test.jsonl, data/records/cases/, data/quality/trial/ or shared/i18n.py:
 - cases, review logs, term sheets and copies of i18n.py live in temporary
   folders, and the app's case folder and review log are pointed at a
   temporary folder before any check runs;
@@ -54,14 +54,14 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-DATA = ROOT / "data"
-REAL_TRIAL_LOG = DATA / "review_log.jsonl"
-REAL_TEST_LOG = DATA / "review_log.test.jsonl"
-TERM_SHEET = DATA / "trial" / "arabic_terms.csv"
-TRIAL_CASES = DATA / "trial" / "cases"
+DATA = ROOT / "data"  # grouped by part since 2026-10-24: knowledge/, quality/, records/
+REAL_TRIAL_LOG = DATA / "records" / "review_log.jsonl"
+REAL_TEST_LOG = DATA / "records" / "review_log.test.jsonl"
+TERM_SHEET = DATA / "quality" / "trial" / "arabic_terms.csv"
+TRIAL_CASES = DATA / "quality" / "trial" / "cases"
 I18N_FILE = ROOT / "shared" / "i18n.py"
 PROTECTED_FILES = (REAL_TRIAL_LOG, REAL_TEST_LOG, I18N_FILE)
-PROTECTED_DIRS = (DATA / "cases", DATA / "trial")
+PROTECTED_DIRS = (DATA / "records" / "cases", DATA / "quality" / "trial")
 VERIFICATION_FILES = {"scripts/verify_prompts_0_2.py", "docs/manual_checks_prompts_0_2.md"}
 BASELINE_TEST_COUNT = 219  # when Prompt 0 ran
 # The Claude API is never called from here (the RAG, 2026-10-11): the app's AI
@@ -117,15 +117,15 @@ sys.addaudithook(_audit)
 from markupsafe import escape  # noqa: E402  (Flask's own escaping, to match what the templates print)
 
 from app import create_app  # noqa: E402
-from intake import load_trial_cases  # noqa: E402
-from intake.routes import analyse_case  # noqa: E402
 from knowledge.models import ProtocolChunk  # noqa: E402
-from reasoning.component_support import component_support  # noqa: E402
-from reasoning.fitting_support import fitting_support  # noqa: E402
+from prosthetics.case import Case  # noqa: E402
+from prosthetics.component_support import component_support  # noqa: E402
+from prosthetics.fitting_support import fitting_support  # noqa: E402
+from quality import load_trial_cases, trial_report  # noqa: E402
 from reasoning.gap_analysis import analyze_gaps  # noqa: E402
-from review import decision_log, trial_report  # noqa: E402
+from reasoning.pathway import analyse_case  # noqa: E402
+from review import decision_log  # noqa: E402
 from shared import arabic_terms, config, i18n  # noqa: E402
-from shared.case_schema import Case  # noqa: E402
 from shared.field_guide import FIELDS_BY_PATH  # noqa: E402
 from shared.store import CaseRecord, store  # noqa: E402
 
@@ -253,7 +253,7 @@ def sandbox(retrieval=one_fake_passage, log: Path | None = None):
         box = SimpleNamespace(tmp=tmp, cases=tmp / "cases", log=log or tmp / "review_log.jsonl")
         with patch.object(store, "folder", box.cases), \
                 patch.object(decision_log, "REVIEW_LOG_PATH", box.log), \
-                patch("intake.routes.retrieve_relevant_chunks", side_effect=retrieval):
+                patch("reasoning.pathway.retrieve_relevant_chunks", side_effect=retrieval):
             store._records.clear()
             app = create_app()
             app.testing = True
@@ -478,6 +478,7 @@ def git_status_clean():
 
 @check("0.4")
 def design_and_fitting_commit():
+    # History: the paths as they were in that commit (the folders were regrouped on 2026-10-24).
     added = git("log", "--diff-filter=A", "--format=%H", "--", "reasoning/fitting_guide.py").split()
     if not added:
         report("FAIL", "0.4", "no commit adds reasoning/fitting_guide.py")
@@ -528,6 +529,7 @@ SECTION_4_5 = [  # name, level, side, K-level, fitting statements, component sta
                     "transhumeral", "shoulder_disarticulation")],
 ]
 
+# Runs on the code of an old commit (statement_ids_at), so it imports the modules as they were then.
 BASELINE_CODE = """
 import json, sys
 from reasoning.component_support import component_support
@@ -544,6 +546,7 @@ print(json.dumps(result))
 
 def statement_ids_at(commit: str, cases: list) -> dict:
     """The statement ids each case got from the code as it was at `commit` (read with git archive)."""
+    # The paths and modules as they were at `commit` (before the folders were regrouped on 2026-10-24).
     archive = subprocess.run(["git", "archive", "--format=tar", commit, "reasoning", "shared", "knowledge",
                               "data/sources/catalog.json"], cwd=ROOT, capture_output=True, check=True).stdout
     with tempfile.TemporaryDirectory(prefix="verify_baseline_") as tmp:
@@ -624,22 +627,32 @@ def test_ids(suite):
 
 
 TEST_GROUPS = {
-    "persistence": ("tests.test_store.", "tests.test_routes.RestartTests."),
-    "form refill (and language switch)": ("tests.test_routes.FormKeptTests.",),
-    "translated errors": ("tests.test_routes.IntakeErrorTests.",
-                          "tests.test_routes.ArabicPageTests.test_number_error_in_arabic",
-                          "tests.test_routes.ArabicPageTests.test_intake_errors_in_arabic"),
+    "persistence": ("shared.tests.test_store.", "prosthetics.tests.test_routes.RestartTests."),
+    "form refill (and language switch)": ("prosthetics.tests.test_routes.FormKeptTests.",),
+    "translated errors": ("prosthetics.tests.test_routes.IntakeErrorTests.",
+                          "prosthetics.tests.test_routes.ArabicPageTests.test_number_error_in_arabic",
+                          "prosthetics.tests.test_routes.ArabicPageTests.test_intake_errors_in_arabic"),
 }
+
+
+# Where a test module was before the folders were regrouped (2026-10-24): every test was in tests/.
+OLD_TEST_FILES = {"prosthetics.tests.test_header": "tests/test_ui.py",
+                  "orthotics.tests.test_modules": "tests/test_orthotic_modules.py",
+                  "shared.tests.test_forms": "tests/test_routes.py"}
+
+
+def old_test_file(module: str) -> str:
+    return OLD_TEST_FILES.get(module) or "tests/" + module.rsplit(".", 1)[-1] + ".py"
 
 
 @check("1.1")
 def new_tests():
-    ids = list(test_ids(unittest.defaultTestLoader.discover(str(ROOT / "tests"), top_level_dir=str(ROOT))))
+    ids = list(test_ids(unittest.defaultTestLoader.discover(str(ROOT), top_level_dir=str(ROOT))))
     commit = state.get("design_commit")
 
     def is_new(test_id: str) -> bool:
         module, cls, method = test_id.rsplit(".", 2)
-        old = source_at(commit, module.replace(".", "/") + ".py") if commit else None
+        old = source_at(commit, old_test_file(module)) if commit else None
         return old is None or f"class {cls}(" not in old or f"def {method}(" not in old
 
     total = state.get("test_count") or len(ids)
@@ -714,12 +727,12 @@ def no_identifiers_in_case_file():
 @check("1.4")
 def cases_ignored_by_git():
     lines = (ROOT / ".gitignore").read_text(encoding="utf-8-sig").splitlines()
-    number = next((n for n, line in enumerate(lines, 1) if line.strip() in ("data/cases/", "data/cases", "/data/cases/")),
+    number = next((n for n, line in enumerate(lines, 1) if line.strip() in ("data/records/cases/", "data/records/cases", "/data/records/cases/")),
                   None)
-    proc = subprocess.run(["git", "check-ignore", "-v", "data/cases/verify-probe.json"], cwd=ROOT,
+    proc = subprocess.run(["git", "check-ignore", "-v", "data/records/cases/verify-probe.json"], cwd=ROOT,
                           capture_output=True, text=True, encoding="utf-8")
     report(verdict(number is not None and proc.returncode == 0), "1.4",
-           (f".gitignore line {number}: {lines[number - 1]}" if number else ".gitignore has no data/cases/ line")
+           (f".gitignore line {number}: {lines[number - 1]}" if number else ".gitignore has no data/records/cases/ line")
            + f"; git check-ignore: {proc.stdout.strip() or 'not ignored'}")
 
 
@@ -800,7 +813,7 @@ def language_switch_keeps_input():
            f"{saved} cases saved; switching back to English kept them",
            ["How: the language control on the intake page is a submit button of the intake form",
             f"  ({button.group(0) if button else 'NOT FOUND'}),",
-            "  so clicking it posts whatever has been typed. intake/routes.py submit_form() sees switch_language,",
+            "  so clicking it posts whatever has been typed. prosthetics/intake.py submit_form() sees switch_language,",
             "  sets g.lang, draws the same form from request.form in the other language, sets the cookie and",
             "  neither checks nor saves anything. A hidden default submit button placed first keeps Enter",
             "  submitting the case. No JavaScript; the browser's part is checked by hand (1.7b)."])
@@ -960,7 +973,7 @@ def trial_cases():
     unrecorded = {c.case_id: len(c.unrecorded_fields()) for c in cases}
     partly = [i for i, n in unrecorded.items() if n > 0]
     gaps, statements = {}, {}
-    with patch("intake.routes.retrieve_relevant_chunks", side_effect=no_passages):
+    with patch("reasoning.pathway.retrieve_relevant_chunks", side_effect=no_passages):
         for case in cases:
             try:
                 record = analyse_case(case)
@@ -1024,7 +1037,7 @@ def load_command():
     opened = [stem for stem, page in pages.items() if page.status_code == 200 and stem in page.get_data(as_text=True)]
     passed = saved == [p.stem for p in paths] and len(opened) == len(paths) and temp_folder
     report(verdict(passed), "2.4",
-           f"the load command (intake.load_trial_cases.main) saved {len(saved)}/{len(paths)} cases to a temporary "
+           f"the load command (quality.load_trial_cases.main) saved {len(saved)}/{len(paths)} cases to a temporary "
            f"folder ({'it says so' if temp_folder else 'NOT the temporary folder'}); after a simulated app start, "
            f"{len(opened)}/{len(paths)} review pages return 200 with their case id",
            [line for line in output.splitlines() if line.startswith("trial-")])
@@ -1088,8 +1101,8 @@ def tally(records: dict[str, CaseRecord]) -> tuple[dict, dict]:
 
 
 def run_report_command(log: Path, out: Path) -> subprocess.CompletedProcess:
-    """python -m review.trial_report on a given log, writing its CSV to `out`."""
-    return subprocess.run([sys.executable, "-m", "review.trial_report", "--log", str(log), "--out", str(out)],
+    """python -m quality.trial_report on a given log, writing its CSV to `out`."""
+    return subprocess.run([sys.executable, "-m", "quality.trial_report", "--log", str(log), "--out", str(out)],
                           cwd=ROOT, capture_output=True, text=True, encoding="utf-8", env=CHILD_ENV)
 
 
@@ -1198,7 +1211,7 @@ def report_on_empty_or_missing_log():
             details.append(f"{label}: exit {proc.returncode}, prints "
                            f"{'No decisions logged yet.' if 'No decisions logged yet.' in proc.stdout else 'NO message'}"
                            f", CSV decisions {decisions}, traceback: {'YES' if traceback_shown else 'no'}")
-    report(verdict(passed), "2.6", "python -m review.trial_report on an empty and on a missing log: a clear "
+    report(verdict(passed), "2.6", "python -m quality.trial_report on an empty and on a missing log: a clear "
                                    "message, zero counts, no traceback", details)
 
 
@@ -1210,7 +1223,7 @@ def record(event, args):
     if event == "open" and args[0] is not None and not isinstance(args[0], int):
         opened.append(os.path.normcase(os.path.abspath(os.fsdecode(args[0]))))
 sys.addaudithook(record)
-from review import trial_report
+from quality import trial_report
 trial_report.main(sys.argv[1:])
 print("OPENED " + json.dumps(opened))
 """
@@ -1237,7 +1250,7 @@ def report_reads_only_its_log():
     report(verdict(only_given and not test_log_opened and not names_test_log and default_ok), "2.7",
            f"the report command on a temporary log opened {len(opened)} files, {len(logs_opened)} named review_log* "
            f"({'only the log given' if only_given else logs_opened}); {REAL_TEST_LOG.name} opened: "
-           f"{'YES' if test_log_opened else 'no'}; review/trial_report.py names a test log: "
+           f"{'YES' if test_log_opened else 'no'}; quality/trial_report.py names a test log: "
            f"{'YES' if names_test_log else 'no'}; default --log: {rel(REPORT_DEFAULT_LOG)}")
 
 
@@ -1264,7 +1277,7 @@ def practice_server(folder: str | None, port: int) -> int:
         load_trial_cases.load(sorted(TRIAL_CASES.glob("*.json")))
     print(f"Practice data (cases and review log): {folder}")
     print(f"Open http://127.0.0.1:{port}/intake or http://127.0.0.1:{port}/review/trial-01")
-    print(f"Report afterwards: python -m review.trial_report --log \"{decision_log.REVIEW_LOG_PATH}\" "
+    print(f"Report afterwards: python -m quality.trial_report --log \"{decision_log.REVIEW_LOG_PATH}\" "
           f"--out \"{folder / 'report.csv'}\"")
     print("Stop with Ctrl+C. The folder stays until you delete it; nothing in data/ is changed.")
     create_app().run(port=port)

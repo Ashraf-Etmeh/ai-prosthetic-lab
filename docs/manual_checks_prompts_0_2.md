@@ -13,7 +13,7 @@ like. Note the date, who checked, and the result next to each one.
 ## Before you start: the practice server
 
 Checks 2, 3 and 5 use the app. Run it on practice data, so nothing is
-written to `data/cases/` or `data/review_log.jsonl`:
+written to `data/records/cases/` or `data/records/review_log.jsonl`:
 
 ```
 python scripts/verify_prompts_0_2.py --practice-server
@@ -29,7 +29,7 @@ To carry on later with the same cases and decisions, add
 delete it when you have finished.
 
 Do not use `python app.py` for these checks: it writes to the real
-`data/cases/` and `data/review_log.jsonl`.
+`data/records/cases/` and `data/records/review_log.jsonl`.
 
 ## 1. A fresh Claude Code session knows the repo's rules
 
@@ -140,7 +140,7 @@ switches the language.
 ## 4. arabic_terms.csv opens with readable Arabic
 
 Steps
-1. Copy `data/trial/arabic_terms.csv` to your desktop and open the copy,
+1. Copy `data/quality/trial/arabic_terms.csv` to your desktop and open the copy,
    so the original in the repo is never saved over by accident.
 2. Open the copy:
    - **Excel:** double-click it.
@@ -187,7 +187,7 @@ Steps
    relevant, and the note, if any.
 3. Stop the server (Ctrl+C) and run the report command it printed:
    ```
-   python -m review.trial_report --log "<folder>\review_log.jsonl" --out "<folder>\report.csv"
+   python -m quality.trial_report --log "<folder>\review_log.jsonl" --out "<folder>\report.csv"
    ```
 4. Compare the printed summary, or `report.csv` opened in Excel, with the
    tally.
@@ -216,11 +216,11 @@ Afterwards, make sure the real trial starts with an empty log:
   New-Item data\review_log.jsonl -ItemType File
   ```
   Never edit or delete lines in either file. Both stay out of git
-  (`data/review_log*.jsonl`).
+  (`data/records/review_log*.jsonl`).
 
 Pass, before the first real trial session:
 - `(Get-Item data\review_log.jsonl).Length` in PowerShell prints 0.
-- `python -m review.trial_report` prints "No decisions logged yet."
+- `python -m quality.trial_report` prints "No decisions logged yet."
 
-To set up the real trial: `python -m intake.load_trial_cases`, then
+To set up the real trial: `python -m quality.load_trial_cases`, then
 `python app.py`.

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prosthetics: 2–3 · Functional requirements and component support</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Arabic:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}
+a{color:#0B5C60}a:hover{color:#073F42}
+button,input,select,textarea{font:inherit}</style>
+</head>
+<body>
+<div style="background: #0A2224; color: #D3E6E4; font: 13px/20px 'IBM Plex Sans', system-ui, sans-serif; padding: 8px 32px"><a href="../index.html" style="color: #FFFFFF; font-weight: 600">All parts</a> · Prosthetics · 2–3 · Functional requirements and component support · design proposal, fake data</div>
+<div style="box-sizing: border-box; width: 100%; background: #F4F5F2; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #15211F; padding-bottom: 56px">
+<header style="background: #0E2F31; color: #FFFFFF">
+<div style="max-width: 1376px; margin: 0 auto; padding: 10px 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px">
+<div style="display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7FC4BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v8l-3 7h9"></path><path d="M9 11h4"></path><circle cx="17" cy="18" r="2"></circle></svg>
+<span>AI Prosthetic Lab</span><span style="font-weight: 500; color: #BFDAD7">/ Prosthetics</span>
+</div>
+<nav aria-label="Modules" style="display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto">
+<a href="Main.html" style="color: #D3E6E4; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px">1 Assess</a>
+<a href="Components.html" aria-current="page" style="color: #0E2F31; background: #FFFFFF; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px; font-weight: 600">2–3 Requirements &amp; components</a>
+<a href="DesignFit.html" style="color: #D3E6E4; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px">4 Design &amp; fitting</a>
+<a href="FollowUp.html" style="color: #D3E6E4; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px">5 Follow-up</a>
+</nav>
+<div style="display: flex; gap: 6px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #FFFFFF; background: #FFFFFF; color: #0E2F31; font-weight: 600">EN</button>
+<button type="button" aria-pressed="false" lang="ar" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #5E8B88; background: transparent; color: #FFFFFF; font-family: 'IBM Plex Sans Arabic', sans-serif">العربية</button>
+</div>
+</div>
+</header>
+<div style="background: #FFFFFF; border-bottom: 1px solid #D7DDDA">
+<div style="max-width: 1376px; margin: 0 auto; padding: 14px 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; font-size: 14px; line-height: 20px">
+<span style="font-size: 16px; font-weight: 700">Case PR-0217</span>
+<span>Transtibial · left · K3 set by the prosthetist</span>
+<span style="color: #4A5553">81 kg</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #ECEEEB; color: #3F4846; font-size: 13px; font-weight: 600">Test case · fake data</span>
+<span style="margin-left: auto; padding: 4px 10px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-size: 13px; font-weight: 600">Decision support: the prosthetist decides</span>
+</div>
+</div>
+<main style="max-width: 1376px; margin: 0 auto; padding: 28px 32px 0; box-sizing: border-box">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px">
+<div>
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: #4A5553">MODULES 2–3</div>
+<h1 style="margin: 4px 0 0; font-size: 30px; line-height: 38px; font-weight: 700">Functional requirements and component support</h1>
+<p style="margin: 6px 0 0; font-size: 16px; line-height: 24px; color: #4A5553">What the prosthesis must do, then the options for each component side by side. Never ranked: the prosthetist chooses and records why.</p>
+</div>
+<div lang="ar" dir="rtl" style="font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 18px; color: #0B5C60; font-weight: 600">تحليل المتطلبات الوظيفية · دعم اختيار المكونات</div>
+</div>
+<section style="margin-top: 24px; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 18px; line-height: 26px">Functional requirements</h2><span style="font-size: 13px; color: #4A5553">Written by the prosthetist, each tied to where it came from</span></div>
+<div style="overflow-x: auto; margin-top: 10px">
+<table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead><tr style="text-align: left; color: #4A5553; font-size: 13px"><th scope="col" style="padding: 10px 12px 10px 0; border-bottom: 1px solid #D7DDDA; font-weight: 600; width: 48px">ID</th><th scope="col" style="padding: 10px 12px; border-bottom: 1px solid #D7DDDA; font-weight: 600">The prosthesis must</th><th scope="col" style="padding: 10px 12px; border-bottom: 1px solid #D7DDDA; font-weight: 600">From</th><th scope="col" style="padding: 10px 0 10px 12px; border-bottom: 1px solid #D7DDDA; font-weight: 600">Priority</th></tr></thead>
+<tbody>
+<tr><td style="padding: 10px 12px 10px 0; border-bottom: 1px solid #ECEEEB; font-weight: 700; color: #0B5C60">R1</td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB"><b>Allow changing walking speed on uneven ground</b></td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB; color: #3F4846">Goal: 500 m outdoors · K3</td><td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #ECEEEB">Must</td></tr>
+<tr><td style="padding: 10px 12px 10px 0; border-bottom: 1px solid #ECEEEB; font-weight: 700; color: #0B5C60">R2</td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB"><b>Stay comfortable through long standing</b></td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB; color: #3F4846">Goal: teaching</td><td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #ECEEEB">Must</td></tr>
+<tr><td style="padding: 10px 12px 10px 0; border-bottom: 1px solid #ECEEEB; font-weight: 700; color: #0B5C60">R3</td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB"><b>Accommodate a changing limb volume</b></td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB; color: #3F4846">Exam: −1.5 cm in 2 weeks</td><td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #ECEEEB">Must</td></tr>
+<tr><td style="padding: 10px 12px 10px 0; border-bottom: 1px solid #ECEEEB; font-weight: 700; color: #0B5C60">R4</td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB"><b>Protect the distal skin</b></td><td style="padding: 10px 12px; border-bottom: 1px solid #ECEEEB; color: #3F4846">Exam: reduced sensation</td><td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #ECEEEB">Must</td></tr>
+<tr><td style="padding: 10px 12px 10px 0; font-weight: 700; color: #0B5C60">R5</td><td style="padding: 10px 12px"><b>Be simple to put on</b> <span style="display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #FFF0D4; color: #5A3700; font-size: 12px; font-weight: 600">Provisional: cognition not recorded</span></td><td style="padding: 10px 12px; color: #3F4846">Information needed</td><td style="padding: 10px 0 10px 12px">Should</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr)); gap: 24px; margin-top: 24px; align-items: start">
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Foot</h2>
+<div style="overflow-x: auto; margin-top: 10px">
+<table style="width: 100%; min-width: 520px; border-collapse: collapse; font-size: 13px; line-height: 19px">
+<thead><tr style="text-align: left"><th scope="col" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #D7DDDA; color: #4A5553; font-weight: 600; width: 96px"></th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA">A · Energy-storing carbon foot</th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA">B · Multiaxial foot</th><th scope="col" style="padding: 8px 0 8px 10px; border-bottom: 1px solid #D7DDDA">C · Microprocessor ankle</th></tr></thead>
+<tbody>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB; text-align: left; color: #4A5553; font-weight: 600">Addresses</th><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">R1 yes · R2 partly</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">R1 partly · R2 yes</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">R1 yes · R2 yes</td></tr>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB; text-align: left; color: #4A5553; font-weight: 600">Costs</th><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Stiffer on slopes</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Less push-off</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Charging, weight, price</td></tr>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB; text-align: left; color: #4A5553; font-weight: 600">Sources</th><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Guideline · [grade as printed]</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Review · [as printed]</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Guideline · [grade as printed]</td></tr>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB; text-align: left; color: #4A5553; font-weight: 600">Funding</th><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">[Payer rule as printed]</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">[Payer rule as printed]</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">[Payer rule as printed]</td></tr>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; text-align: left; color: #4A5553; font-weight: 600">Weight limit</th><td style="padding: 8px 10px">81 kg within the maker's limit</td><td style="padding: 8px 10px">81 kg within the maker's limit</td><td style="padding: 8px 0 8px 10px">81 kg within the maker's limit</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Socket, liner and suspension</h2>
+<div style="overflow-x: auto; margin-top: 10px">
+<table style="width: 100%; min-width: 520px; border-collapse: collapse; font-size: 13px; line-height: 19px">
+<thead><tr style="text-align: left"><th scope="col" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #D7DDDA; color: #4A5553; font-weight: 600; width: 96px"></th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA">A · Total surface bearing, silicone liner, pin lock</th><th scope="col" style="padding: 8px 10px; border-bottom: 1px solid #D7DDDA">B · Total surface bearing, sealing liner, suction</th><th scope="col" style="padding: 8px 0 8px 10px; border-bottom: 1px solid #D7DDDA">C · Patellar tendon bearing, foam liner, sleeve</th></tr></thead>
+<tbody>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB; text-align: left; color: #4A5553; font-weight: 600">Addresses</th><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">R3 partly · R4 yes · R5 yes</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">R3 no · R4 yes · R5 partly</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">R3 yes · R4 partly · R5 yes</td></tr>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB; text-align: left; color: #4A5553; font-weight: 600">Costs</th><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Distal pull on the skin</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Loses fit as volume falls</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Pressure on tolerant areas only</td></tr>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; border-bottom: 1px solid #ECEEEB; text-align: left; color: #4A5553; font-weight: 600">Sources</th><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Manual · practice, no outcome evidence</td><td style="padding: 8px 10px; border-bottom: 1px solid #ECEEEB">Review · [as printed]</td><td style="padding: 8px 0 8px 10px; border-bottom: 1px solid #ECEEEB">Manual · practice, no outcome evidence</td></tr>
+<tr><th scope="row" style="padding: 8px 10px 8px 0; text-align: left; color: #4A5553; font-weight: 600">Check at fitting</th><td style="padding: 8px 10px">Distal skin after 20 min</td><td style="padding: 8px 10px">Seal after a full day</td><td style="padding: 8px 0 8px 10px">Patellar tendon load</td></tr>
+</tbody>
+</table>
+</div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 19px; color: #8F3510; font-weight: 600">Option B is marked by the prosthetist as not addressing R3, a Must.</p>
+</section>
+</div>
+<section style="margin-top: 24px; background: #FFFFFF; border: 2px solid #0B5C60; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 18px; line-height: 26px">The prosthetist's configuration</h2><span style="font-size: 13px; color: #4A5553">Recorded with the requirements and the sources shown at the time</span></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 16px; margin-top: 14px">
+<label style="display: block; font-size: 13px; color: #4A5553">Foot<select style="display: block; width: 100%; min-height: 44px; margin-top: 4px; border: 1px solid #A9B4B1; border-radius: 8px; background: #FFFFFF; padding: 0 10px; color: #15211F"><option selected>A · Energy-storing carbon foot</option><option>B · Multiaxial foot</option><option>C · Microprocessor ankle</option></select></label>
+<label style="display: block; font-size: 13px; color: #4A5553">Socket, liner, suspension<select style="display: block; width: 100%; min-height: 44px; margin-top: 4px; border: 1px solid #A9B4B1; border-radius: 8px; background: #FFFFFF; padding: 0 10px; color: #15211F"><option selected>A · Total surface bearing, silicone liner, pin lock</option><option>B · Sealing liner, suction</option><option>C · Patellar tendon bearing, sleeve</option></select></label>
+<label style="display: block; font-size: 13px; color: #4A5553">Reason (required)<textarea rows="2" style="display: block; width: 100%; box-sizing: border-box; margin-top: 4px; border: 1px solid #A9B4B1; border-radius: 8px; padding: 8px 10px; color: #15211F">Volume still changing (R3): pin lock with socks; definitive suction later.</textarea></label>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px">
+<a href="DesignFit.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 12px; background: #0B5C60; color: #FFFFFF; font-weight: 600; text-decoration: none">Record and go to design →</a>
+<a href="Main.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid #0B5C60; color: #0B5C60; font-weight: 600; text-decoration: none">← Back to the assessment</a>
+</div>
+</section>
+</main>
+</div>
+
+</body>
+</html>

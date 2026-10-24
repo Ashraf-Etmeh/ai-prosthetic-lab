@@ -8,8 +8,8 @@ about design and fitting, with the orthotist's choice in the review log
 cases are a PROPOSAL awaiting the owner's and an orthotist's review.
 
 The orthotic case shares everything else with prosthetics: the case core
-(shared/case_schema.py OrthoticCase), the field guide's mechanics
-(shared/field_guide.py ORTHOTIC_FIELDS), the search, the AI writer and its
+(orthotics/case.py OrthoticCase), the field guide's mechanics
+(orthotics/fields.py FIELDS), the search, the AI writer and its
 word-for-word quote check (reasoning/rag.py, through a profile), the case
 store, the review page and the review log.
 

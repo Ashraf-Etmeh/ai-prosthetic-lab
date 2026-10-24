@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search and education: Use case 05 · Smart search</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Arabic:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}
+a{color:#0B5C60}a:hover{color:#073F42}
+button,input,select,textarea{font:inherit}</style>
+</head>
+<body>
+<div style="background: #0A2224; color: #D3E6E4; font: 13px/20px 'IBM Plex Sans', system-ui, sans-serif; padding: 8px 32px"><a href="../index.html" style="color: #FFFFFF; font-weight: 600">All parts</a> · Search and education · Use case 05 · Smart search · design proposal, fake data</div>
+<div style="box-sizing: border-box; width: 100%; background: #F4F5F2; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #15211F; padding-bottom: 56px">
+<header style="background: #0E2F31; color: #FFFFFF">
+<div style="max-width: 1376px; margin: 0 auto; padding: 10px 32px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px">
+<div style="display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7FC4BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v8l-3 7h9"></path><path d="M9 11h4"></path><circle cx="17" cy="18" r="2"></circle></svg>
+<span>AI Prosthetic Lab</span><span style="font-weight: 500; color: #BFDAD7">/ Search and education</span>
+</div>
+<nav aria-label="Pages" style="display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto">
+<a href="Main.html" aria-current="page" style="color: #0E2F31; background: #FFFFFF; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px; font-weight: 600">1 Smart search</a>
+<a href="Learning.html" style="color: #D3E6E4; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 14px; line-height: 20px">2 Case-based learning</a>
+</nav>
+<div style="display: flex; gap: 6px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #FFFFFF; background: #FFFFFF; color: #0E2F31; font-weight: 600">EN</button>
+<button type="button" aria-pressed="false" lang="ar" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #5E8B88; background: transparent; color: #FFFFFF; font-family: 'IBM Plex Sans Arabic', sans-serif">العربية</button>
+</div>
+</div>
+</header>
+<main style="max-width: 1376px; margin: 0 auto; padding: 28px 32px 0; box-sizing: border-box">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px">
+<div>
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: #4A5553">USE CASE 05</div>
+<h1 style="margin: 4px 0 0; font-size: 30px; line-height: 38px; font-weight: 700">Smart search in the specialist library</h1>
+<p style="margin: 6px 0 0; font-size: 16px; line-height: 24px; color: #4A5553">Ask in English or Arabic. Each answer sentence sits on the source's own words; when the library has nothing, the page says so and writes nothing in its place.</p>
+</div>
+<div lang="ar" dir="rtl" style="font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 18px; color: #0B5C60; font-weight: 600">البحث الذكي داخل المعرفة المتخصصة</div>
+</div>
+
+<section style="margin-top: 24px; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<form role="search" style="display: flex; flex-wrap: wrap; gap: 10px" onsubmit="return false">
+<label style="flex: 1 1 480px; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; border: 2px solid #0B5C60; border-radius: 12px; background: #FFFFFF">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B5C60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Question</span>
+<input type="search" value="Suspension options for a transtibial user whose limb volume changes during the day" style="flex: 1 1 auto; min-width: 0; border: 0; outline: none; font-size: 16px; color: #15211F; background: transparent">
+</label>
+<button type="submit" style="min-height: 52px; padding: 0 22px; border-radius: 12px; border: 1px solid #0B5C60; background: #0B5C60; color: #FFFFFF; font-weight: 600; font-size: 16px">Search</button>
+</form>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: 13px">
+<span style="padding: 4px 10px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-weight: 600">Searched in English and Arabic sources</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #ECEEEB; color: #3F4846">Library 2026.10 · 214 sources</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #ECEEEB; color: #3F4846">Search runs on the clinic's server</span>
+<span lang="ar" dir="rtl" style="padding: 4px 10px; border-radius: 999px; background: #ECEEEB; color: #3F4846; font-family: 'IBM Plex Sans Arabic', sans-serif">جرّب: خيارات التعليق لمستخدم تحت الركبة</span>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 24px; align-items: flex-start">
+<aside aria-label="Filters" style="flex: 1 1 260px; max-width: 100%; min-width: 0; background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px; font-size: 14px; line-height: 20px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Filters</h2>
+<fieldset style="margin: 14px 0 0; padding: 0; border: 0">
+<legend style="font-size: 13px; font-weight: 600; color: #4A5553; padding: 0">Domain</legend>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0B5C60">Prosthetics</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #0B5C60">Orthotics</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #0B5C60">Gait analysis</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #0B5C60">Rehabilitation</label>
+</fieldset>
+<fieldset style="margin: 14px 0 0; padding: 0; border: 0">
+<legend style="font-size: 13px; font-weight: 600; color: #4A5553; padding: 0">Source type</legend>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0B5C60">Clinical guideline</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0B5C60">Systematic review</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0B5C60">Textbook</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #0B5C60">Manufacturer manual</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #0B5C60">Clinic protocol</label>
+</fieldset>
+<fieldset style="margin: 14px 0 0; padding: 0; border: 0">
+<legend style="font-size: 13px; font-weight: 600; color: #4A5553; padding: 0">Evidence layer (set by the owner)</legend>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0B5C60">[Layer A]</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0B5C60">[Layer B]</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0B5C60">Unassigned</label>
+</fieldset>
+<div style="display: flex; gap: 10px; margin-top: 14px">
+<label style="flex: 1 1 0; min-width: 0; font-size: 13px; color: #4A5553">Language<select style="display: block; width: 100%; min-height: 44px; margin-top: 4px; border: 1px solid #A9B4B1; border-radius: 8px; padding: 0 8px; background: #FFFFFF; color: #15211F"><option>Both</option><option>English</option><option>Arabic</option></select></label>
+<label style="flex: 1 1 0; min-width: 0; font-size: 13px; color: #4A5553">From year<select style="display: block; width: 100%; min-height: 44px; margin-top: 4px; border: 1px solid #A9B4B1; border-radius: 8px; padding: 0 8px; background: #FFFFFF; color: #15211F"><option>Any</option><option>2015</option><option>2020</option></select></label>
+</div>
+</aside>
+
+<div style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">What the sources say</h2>
+<span style="padding: 2px 8px; border-radius: 999px; background: #EDE8F7; color: #4B3A86; font-size: 13px; font-weight: 600">AI summary · 3 sentences, 3 quotes checked</span>
+</div>
+<p style="margin: 6px 0 0; font-size: 13px; line-height: 19px; color: #4A5553">Options appear in the order the sources mention them. Nothing here is ranked or recommended.</p>
+<ol style="margin: 14px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px">
+<li>
+<p style="margin: 0; font-size: 16px; line-height: 24px">The guideline describes socks as a way to adjust a pin-lock socket to daily volume change.</p>
+<blockquote style="margin: 8px 0 0; padding: 10px 14px; border-radius: 10px; background: #F7F9F8; border: 1px solid #D7DDDA; font-size: 14px; line-height: 21px">“[The source's own words, word for word]”<div style="margin-top: 4px; font-size: 13px; color: #4A5553">[Guideline], p. [x] · quote checked · grade as printed: [grade]</div></blockquote>
+</li>
+<li>
+<p style="margin: 0; font-size: 16px; line-height: 24px">A systematic review reports that suction suspension was studied mainly in users with stable limb volume.</p>
+<blockquote style="margin: 8px 0 0; padding: 10px 14px; border-radius: 10px; background: #F7F9F8; border: 1px solid #D7DDDA; font-size: 14px; line-height: 21px">“[The source's own words, word for word]”<div style="margin-top: 4px; font-size: 13px; color: #4A5553">[Systematic review], p. [x] · quote checked · population as the source states it: [population]</div></blockquote>
+</li>
+<li>
+<p style="margin: 0; font-size: 16px; line-height: 24px">The textbook lists elevated vacuum among the options for managing volume change.</p>
+<blockquote style="margin: 8px 0 0; padding: 10px 14px; border-radius: 10px; background: #F7F9F8; border: 1px solid #D7DDDA; font-size: 14px; line-height: 21px">“[The source's own words, word for word]”<div style="margin-top: 4px; font-size: 13px; color: #4A5553">[Textbook], p. [x] · quote checked · no grade printed</div></blockquote>
+</li>
+</ol>
+<div style="margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: #FFF6DB; border: 1px solid #E8CF7A; color: #4D3B00; font-size: 14px; line-height: 20px"><b>The sources differ</b> on which users each option was studied in. Read the populations before applying either to a case.</div>
+<div role="group" aria-label="Was this answer useful?" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px">
+<span style="color: #4A5553">Your mark:</span>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #C5CECB; background: #FFFFFF; color: #15211F">Useful</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #C5CECB; background: #FFFFFF; color: #15211F">Not useful</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #C5CECB; background: #FFFFFF; color: #15211F">A summary is wrong</button>
+</div>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 18px; line-height: 26px">Passages found</h2><span style="font-size: 13px; color: #4A5553">6 passages from 4 sources · order of match, not of quality</span></div>
+<ul style="margin: 12px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px">
+<li style="padding: 14px; border-radius: 12px; border: 1px solid #D7DDDA; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 19px">
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span style="padding: 2px 8px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-weight: 600">Guideline</span><span style="padding: 2px 8px; border-radius: 999px; background: #ECEEEB; color: #3F4846">EN</span><span style="padding: 2px 8px; border-radius: 999px; background: #ECEEEB; color: #3F4846">Layer: [owner's value]</span></div>
+<b style="font-size: 15px">[Guideline title]</b>
+<span style="color: #4A5553">[Organisation], [year] · p. [x] · section [n]</span>
+<a href="#" style="font-weight: 600">Open passage</a>
+</li>
+<li style="padding: 14px; border-radius: 12px; border: 1px solid #D7DDDA; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 19px">
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span style="padding: 2px 8px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-weight: 600">Systematic review</span><span style="padding: 2px 8px; border-radius: 999px; background: #ECEEEB; color: #3F4846">EN</span><span style="padding: 2px 8px; border-radius: 999px; background: #ECEEEB; color: #3F4846">Layer: unassigned</span></div>
+<b style="font-size: 15px">[Review title]</b>
+<span style="color: #4A5553">[Journal], [year] · p. [x]</span>
+<a href="#" style="font-weight: 600">Open passage</a>
+</li>
+<li style="padding: 14px; border-radius: 12px; border: 1px solid #D7DDDA; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 19px">
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span style="padding: 2px 8px; border-radius: 999px; background: #E3F0EE; color: #0B5C60; font-weight: 600">Textbook</span><span style="padding: 2px 8px; border-radius: 999px; background: #ECEEEB; color: #3F4846">AR</span><span style="padding: 2px 8px; border-radius: 999px; background: #ECEEEB; color: #3F4846">Layer: [owner's value]</span></div>
+<b lang="ar" dir="rtl" style="font-size: 15px; font-family: 'IBM Plex Sans Arabic', sans-serif">[عنوان الكتاب]</b>
+<span style="color: #4A5553">[Publisher], [year] · p. [x] · quoted in Arabic, never translated</span>
+<a href="#" style="font-weight: 600">Open passage</a>
+</li>
+</ul>
+<a href="#" style="display: inline-block; margin-top: 12px; font-size: 14px; font-weight: 600">Show 3 more passages</a>
+</section>
+</div>
+
+<aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<section style="background: #FFFFFF; border: 1px dashed #A9B4B1; border-radius: 14px; padding: 20px 24px">
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.06em; color: #4A5553">WHEN THE LIBRARY HAS NO ANSWER</div>
+<p style="margin: 8px 0 0; font-size: 15px; line-height: 22px"><b>No passage in the library answers this question.</b> Nothing has been written in its place.</p>
+<p style="margin: 6px 0 0; font-size: 13px; line-height: 19px; color: #4A5553">Shown also when every AI sentence failed the quote check.</p>
+<button type="button" style="margin-top: 12px; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #0B5C60; background: #FFFFFF; color: #0B5C60; font-weight: 600">Suggest a source to the curator</button>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">Use it in a case</h2>
+<p style="margin: 8px 0 0; font-size: 14px; line-height: 21px; color: #3F4846">Pin a passage to an open case. It joins that case's review as a passage, with its page, for the specialist to mark.</p>
+<label style="display: block; margin-top: 12px; font-size: 13px; color: #4A5553">Case<select style="display: block; width: 100%; min-height: 44px; margin-top: 4px; border: 1px solid #A9B4B1; border-radius: 8px; padding: 0 8px; background: #FFFFFF; color: #15211F"><option>PR-0217 · transtibial, left</option><option>ORT-0142 · stroke AFO</option></select></label>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #D7DDDA; border-radius: 14px; padding: 20px 24px">
+<h2 style="margin: 0; font-size: 18px; line-height: 26px">What leaves the clinic</h2>
+<ul style="margin: 10px 0 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: #3F4846">
+<li>The question and the passages, to the one language model</li>
+<li>Never a case's typed notes</li>
+<li>Searches are logged without who asked</li>
+</ul>
+</section>
+</aside>
+</div>
+</main>
+</div>
+
+</body>
+</html>

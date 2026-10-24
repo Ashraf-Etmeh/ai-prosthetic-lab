@@ -4,9 +4,9 @@
                                      (python -m knowledge.evidence_rules does the same)
 
 Built in two steps:
-1. build_items(): one item per statement in reasoning/component_guide.py (the
+1. build_items(): one item per statement in prosthetics/component_guide.py (the
    component rules, the K-level descriptions and cautions) and
-   reasoning/fitting_guide.py, in that order, holding only what the guides
+   prosthetics/fitting_guide.py, in that order, holding only what the guides
    and the catalog record: the statement id, the quote (and the list it
    introduces), the domain, its component or fitting section, the source,
    the citation, the source's year and kind, and the grade exactly as
@@ -35,8 +35,8 @@ from typing import Optional
 
 from knowledge.evidence_rules import CONDITIONS, EvidenceRule, apply_rules, load_rules
 from knowledge.models import KnowledgeItem
-from reasoning import component_guide, fitting_guide
-from reasoning.component_support import cite
+from prosthetics import component_guide, fitting_guide
+from reasoning.citations import cite
 from reasoning.models import GuidelineStatement
 from shared.config import EVIDENCE_RULES_PATH, KNOWLEDGE_ITEMS_PATH, PROJECT_ROOT
 

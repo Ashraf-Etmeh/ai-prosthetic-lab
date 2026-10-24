@@ -1,0 +1,74 @@
+{# Every page's header (since 2026-10-23, from the "Orthotics Module Design" canvas): the domain
+   switch, the domain's modules in order and, on a case's pages, the case bar.
+   Uses: domain ("prosthetics" or "orthotics"; a case's own domain wins), case (or none), module (the
+   current one's key), here (this page's path); no_lang: true on a page with its own language button
+   (the intake forms keep what was typed).
+   Orthotic modules are pages; the prosthetic modules are the sections of the review page, which has
+   one decision form for all of them, so they link to its sections. #}
+{% set domain = case.domain if case else (domain or 'prosthetics') %}
+{% if domain == 'orthotics' %}
+  {% set map_url = url_for('orthotic_modules.module_map') %}
+  {% set intake_url = url_for('orthotic_intake.show_form') %}
+  {% set modules = [('analyse', 'orthotic_modules.analysis', ''), ('requirements', 'orthotic_modules.requirements', ''),
+                    ('options', 'orthotic_modules.options', ''), ('design', 'orthotic_modules.design', ''),
+                    ('fit', 'orthotic_modules.fit', ''), ('follow_up', 'orthotic_modules.follow_up', '')] %}
+{% else %}
+  {% set map_url = url_for('prosthetic_intake.prosthetics_map') %}
+  {% set intake_url = url_for('prosthetic_intake.show_form') %}
+  {% set modules = [('evaluate', 'review.show_case', '#gaps'), ('functional', 'review.show_case', '#functional'),
+                    ('components', 'review.show_case', '#components'), ('fitting', 'review.show_case', '#fitting')] %}
+{% endif %}
+<header class="ui-top">
+  <div class="ui-wrap ui-top-row">
+    <a class="ui-brand" href="{{ map_url }}">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7FC4BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v8l-3 7h9"></path><path d="M9 11h4"></path><circle cx="17" cy="18" r="2"></circle></svg>
+      <span lang="en" dir="ltr">AI Prosthetic Lab</span>
+    </a>
+    <nav class="ui-domains" aria-label="{{ t('domain.switch') }}">
+      <a href="{{ url_for('prosthetic_intake.prosthetics_map') }}"{% if domain == 'prosthetics' %} aria-current="true"{% endif %}>{{ t('domain.prosthetics') }}</a>
+      <a href="{{ url_for('orthotic_modules.module_map') }}"{% if domain == 'orthotics' %} aria-current="true"{% endif %}>{{ t('domain.orthotics') }}</a>
+    </nav>
+    <nav class="ui-nav" aria-label="{{ t('domain.modules', domain=t('domain.' ~ domain)) }}">
+      <a href="{{ map_url }}"{% if module == 'map' %} aria-current="page"{% endif %}>{{ t('mod.map') }}</a>
+      {% for key, endpoint, anchor in modules %}
+        {% if case %}
+      <a href="{{ url_for(endpoint, case_id=case.case_id) }}{{ anchor }}"{% if module == key %} aria-current="page"{% endif %}>{{ t('mod.' ~ key) if domain == 'orthotics' else t('pmod.' ~ key) }}</a>
+        {% elif loop.first %}
+      <a href="{{ intake_url }}"{% if module == key %} aria-current="page"{% endif %}>{{ t('mod.' ~ key) if domain == 'orthotics' else t('pmod.' ~ key) }}</a>
+        {% else %}
+      <span title="{{ t('mod.needs_case') }}">{{ t('mod.' ~ key) if domain == 'orthotics' else t('pmod.' ~ key) }}</span>
+        {% endif %}
+      {% endfor %}
+    </nav>
+    {% if not no_lang %}
+    <a class="ui-lang" href="{{ url_for('set_language', code=t('nav.other_code'), next=here) }}" lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</a>
+    {% endif %}
+  </div>
+</header>
+{% if case %}
+<div class="ui-casebar">
+  <div class="ui-wrap">
+    <strong>{{ t('mod.case', id=case.case_id) }}</strong>
+    {% if domain == 'orthotics' %}
+    {# Modules 4-6 work on the chosen design (the design's case bar: "Option B · Hinged AFO · left · Design v3"). #}
+    {% set chosen_option = plan.option(plan.chosen) if plan is defined and plan else none %}
+    {% if module in ('design', 'fit', 'follow_up') and chosen_option %}
+    <span>{{ t('options.option', id=chosen_option.id) }} · {{ t('device.' ~ chosen_option.device.value) }} · {{ value_label(case.side) }}{% if plan.current %} · {{ t('mod.design_version', n=plan.current.number) }}{% endif %}</span>
+    {% if module == 'fit' and plan.fit.delivered_on %}<span style="color: var(--ui-muted)">{{ t('mod.delivered', date=plan.fit.delivered_on) }}</span>{% endif %}
+    {% if module == 'follow_up' %}<span style="color: var(--ui-muted)">{{ t('mod.pseudonymous') }}</span>{% endif %}
+    {% elif module in ('design', 'fit', 'follow_up') and plan is defined and plan and plan.chosen == fes_id %}
+    <span>{{ t('options.fes_chosen') }} · {{ value_label(case.side) }}</span>
+    {% else %}
+    <span>{{ value_label(case.condition) }} · {{ t('mod.side', side=value_label(case.side)) }}{% if case.months_since_onset is not none %} · {{ t('mod.months', n="%g" | format(case.months_since_onset)) }}{% endif %}</span>
+    {% endif %}
+    {% else %}
+    <span>{{ value_label(case.amputation_level) }} · {{ t('pmod.side', side=value_label(case.side)) }}{% if case.is_lower_limb and case.activity.k_level %} · {{ t('pmod.k_level', k=value_label(case.activity.k_level)) }}{% endif %}{% if case.months_since_amputation is not none %} · {{ t('pmod.months', n="%g" | format(case.months_since_amputation)) }}{% endif %}</span>
+    {% endif %}
+    {% if (case.age_years is not none or case.body_weight_kg is not none) and module not in ('design', 'fit', 'follow_up') %}
+    <span style="color: var(--ui-muted)">{% if case.age_years is not none %}{{ t('mod.age', n=case.age_years) }}{% endif %}{% if case.age_years is not none and case.body_weight_kg is not none %} · {% endif %}{% if case.body_weight_kg is not none %}{{ t('mod.weight', n="%g" | format(case.body_weight_kg)) }}{% endif %}</span>
+    {% endif %}
+    <span class="ui-chip">{{ t('mod.fake_data') }}</span>
+    <span class="ui-chip ui-chip-accent">{{ t('mod.orthotist_approves' if module == 'design' else ('mod.orthotist_decides' if domain == 'orthotics' else 'pmod.specialist_decides')) }}</span>
+  </div>
+</div>
+{% endif %}

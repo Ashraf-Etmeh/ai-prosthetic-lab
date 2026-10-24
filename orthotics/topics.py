@@ -4,7 +4,7 @@ PROPOSAL, awaiting the owner (2026-10-22): the sections and their search
 wording follow the stroke-AFO design of 2026-10-21 (modules 1-3 and fitting).
 
 Three parts, one AI call each (reasoning/rag.py with orthotics/rag.py PROFILE):
-- "gaps": one topic per missing intake field (shared/field_guide.py ORTHOTIC_FIELDS).
+- "gaps": one topic per missing intake field (orthotics/fields.py FIELDS).
 - "devices": what the sources say about an ankle-foot orthosis or FES for
   walking, the types of AFO, their effects and limits, and when not to
   provide one. Shown side by side, never ranked: the orthotist chooses.
@@ -18,8 +18,8 @@ names stroke where it matters. It decides nothing: the AI reports what the
 passages say, and the orthotist decides.
 """
 
+from orthotics.case import OrthoticCase
 from reasoning.rag_topics import GAPS, Topic
-from shared.case_schema import OrthoticCase
 from shared.field_guide import build_query, missing_fields
 
 DEVICES, DESIGN_FITTING = "devices", "design_fitting"

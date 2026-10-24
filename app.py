@@ -3,22 +3,24 @@
 Run locally with:
     python app.py
 
-Wires together the intake and review blueprints. knowledge/ and reasoning/
-have no routes of their own — they're called directly by intake/routes.py
-as part of handling a submitted case.
+Wires together each part's pages (Flask blueprints): each domain's intake
+and modules, and the review page. knowledge/ and reasoning/ have no routes of
+their own: an intake calls reasoning/pathway.py as part of handling a
+submitted case. The pages every part shares (header, style, base page) are
+in shared/templates/; each part's own are in <part>/templates/<part>/.
 
 The pages are in English or Arabic (shared/i18n.py). GET /language/<code>
 remembers the choice in a cookie and goes back to the page it came from.
-The intake form switches language by posting itself instead, so what was
-typed stays in the form (intake/routes.py).
+The intake forms switch language by posting themselves instead, so what was
+typed stays in the form (prosthetics/intake.py, orthotics/intake.py).
 """
 
 from flask import Flask, abort, g, redirect, request, url_for
 
-from intake.routes import bp as intake_bp
 from knowledge.catalog import attributions
+from orthotics.intake import bp as orthotic_intake_bp
 from orthotics.modules import bp as orthotic_modules_bp
-from orthotics.routes import bp as orthotic_intake_bp
+from prosthetics.intake import bp as prosthetic_intake_bp
 from review.routes import bp as review_bp
 from shared.i18n import (
     LANGUAGES,
@@ -41,11 +43,11 @@ def _local_page(target: str) -> bool:
 
 
 def create_app() -> Flask:
-    app = Flask(__name__)
-    app.register_blueprint(intake_bp)
+    app = Flask(__name__, template_folder="shared/templates")
+    app.register_blueprint(prosthetic_intake_bp)  # /intake and /prosthetics (use cases 01, 02)
     app.register_blueprint(orthotic_intake_bp)  # /intake/orthotics (use case 03, stroke AFO)
-    app.register_blueprint(orthotic_modules_bp)  # /orthotics: modules 2-4 after the analysis
-    app.register_blueprint(review_bp)
+    app.register_blueprint(orthotic_modules_bp)  # /orthotics: the map and modules 1-6
+    app.register_blueprint(review_bp)  # /review/<id>: what the sources say, and the reviewer's marks
 
     @app.context_processor
     def interface_language():
@@ -64,7 +66,7 @@ def create_app() -> Flask:
 
     @app.route("/")
     def index():
-        return redirect(url_for("intake.show_form"))
+        return redirect(url_for("prosthetic_intake.show_form"))
 
     @app.route("/language/<code>")
     def set_language(code: str):

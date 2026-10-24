@@ -3,7 +3,7 @@
 - ProtocolChunk: a retrieved passage with its citation and score.
 - KnowledgeItem: one curated statement in the knowledge-item structure of
   the research brief, with its evidence fields (built by knowledge/items.py
-  from reasoning/component_guide.py and reasoning/fitting_guide.py).
+  from prosthetics/component_guide.py and prosthetics/fitting_guide.py).
 
 These are intentionally separate from the ingestion/storage implementation
 so the reasoning layer can depend on a stable shape regardless of how the
@@ -21,7 +21,7 @@ from knowledge.catalog import DOMAINS, SOURCE_TYPES
 class ProtocolChunk:
     chunk_id: str  # "<catalog document id>-<4-digit number>", e.g. "lower_limb_amputation_va_dod_cpg_2024-0042"
     text: str
-    source: str  # file the chunk came from, relative to data/sources/
+    source: str  # file the chunk came from, relative to data/knowledge/sources/
     title: str = ""  # document title from the catalog
     year: Optional[int] = None
     page: Optional[int] = None  # page the chunk starts on, as numbered in a PDF viewer

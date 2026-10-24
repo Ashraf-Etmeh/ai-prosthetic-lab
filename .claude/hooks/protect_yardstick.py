@@ -10,7 +10,7 @@ permission prompt with the reason. Reading them is never stopped.
 
 Limits: a script that writes one of these files without naming it on the
 command line is not seen here. The held-out cases are also hash-frozen
-(tests/test_golden_cases.py), and the app itself writes the review log
+(quality/tests/test_golden_cases.py), and the app itself writes the review log
 through review/decision_log.py, which this hook does not touch.
 
 Reads the hook JSON on stdin; prints a decision only when it asks.
@@ -23,15 +23,15 @@ import sys
 from pathlib import Path
 
 PROTECTED = (
-    "data/eval/golden_cases/",  # the development golden cases (their expectations)
-    "data/eval/golden_cases_held_out/",  # the frozen held-out cases
-    "data/eval/golden_cases_held_out.json",  # their freeze manifest (hashes)
-    "reasoning/component_guide.py",  # the answer key's component statements
-    "reasoning/fitting_guide.py",  # the answer key's fitting statements
+    "data/quality/golden_cases/",  # the development golden cases (their expectations)
+    "data/quality/golden_cases_held_out/",  # the frozen held-out cases
+    "data/quality/golden_cases_held_out.json",  # their freeze manifest (hashes)
+    "prosthetics/component_guide.py",  # the answer key's component statements
+    "prosthetics/fitting_guide.py",  # the answer key's fitting statements
     "data/knowledge/evidence_rules.csv",  # the owner's rule table
-    "data/review_log.jsonl",  # append-only: the app adds lines, nobody edits them
-    "data/review_log.test.jsonl",
-    "data/review_log.test-2026-10-23.jsonl",  # the 2 test lines moved out before the trial
+    "data/records/review_log.jsonl",  # append-only: the app adds lines, nobody edits them
+    "data/records/review_log.test.jsonl",
+    "data/records/review_log.test-2026-10-23.jsonl",  # the 2 test lines moved out before the trial
 )
 FILE_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 SHELL_TOOLS = ("Bash", "PowerShell")

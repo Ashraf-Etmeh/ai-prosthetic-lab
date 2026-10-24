@@ -81,6 +81,8 @@ STEPS = {
                    r"rectif|modification of the (plaster|positive)"),
     Step.PARAMETERS: ("ankle-foot orthosis design: ankle angle, trim lines and material thickness",
                       r"trim line|thickness|degrees? of dorsi"),
+    Step.SIMULATE: ("finite element simulation or pressure analysis of an orthosis design before manufacture",
+                    r"finite element|simulat|pressure (distribution|map|analysis)"),
     Step.FABRICATE: ("manufacturing an ankle-foot orthosis: draping polypropylene or 3D printing",
                      r"drap|thermoform|vacuum|3D[- ]?print|manufactur"),
     Step.RELEASE: ("before delivery of an orthosis, check its fit and function; training and follow-up",

@@ -4,8 +4,11 @@ A working local prototype of a decision-support tool for prosthetics
 specialists (Flask, RAG: local bge-m3 search plus cloud-model summaries,
 Gemini free tier or Claude API, backed by checked quotes, English/Arabic pages).
 Extend it; don't rebuild it. Before changing anything, read
-`SYSTEM_DESCRIPTION.md` (what it does and how it is built), `README.md`
-(how to run it) and `FUTURE_WORK.md` (decisions, measurements, open items).
+`docs/SYSTEM_DESCRIPTION.md` (what it does and how it is built), `README.md`
+(how to run it, and the folder layout), `docs/FUTURE_WORK.md` (decisions,
+measurements, open items) and `docs/design/SYSTEM_DESIGN.md` (the target
+system the owner designed, with its screens in `docs/design/`; where the two
+differ it says where the build is heading, and this file still sets the rules).
 
 ## Principles that never change
 
@@ -32,7 +35,7 @@ Extend it; don't rebuild it. Before changing anything, read
    (name, date of birth, address, record numbers). Part of each case is
    sent to the cloud model with the passages (its amputation level, side
    and recorded K-level, never what was typed: `case_for_prompt` in
-   `reasoning/rag.py`, since 2026-10-16; an orthotic case: condition, side
+   `prosthetics/rag.py`, since 2026-10-16; an orthotic case: condition, side
    and months since onset, `orthotics/rag.py`, but only once the owner sets
    `ORTHOTIC_CLOUD_AI`, off since 2026-10-23), which makes this doubly
    important: on Gemini's free tier Google uses what is sent to improve its
@@ -46,19 +49,19 @@ Extend it; don't rebuild it. Before changing anything, read
 - **All tests keep passing** (`python -m unittest`). A change that breaks a
   test is not finished.
 - **Every quote is checked word for word** against its page in
-  `data/extracted/<doc_id>.txt`. Quotes in the AI summaries are checked at
+  `data/knowledge/extracted/<doc_id>.txt`. Quotes in the AI summaries are checked at
   run time by `reasoning/quote_check.py` before they are shown (that check
   has its own tests). Statements added to
-  `reasoning/component_guide.py` or `reasoning/fitting_guide.py` are covered
-  by `tests/test_component_guide.py` (quote on its page, list items in
+  `prosthetics/component_guide.py` or `prosthetics/fitting_guide.py` are covered
+  by `prosthetics/tests/test_component_guide.py` (quote on its page, list items in
   order, VA/DoD grade as printed); quotes kept anywhere else need an
-  equivalent test. These tests skip when `data/extracted/` is missing:
+  equivalent test. These tests skip when `data/knowledge/extracted/` is missing:
   generate it (`python -m knowledge.ingest`) so a skip is never mistaken
   for a pass.
 - **Every new interface text gets its Arabic entry** in `shared/i18n.py`.
-  `tests/test_i18n.py` enforces it; a key built at runtime (e.g.
+  `shared/tests/test_i18n.py` enforces it; a key built at runtime (e.g.
   `'section.' ~ key`) must also be added to its expected-keys test.
-- **The review log is append-only.** Lines in `data/review_log.jsonl` are
+- **The review log is append-only.** Lines in `data/records/review_log.jsonl` are
   never edited or removed. Any change to the shape of a log entry raises
   `LOG_VERSION` in `review/decision_log.py`, and everything that reads the
   log must still read lines from earlier versions.
@@ -73,12 +76,12 @@ Extend it; don't rebuild it. Before changing anything, read
   as `grade_as_printed`); anything without an owner's rule or value stays
   "unassigned" or empty.
 - **Held-out golden cases stay held out.** The cases in
-  `data/eval/golden_cases_held_out/` are frozen (content hashes in
-  `data/eval/golden_cases_held_out.json`, checked by
-  `tests/test_golden_cases.py`). Never edit them, never tune the search,
+  `data/quality/golden_cases_held_out/` are frozen (content hashes in
+  `data/quality/golden_cases_held_out.json`, checked by
+  `quality/tests/test_golden_cases.py`). Never edit them, never tune the search,
   topics, prompt or settings on their results, and run them (`--held-out`)
-  only when the owner asks, recording each run in `FUTURE_WORK.md`. Tuning
-  and its measurements use `data/eval/golden_cases/` only.
+  only when the owner asks, recording each run in `docs/FUTURE_WORK.md`. Tuning
+  and its measurements use `data/quality/golden_cases/` only.
 - **The yardstick asks first.** Claude Code asks the owner before Claude
   edits the golden cases, the held-out manifest, the two guides, the rule
   table or the review logs (`.claude/hooks/protect_yardstick.py`, in
@@ -86,17 +89,25 @@ Extend it; don't rebuild it. Before changing anything, read
 - **Ask the owner first** before committing, pushing (the owner decides
   when to push), adding a dependency, deleting data, or starting the next
   roadmap item.
+- **Everything lives in its part's folder** (owner's decision, 2026-10-24;
+  README.md, "Folder layout"): one package per part of the system (`shared/`,
+  `knowledge/`, `reasoning/`, `review/`, `quality/`, and one per clinical
+  domain: `prosthetics/`, `orthotics/`), each with its own `templates/<part>/`
+  and `tests/`; the data likewise under `data/knowledge/`, `data/quality/`,
+  `data/records/`. A domain has the same files as the others (`case.py`,
+  `fields.py`, `topics.py`, `rag.py`, `intake.py`, ...), and shared code
+  reaches it through `shared/domains.py`, never by naming it.
 
 ## Roadmap (in this order, by track)
 
 **RAG (owner's decision, 2026-10-11).** The review page is produced by
 retrieval plus a cloud language model, with checked quotes. The 59 hand-written statements
 no longer produce the page; they are the answer key the RAG is measured
-against (`python -m intake.golden_cases --rag`).
+against (`python -m quality.golden_cases --rag`).
 
 **Trial readiness**
 1. Stabilise the app for a specialist trial (candidates: the known
-   limitations in `SYSTEM_DESCRIPTION.md` §7 and `FUTURE_WORK.md`).
+   limitations in `docs/SYSTEM_DESCRIPTION.md` §7 and `docs/FUTURE_WORK.md`).
 2. Trial tooling, then a trial with a real prosthetist, measured through the
    reviewers' marks in the review log.
 
@@ -108,10 +119,11 @@ against (`python -m intake.golden_cases --rag`).
 **Product**
 5. Smart search, use case 05 (can build on `knowledge/retrieval.py`).
 6. Split `Case` into a shared core plus one section per domain. Core done
-   2026-10-17: `CaseCore` plus `Case` (prosthetics) in
-   `shared/case_schema.py`, read back with `case_from_dict`; a dict without
-   "domain" is a prosthetics case, so saved cases, log lines and the golden
-   cases read unchanged.
+   2026-10-17: `CaseCore` in `shared/case_schema.py`, read back with
+   `case_from_dict`; a dict without "domain" is a prosthetics case, so saved
+   cases, log lines and the golden cases read unchanged. Since 2026-10-24
+   each domain's section is in its own package (`prosthetics/case.py` `Case`,
+   `orthotics/case.py` `OrthoticCase`).
 7. Orthotics, use case 03, stroke AFO first. (Owner's decision, 2026-10-16:
    started before the trial, replacing "only after the trial results are
    in".) Its intake fields and which are critical, its topics, answer key
@@ -127,18 +139,18 @@ against (`python -m intake.golden_cases --rag`).
 ## Commands
 
 ```
-python -m unittest            # all tests, ~1 s, no model needed
+python -m unittest            # all tests (every <part>/tests/), about 1.5 min, no model needed
 python app.py                 # app at http://127.0.0.1:5000
-python -m knowledge.ingest    # rebuild data/extracted/ and the search index
+python -m knowledge.ingest    # rebuild data/knowledge/extracted/ and the search index
 python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
-                              # --orthotics: the orthotic topic searches (data/eval/orthotic_topics.json)
+                              # --orthotics: the orthotic topic searches (data/knowledge/eval/orthotic_topics.json)
 python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
                               # (python -m knowledge.evidence_rules does the same)
-python -m intake.golden_cases # development golden cases vs the app (--no-search: no model needed)
+python -m quality.golden_cases # development golden cases vs the app (--no-search: no model needed)
                               # --rag: live RAG coverage of the hand-written statements
                               # (calls the cloud model: free-tier quota or money, ask first)
                               # --held-out: the frozen held-out cases instead (only when the owner asks)
-python -m intake.retrieval_misses  # why expected statements miss the writer: development cases,
+python -m quality.retrieval_misses  # why expected statements miss the writer: development cases,
                               # real search, no AI (--json FILE keeps every record)
 python scripts/verify_all.py  # the 0-2 checks and the golden cases (--with-model: real search)
 ```

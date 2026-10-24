@@ -1,6 +1,6 @@
 """The Arabic term sheet: every interface text, for an Arabic-reading prosthetist to check.
 
-  python -m shared.arabic_terms export          writes data/trial/arabic_terms.csv
+  python -m shared.arabic_terms export          writes data/quality/trial/arabic_terms.csv
   python -m shared.arabic_terms apply SHEET     puts the sheet's corrections into shared/i18n.py
 
 The sheet has one row per text in shared/i18n.py: the page texts (TEXT), the
@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from shared import i18n
-from shared.config import PROJECT_ROOT, TRIAL_DIR
+from shared.config import CODE_PACKAGES, PROJECT_ROOT, TRIAL_DIR
 from shared.field_guide import FIELDS_BY_PATH
 
 TERMS_PATH = TRIAL_DIR / "arabic_terms.csv"
@@ -55,8 +55,10 @@ class Term:
 
 def _source_files(root: Path) -> list[Path]:
     """The templates and modules that show interface text (not tests, not i18n itself)."""
-    files = [root / "app.py", *root.glob("templates/*.html"), *root.glob("*/templates/*.html"), *root.glob("*/*.py")]
-    return sorted(p for p in files if p.parent.name != "tests" and p.name not in ("i18n.py", "arabic_terms.py"))
+    files = [root / "app.py", *(path for package in (*CODE_PACKAGES, "scripts") for path in (root / package).rglob("*")
+                                if path.suffix in (".py", ".html") and "__pycache__" not in path.parts)]
+    return sorted(p for p in files if "tests" not in p.relative_to(root).parts
+                  and p.name not in ("i18n.py", "arabic_terms.py", "testing.py"))
 
 
 def where_used(key: str, sources: dict[Path, str], root: Path) -> str:

@@ -23,11 +23,11 @@ from typing import Optional
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 
+from orthotics.case import GAIT_PHASES
+from orthotics.fields import FIELDS as ORTHOTIC_FIELDS
 from reasoning.gap_analysis import explain_gap
 from review import decision_log
 from review.decision_log import InvalidDecision, read_decisions, record_decision
-from shared.case_schema import GAIT_PHASES
-from shared.field_guide import ORTHOTIC_FIELDS
 from shared.i18n import DEFAULT_LANGUAGE, error_message, language_from_cookies, t
 from shared.store import CaseRecord, store
 
@@ -76,11 +76,11 @@ def _render_review(record: CaseRecord, error: Optional[str] = None, form=None):
     lang = language_from_cookies(request.cookies)
     logged = read_decisions(record.case.case_id)
     return render_template(
-        "review.html",
+        "review/review.html",
         case=record.case,
         orthotic=record.case.domain == "orthotics",
         gait_phases=GAIT_PHASES,
-        # Orthotic gaps marked critical (a draft proposal; shared/field_guide.py ORTHOTIC_FIELDS).
+        # Orthotic gaps marked critical (a draft proposal; orthotics/fields.py FIELDS).
         critical={info.path for info in ORTHOTIC_FIELDS if info.critical}
         if record.case.domain == "orthotics" else set(),
         gaps=record.gaps,

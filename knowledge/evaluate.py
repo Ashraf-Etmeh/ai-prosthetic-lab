@@ -2,7 +2,7 @@
 
 Run:  python -m knowledge.evaluate      (after python -m knowledge.ingest)
 
-Reads data/eval/retrieval_queries.json. Each query names the document and
+Reads data/knowledge/eval/retrieval_queries.json. Each query names the document and
 pages that answer it. The script searches the documents v1 searches
 (RETRIEVAL_DOMAINS, without RETRIEVAL_EXCLUDED_DOCUMENTS) and reports, per
 group of queries:

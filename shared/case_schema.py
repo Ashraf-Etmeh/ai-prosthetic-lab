@@ -1,15 +1,17 @@
-"""Case-object schema for AI Prosthetic Lab (v1 prototype).
+"""The case core: what every domain's case records, and how a saved case is read back.
 
 A case holds the intake data for one evaluation. It is the object passed
 between intake -> knowledge -> reasoning -> review.
 
 Since 2026-10-17 (roadmap item 6) a case is a shared core plus one domain's
 section: CaseCore holds what every domain records (ids, timestamps,
-demographics, health context) and each domain's class adds its own fields.
-`Case` is the prosthetics case; its name predates the split and is kept.
-A domain other than prosthetics writes "domain" into its dict; a dict without
-it is a prosthetics case, so every case saved before the split, every golden
-case and every review-log line still reads unchanged (case_from_dict).
+demographics, health context) and each domain's class adds its own fields, in
+its own package (prosthetics/case.py `Case`, orthotics/case.py `OrthoticCase`;
+shared/domains.py). `Case` is the prosthetics case; its name predates the
+split and is kept. A domain other than prosthetics writes "domain" into its
+dict; a dict without it is a prosthetics case, so every case saved before the
+split, every golden case and every review-log line still reads unchanged
+(case_from_dict).
 
 Conventions:
 - A field set to None means "not recorded at intake". The reasoning layer
@@ -31,39 +33,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, ClassVar, Optional
 
+from shared import domains
+
 # The domain of a case dict that names none: every case saved before the split.
 DEFAULT_DOMAIN = "prosthetics"
-
-
-class AmputationLevel(str, Enum):
-    # Lower limb
-    PARTIAL_FOOT = "partial_foot"
-    SYME = "syme"
-    TRANSTIBIAL = "transtibial"
-    KNEE_DISARTICULATION = "knee_disarticulation"
-    TRANSFEMORAL = "transfemoral"
-    HIP_DISARTICULATION = "hip_disarticulation"
-    # Upper limb
-    PARTIAL_HAND = "partial_hand"
-    WRIST_DISARTICULATION = "wrist_disarticulation"
-    TRANSRADIAL = "transradial"
-    ELBOW_DISARTICULATION = "elbow_disarticulation"
-    TRANSHUMERAL = "transhumeral"
-    SHOULDER_DISARTICULATION = "shoulder_disarticulation"
-
-    @property
-    def is_lower_limb(self) -> bool:
-        return self in _LOWER_LIMB_LEVELS
-
-
-_LOWER_LIMB_LEVELS = {
-    AmputationLevel.PARTIAL_FOOT,
-    AmputationLevel.SYME,
-    AmputationLevel.TRANSTIBIAL,
-    AmputationLevel.KNEE_DISARTICULATION,
-    AmputationLevel.TRANSFEMORAL,
-    AmputationLevel.HIP_DISARTICULATION,
-}
 
 
 class Side(str, Enum):
@@ -72,67 +45,10 @@ class Side(str, Enum):
     BILATERAL = "bilateral"
 
 
-class Etiology(str, Enum):
-    VASCULAR = "vascular"  # incl. diabetes-related
-    TRAUMA = "trauma"
-    ONCOLOGIC = "oncologic"
-    INFECTION = "infection"
-    CONGENITAL = "congenital"
-    OTHER = "other"
+class YesNoUnknown(str, Enum):
+    YES = "yes"
+    NO = "no"
     UNKNOWN = "unknown"
-
-
-class ActivityLevel(str, Enum):
-    """Medicare Functional Classification Level (K-level).
-
-    Used for lower-limb cases. Upper-limb cases rely on
-    ActivityProfile.description and functional goals instead.
-    """
-
-    K0 = "K0"  # no ability/potential to ambulate or transfer safely
-    K1 = "K1"  # household ambulator, fixed cadence
-    K2 = "K2"  # limited community ambulator, low-level barriers
-    K3 = "K3"  # community ambulator, variable cadence
-    K4 = "K4"  # exceeds basic ambulation (high impact / athletic)
-    UNKNOWN = "unknown"
-
-
-class WoundStatus(str, Enum):
-    HEALED = "healed"
-    HEALING = "healing"
-    OPEN = "open"
-    UNKNOWN = "unknown"
-
-
-class VolumeStability(str, Enum):
-    STABLE = "stable"
-    FLUCTUATING = "fluctuating"
-    UNKNOWN = "unknown"
-
-
-@dataclass
-class ResidualLimb:
-    wound_status: Optional[WoundStatus] = None
-    volume_stability: Optional[VolumeStability] = None
-    skin_condition: Optional[str] = None  # e.g. grafts, scarring, adherent scar
-    length_description: Optional[str] = None  # e.g. "short", "mid-length", or cm
-    pain: Optional[str] = None  # residual-limb and/or phantom pain, free text
-    sensation: Optional[str] = None  # e.g. intact, reduced, neuropathic
-    notes: Optional[str] = None
-
-    def __post_init__(self) -> None:
-        self.wound_status = _to_enum(WoundStatus, self.wound_status)
-        self.volume_stability = _to_enum(VolumeStability, self.volume_stability)
-
-
-@dataclass
-class ActivityProfile:
-    k_level: Optional[ActivityLevel] = None  # lower limb only
-    description: Optional[str] = None  # current daily activity in the patient's terms
-    functional_goals: Optional[str] = None  # what the patient wants to be able to do
-
-    def __post_init__(self) -> None:
-        self.k_level = _to_enum(ActivityLevel, self.k_level)
 
 
 @dataclass
@@ -145,7 +61,7 @@ class PriorDevice:
     def __post_init__(self) -> None:
         if not self.device_description or not self.device_description.strip():
             raise ValueError("device_description must not be empty")
-        _check_number("years_used", self.years_used)
+        check_number("years_used", self.years_used)
 
 
 @dataclass(kw_only=True)
@@ -174,8 +90,8 @@ class CaseCore:
     # ---- Validation ----------------------------------------------------
 
     def __post_init__(self) -> None:
-        _check_number("age_years", self.age_years)
-        _check_number("body_weight_kg", self.body_weight_kg, positive=True)
+        check_number("age_years", self.age_years)
+        check_number("body_weight_kg", self.body_weight_kg, positive=True)
 
     # ---- Serialization -------------------------------------------------
 
@@ -224,280 +140,45 @@ class CaseCore:
                 yield f.name, value
 
 
-@dataclass
-class Case(CaseCore):
-    """A prosthetics case: the shared core plus the amputation and the prosthesis."""
-
-    domain: ClassVar[str] = "prosthetics"
-
-    # Required at creation
-    amputation_level: AmputationLevel
-    side: Side
-
-    # Amputation history
-    etiology: Optional[Etiology] = None
-    months_since_amputation: Optional[float] = None
-
-    # Core evaluation inputs
-    residual_limb: ResidualLimb = field(default_factory=ResidualLimb)
-    activity: ActivityProfile = field(default_factory=ActivityProfile)
-    # None = device history not asked; [] = asked, no prior devices.
-    prior_devices: Optional[list[PriorDevice]] = None
-
-    contralateral_limb_status: Optional[str] = None  # lower limb: other leg's condition
-
-    # ---- Validation ----------------------------------------------------
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        # Accept enum members or their string values; reject anything else.
-        self.amputation_level = AmputationLevel(self.amputation_level)
-        self.side = Side(self.side)
-        self.etiology = _to_enum(Etiology, self.etiology)
-
-        _check_number("months_since_amputation", self.months_since_amputation)
-
-    # ---- Serialization -------------------------------------------------
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Case":
-        # Enum strings are converted by each class's __post_init__, so only
-        # the nested objects need rebuilding here.
-        data = dict(data)
-        data["residual_limb"] = ResidualLimb(**(data.get("residual_limb") or {}))
-        data["activity"] = ActivityProfile(**(data.get("activity") or {}))
-        if data.get("prior_devices") is not None:
-            data["prior_devices"] = [PriorDevice(**d) for d in data["prior_devices"]]
-        if data.get("comorbidities") is not None:
-            data["comorbidities"] = list(data["comorbidities"])
-        return cls(**data)
-
-    # ---- Helpers for the reasoning layer -------------------------------
-
-    @property
-    def is_lower_limb(self) -> bool:
-        return self.amputation_level.is_lower_limb
-
-    def _not_applicable(self) -> set[str]:
-        if self.is_lower_limb:
-            return set()
-        return {"activity.k_level", "contralateral_limb_status"}
+# Each domain's case class, by the name its dicts carry in "domain". Each domain's
+# case module adds its class (register_case); case_from_dict loads them first.
+DOMAIN_CASES: dict[str, type[CaseCore]] = {}
 
 
-# ---- Orthotics (use case 03, stroke AFO first; added 2026-10-22) ------------
-#
-# PROPOSAL, awaiting the owner's and an orthotist's review (CLAUDE.md: the
-# orthotic intake fields and which are critical come from the owner; the
-# owner chose on 2026-10-22 to build Claude's proposal as a draft). The fields
-# follow the stroke-AFO minimum data set proposed in the independent blueprint
-# (section 7) and the discussion of 2026-10-21: what the case needs before an
-# orthotist weighs an ankle-foot orthosis or FES. The case records findings
-# only; what the orthosis must do (`requirements`) is written by the orthotist.
-
-
-class OrthoticCondition(str, Enum):
-    STROKE = "stroke"  # the first area (owner's decision, 2026-10-16); others come later
-
-
-class WalkingStatus(str, Enum):
-    NON_AMBULATORY = "non_ambulatory"
-    WITH_ASSISTANCE = "with_assistance"  # walks with another person's help
-    INDEPENDENT_WITH_AID = "independent_with_aid"  # alone, with a cane, crutch or walker
-    INDEPENDENT = "independent"  # alone, no aid
-    UNKNOWN = "unknown"
-
-
-class KneeInStance(str, Enum):
-    STABLE = "stable"
-    HYPEREXTENDS = "hyperextends"
-    BUCKLES = "buckles"
-    UNKNOWN = "unknown"
-
-
-class SensationStatus(str, Enum):
-    INTACT = "intact"
-    REDUCED = "reduced"
-    ABSENT = "absent"
-    UNKNOWN = "unknown"
-
-
-class ToneScale(str, Enum):
-    """The scale a tone grade was measured with: a grade means little without it."""
-
-    MODIFIED_ASHWORTH = "modified_ashworth"
-    MODIFIED_TARDIEU = "modified_tardieu"
-    OTHER = "other"
-
-
-class DonningAbility(str, Enum):
-    INDEPENDENT = "independent"
-    NEEDS_HELP = "needs_help"
-    UNKNOWN = "unknown"
-
-
-class YesNoUnknown(str, Enum):
-    YES = "yes"
-    NO = "no"
-    UNKNOWN = "unknown"
-
-
-class GaitDeviation(str, Enum):
-    """Deviations an orthotist can tick after observing gait, each in its gait phase."""
-
-    FOOT_FLAT_CONTACT = "foot_flat_contact"  # initial contact
-    KNEE_HYPEREXTENSION = "knee_hyperextension"  # mid-stance
-    KNEE_BUCKLING = "knee_buckling"  # mid-stance
-    NO_HEEL_RISE = "no_heel_rise"  # terminal stance
-    REDUCED_PUSH_OFF = "reduced_push_off"  # pre-swing
-    TOE_DRAG = "toe_drag"  # swing (foot drop)
-    CIRCUMDUCTION = "circumduction"  # swing: hip hitching or circumduction, a compensation
-
-    @property
-    def phase(self) -> str:
-        return _DEVIATION_PHASES[self]
-
-
-_DEVIATION_PHASES = {
-    GaitDeviation.FOOT_FLAT_CONTACT: "initial_contact",
-    GaitDeviation.KNEE_HYPEREXTENSION: "mid_stance",
-    GaitDeviation.KNEE_BUCKLING: "mid_stance",
-    GaitDeviation.NO_HEEL_RISE: "terminal_stance",
-    GaitDeviation.REDUCED_PUSH_OFF: "pre_swing",
-    GaitDeviation.TOE_DRAG: "swing",
-    GaitDeviation.CIRCUMDUCTION: "swing",
-}
-# The phases of the gait cycle, in order, for showing deviations phase by phase.
-GAIT_PHASES = ("initial_contact", "loading_response", "mid_stance", "terminal_stance", "pre_swing", "swing")
-# Ankle angles are signed (dorsiflexion positive, plantarflexion negative): -5 means
-# the ankle stops 5 degrees short of neutral. Anything outside this is a typing error.
-MAX_ANKLE_DEGREES = 90
-
-
-@dataclass
-class Walking:
-    status: Optional[WalkingStatus] = None
-    walking_aid: Optional[str] = None  # e.g. "quad cane"
-    gait_speed_m_s: Optional[float] = None
-    gait_speed_test: Optional[str] = None  # which test, e.g. "10-metre walk test"; needed with a speed
-    falls_last_6_months: Optional[int] = None
-    # None = gait not observed; [] = observed, no deviation from the list.
-    deviations: Optional[list[GaitDeviation]] = None
-    other_deviations: Optional[str] = None
-
-    def __post_init__(self) -> None:
-        self.status = _to_enum(WalkingStatus, self.status)
-        if self.deviations is not None:
-            self.deviations = [GaitDeviation(d) for d in self.deviations]
-        _check_number("gait_speed_m_s", self.gait_speed_m_s)
-        _check_number("falls_last_6_months", self.falls_last_6_months)
-        if self.gait_speed_m_s is not None and not (self.gait_speed_test or "").strip():
-            raise ValueError("gait_speed_test must name the test a gait speed was measured with")
-
-
-@dataclass
-class OrthoticExam:
-    dorsiflexion_knee_extended_deg: Optional[float] = None  # passive, signed
-    dorsiflexion_knee_flexed_deg: Optional[float] = None  # passive, signed
-    plantarflexor_tone_scale: Optional[ToneScale] = None
-    plantarflexor_tone_grade: Optional[str] = None  # as the scale writes it, e.g. "1+"
-    plantarflexor_tone_notes: Optional[str] = None  # position, muscle, rater
-    dorsiflexor_strength: Optional[str] = None  # e.g. "MRC 2/5"
-    knee_extensor_strength: Optional[str] = None
-    knee_in_stance: Optional[KneeInStance] = None
-    foot_posture: Optional[str] = None  # e.g. "equinovarus, flexible"
-    protective_sensation: Optional[SensationStatus] = None
-    proprioception: Optional[SensationStatus] = None
-    skin_condition: Optional[str] = None
-
-    def __post_init__(self) -> None:
-        self.plantarflexor_tone_scale = _to_enum(ToneScale, self.plantarflexor_tone_scale)
-        self.knee_in_stance = _to_enum(KneeInStance, self.knee_in_stance)
-        self.protective_sensation = _to_enum(SensationStatus, self.protective_sensation)
-        self.proprioception = _to_enum(SensationStatus, self.proprioception)
-        for name in ("dorsiflexion_knee_extended_deg", "dorsiflexion_knee_flexed_deg"):
-            _check_angle(name, getattr(self, name))
-        if self.plantarflexor_tone_grade and self.plantarflexor_tone_scale is None:
-            raise ValueError("plantarflexor_tone_grade needs plantarflexor_tone_scale: name the scale")
-
-
-@dataclass
-class OrthoticCase(CaseCore):
-    """An orthotics case: the shared core plus the condition, walking, the exam and the device history."""
-
-    domain: ClassVar[str] = "orthotics"
-
-    # Required at creation
-    condition: OrthoticCondition
-    side: Side  # the affected side
-
-    months_since_onset: Optional[float] = None
-    functional_goals: Optional[str] = None
-    walking: Walking = field(default_factory=Walking)
-    exam: OrthoticExam = field(default_factory=OrthoticExam)
-    footwear: Optional[str] = None  # e.g. "closed trainers, heel 1 cm"
-    donning: Optional[DonningAbility] = None  # putting an orthosis on
-    # None = not asked; [] = asked, no orthosis or FES used before.
-    prior_orthoses: Optional[list[PriorDevice]] = None
-    # Asked only if FES is discussed; never listed as missing information.
-    implanted_electronic_device: Optional[YesNoUnknown] = None
-    # What the orthosis must do, written by the orthotist (module 2), one per item.
-    requirements: Optional[list[str]] = None
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self.condition = OrthoticCondition(self.condition)
-        self.side = Side(self.side)
-        self.donning = _to_enum(DonningAbility, self.donning)
-        self.implanted_electronic_device = _to_enum(YesNoUnknown, self.implanted_electronic_device)
-        _check_number("months_since_onset", self.months_since_onset)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "OrthoticCase":
-        data = dict(data)
-        data["walking"] = Walking(**(data.get("walking") or {}))
-        data["exam"] = OrthoticExam(**(data.get("exam") or {}))
-        if data.get("prior_orthoses") is not None:
-            data["prior_orthoses"] = [PriorDevice(**d) for d in data["prior_orthoses"]]
-        for name in ("comorbidities", "requirements"):
-            if data.get(name) is not None:
-                data[name] = list(data[name])
-        return cls(**data)
-
-    @property
-    def is_lower_limb(self) -> bool:
-        return True  # stroke AFO: an ankle-foot orthosis
-
-
-# Each domain's case class, by the name its dicts carry in "domain".
-DOMAIN_CASES: dict[str, type[CaseCore]] = {Case.domain: Case, OrthoticCase.domain: OrthoticCase}
+def register_case(cls: type[CaseCore]) -> type[CaseCore]:
+    """Class decorator for a domain's case class: case_from_dict finds it by its `domain`."""
+    DOMAIN_CASES[cls.domain] = cls
+    return cls
 
 
 def case_from_dict(data: dict[str, Any]) -> CaseCore:
     """The case a dict holds, as the class of its domain (none named: prosthetics)."""
     data = dict(data)
     domain = data.pop("domain", DEFAULT_DOMAIN)
+    domains.load_cases()
     if domain not in DOMAIN_CASES:
         raise ValueError(f"domain must be one of {sorted(DOMAIN_CASES)}, got {domain!r}")
     return DOMAIN_CASES[domain].from_dict(data)
 
 
-def _to_enum(enum_cls: type[Enum], value: Any) -> Any:
+def recorded_value(case: CaseCore, path: str) -> object:
+    """The value of a dotted field path, e.g. "residual_limb.pain", as recorded."""
+    value = case
+    for name in path.split("."):
+        value = getattr(value, name)
+    return value
+
+
+def to_enum(enum_cls: type[Enum], value: Any) -> Any:
     return None if value is None else enum_cls(value)
 
 
-def _check_number(name: str, value: Optional[float], positive: bool = False) -> None:
+def check_number(name: str, value: Optional[float], positive: bool = False) -> None:
     if value is None:
         return
     if not math.isfinite(value) or value < 0 or (positive and value == 0):
         rule = "greater than 0" if positive else "0 or greater"
         raise ValueError(f"{name} must be {rule}, got {value!r}")
-
-
-def _check_angle(name: str, value: Optional[float]) -> None:
-    if value is None:
-        return
-    if not math.isfinite(value) or abs(value) > MAX_ANKLE_DEGREES:
-        raise ValueError(f"{name} must be between -{MAX_ANKLE_DEGREES} and {MAX_ANKLE_DEGREES}, got {value!r}")
 
 
 def _enums_to_values(obj: Any) -> Any:

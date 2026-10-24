@@ -35,19 +35,20 @@ record numbers) are collected.
 
 | Brief pathway step          | Module                              | Status in v1                       |
 |-----------------------------|-------------------------------------|------------------------------------|
-| 01 Case data                | `intake/`, `shared/case_schema.py`  | Working: form (incl. prior prostheses), schema, validation |
+| 01 Case data                | `prosthetics/intake.py`, `prosthetics/case.py`, `shared/case_schema.py` | Working: form (incl. prior prostheses), schema, validation |
 | 02 Information analysis     | `knowledge/`                        | Working: extraction, chunking, multilingual search (en/ar; German ingested, not searched), one search per missing field and per RAG topic |
 | 03 Specialised reasoning    | `reasoning/rag.py`, `reasoning/writer.py`, `reasoning/quote_check.py` | Working (RAG, since 2026-10-11): a cloud language model (Gemini free tier or Claude API) summarises the passages found; every quote checked word for word; without the API, the gaps fall back to `reasoning/gap_analysis.py` and the passages are listed. The hand-written statements are the answer key |
 | 04 Assistive output         | `reasoning/models.py`               | Working: gap list, functional level, statements per component, and design and fitting statements: an AI sentence each, labelled, over the source's quote |
 | 05 Specialist review        | `review/`                           | Working: approve / edit / reject, needed / not needed per gap, relevant / not relevant per component or fitting statement |
-| 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/review_log.jsonl` |
+| 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/records/review_log.jsonl` |
 
 The prosthetics domain's three parts (evaluate, choose components, design
 and fit) now each have a first version. Orthotics (use case 03, stroke
 ankle-foot orthosis) has a first version as drafts awaiting the owner's and
 an orthotist's review (below, "Orthotics"). The rest of the brief (gait
 analysis, rehabilitation, follow-up) is planned but not started — see
-[FUTURE_WORK.md](FUTURE_WORK.md#path-to-the-full-system).
+[docs/FUTURE_WORK.md](docs/FUTURE_WORK.md#path-to-the-full-system); the target
+system is described in [docs/design/SYSTEM_DESIGN.md](docs/design/SYSTEM_DESIGN.md).
 
 ## Running it
 
@@ -88,14 +89,14 @@ without summaries until the quota resets. If they are too tight,
 To use the Claude API instead (paid): set `LLM_PROVIDER = "claude"` in
 `shared/config.py` and `$env:ANTHROPIC_API_KEY = "sk-ant-..."`. Time,
 tokens and (for Claude) cost per case are measured in
-`python -m intake.golden_cases --rag` (FUTURE_WORK.md).
+`python -m quality.golden_cases --rag` (docs/FUTURE_WORK.md).
 
 Without a key, or offline, the app still works: the page says why there are
 no summaries, the gaps cite passages through the topic-word check, and
 each section lists the passages the search found. To switch the AI off
 on purpose, set `AI_PROSTHETIC_LAB_OFFLINE=1` (the tests always do).
 
-Each case is saved as `data/cases/<case id>.json` (not in git), so its
+Each case is saved as `data/records/cases/<case id>.json` (not in git), so its
 review page still works after the server is restarted. The files hold the
 case as entered (no patient identifiers), the passages found and the gap
 list.
@@ -169,20 +170,20 @@ drop-down choice has no Arabic version.
 
 ## Knowledge sources
 
-The source PDFs are not in git. `data/sources/catalog.json` lists each one
+The source PDFs are not in git. `data/knowledge/sources/catalog.json` lists each one
 with its DOI or web address; download them into the folders it names (see
-`data/sources/README.md`). Then build the search index:
+`data/knowledge/sources/README.md`). Then build the search index:
 
 ```
 python -m knowledge.ingest
 ```
 
-This extracts each document's text to `data/extracted/<id>.txt` (open those
+This extracts each document's text to `data/knowledge/extracted/<id>.txt` (open those
 files to see exactly what the system reads), cuts it into chunks of about
 800 characters, and turns each chunk into a vector with the multilingual
 model `BAAI/bge-m3` (about 2.3 GB, downloaded on the first run into the
 Hugging Face cache, outside this folder). The result goes to
-`data/vector_store/`. Re-run it whenever a document, the catalog or the
+`data/knowledge/vector_store/`. Re-run it whenever a document, the catalog or the
 model changes. Without it the app still lists gaps, but warns that no
 sources were searched.
 
@@ -229,7 +230,7 @@ python -m knowledge.evaluate
    form of quotation marks and dashes aside), at least five words long,
    with an Arabic sentence. A grade not printed right after the quote is
    dropped. The page shows the passage's own words and the page the quote
-   is on (looked up in `data/extracted/`). Everything removed is kept with
+   is on (looked up in `data/knowledge/extracted/`). Everything removed is kept with
    its reason, so the misquote rate can be measured.
 4. **Show.** Each gap and statement shows "AI summary — check it against
    the quote below", the AI's sentence in the page's language, then the
@@ -244,14 +245,14 @@ amputation) as entered; the tool never says whether the patient is ready.
 
 ## The hand-written statements: the answer key
 
-`reasoning/component_guide.py` and `reasoning/fitting_guide.py` hold 59
+`prosthetics/component_guide.py` and `prosthetics/fitting_guide.py` hold 59
 statements copied word for word from VA/DoD 2024 and 2022, CMS 2017, the
 ICRC gait-analysis manual 2014 and the WHO implementation manual, each with
 its page, the source's own grade and a rule for which cases it applies to
 (level, side, K-level, "ambulators"). Until 2026-10-11 they produced the
 page; now they are the answer key the RAG is measured against
-(`python -m intake.golden_cases --rag`), and the knowledge items are built
-from them. `tests/test_component_guide.py` still checks that every quote is
+(`python -m quality.golden_cases --rag`), and the knowledge items are built
+from them. `prosthetics/tests/test_component_guide.py` still checks that every quote is
 on its page of the extracted text, that a quoted list's items follow their
 heading in order, and that each VA/DoD grade is the one printed after the
 recommendation.
@@ -287,7 +288,7 @@ The specialist marks each gap "Needed" or "Not needed for this case", and
 each component or fitting statement "Relevant" or "Not relevant for this
 case" (or leaves them unmarked), and approves, edits (with a note saying
 what should change) or rejects the list. Each decision is added as one line
-of JSON to `data/review_log.jsonl`, and the review page lists the decisions
+of JSON to `data/records/review_log.jsonl`, and the review page lists the decisions
 logged for the case. A line holds the decision, note, time (UTC), the case
 as entered, every gap with its quote, citation and full passage, the
 functional level, every component and fitting statement shown with its
@@ -300,19 +301,19 @@ quote check removed. Labels and explanations are logged in English whichever
 language the reviewer used; `ui_language` records which one it was. Lines are never changed or removed. The file stays on this
 machine (it is in `.gitignore`). The 26 lines written while building and
 checking the prototype were moved, unchanged, to
-`data/review_log.test.jsonl` (2026-10-09), so `data/review_log.jsonl` holds
+`data/records/review_log.test.jsonl` (2026-10-09), so `data/records/review_log.jsonl` holds
 only the trial's decisions.
 
 ## Trial tools
 
 For the Arabic term check and the specialist trial (details in
-[data/trial/README.md](data/trial/README.md)):
+[data/quality/trial/README.md](data/quality/trial/README.md)):
 
 ```
-python -m shared.arabic_terms export     # every interface text -> data/trial/arabic_terms.csv
-python -m shared.arabic_terms apply data/trial/arabic_terms.csv   # a prosthetist's corrections -> shared/i18n.py
-python -m intake.load_trial_cases        # the 15 prepared fake cases in data/trial/cases/ -> the app
-python -m review.trial_report            # counts from the review log -> data/trial/report.csv
+python -m shared.arabic_terms export     # every interface text -> data/quality/trial/arabic_terms.csv
+python -m shared.arabic_terms apply data/quality/trial/arabic_terms.csv   # a prosthetist's corrections -> shared/i18n.py
+python -m quality.load_trial_cases        # the 15 prepared fake cases in data/quality/trial/cases/ -> the app
+python -m quality.trial_report            # counts from the review log -> data/quality/trial/report.csv
                                          # (prosthetic cases; --domain orthotics -> report_orthotics.csv)
 ```
 
@@ -320,12 +321,12 @@ python -m review.trial_report            # counts from the review log -> data/tr
 
 ```
 python -m unittest
-python -m intake.golden_cases     # fake cases with the output they must give (data/eval/golden_cases/)
-python -m intake.golden_cases --rag   # also measure the RAG (calls the cloud model: free-tier quota or money)
-python -m intake.golden_cases --held-out   # the frozen held-out cases instead (only when the owner asks)
-python -m intake.retrieval_misses   # why expected statements don't reach the writer (development cases,
+python -m quality.golden_cases     # fake cases with the output they must give (data/quality/golden_cases/)
+python -m quality.golden_cases --rag   # also measure the RAG (calls the cloud model: free-tier quota or money)
+python -m quality.golden_cases --held-out   # the frozen held-out cases instead (only when the owner asks)
+python -m quality.retrieval_misses   # why expected statements don't reach the writer (development cases,
                                     # real search, no AI; --json FILE keeps every record)
-python -m reasoning.sentence_checks # flags on stored AI sentences (data/cases/): measurement only
+python -m reasoning.sentence_checks # flags on stored AI sentences (data/records/cases/): measurement only
 ```
 
 `reasoning.sentence_checks` flags kept AI items whose sentence has a number,
@@ -338,22 +339,22 @@ The golden cases, the two guides behind the answer key, the owner's rule
 table and the review logs are protected in Claude Code: a project hook
 (`.claude/hooks/protect_yardstick.py`) makes Claude ask before editing them.
 
-`intake.retrieval_misses` measures the search's ceiling for `--rag`: for
+`quality.retrieval_misses` measures the search's ceiling for `--rag`: for
 each development case and expected statement, whether a passage the topic
 search returns (top `RAG_TOP_K`) is from the statement's document and shares
 six words in a row with it, and for each miss, why: the statement's own words
 would find it (the topic query is the problem), even they don't (chunking or
 embedding), or nothing can find it. The first run is in
-`data/eval/baseline/2026-10-16/` and FUTURE_WORK.md.
+`data/quality/baseline/2026-10-16/` and docs/FUTURE_WORK.md.
 
 **Held-out cases (2026-10-13).** Of the 13 golden cases, 8 are for
-development (`data/eval/golden_cases/`): they run by default, and the
+development (`data/quality/golden_cases/`): they run by default, and the
 search, topics and prompt may be tuned on them. The other 5 are held out
-(`data/eval/golden_cases_held_out/`) to measure whether that tuning carries
+(`data/quality/golden_cases_held_out/`) to measure whether that tuning carries
 over to cases it never saw. They are frozen: each one's content hash is in
-`data/eval/golden_cases_held_out.json`, a test fails if a case changes, and
+`data/quality/golden_cases_held_out.json`, a test fails if a case changes, and
 `--held-out` runs nothing until they match. They run only with `--held-out`,
-when the owner asks, and each run is recorded in FUTURE_WORK.md.
+when the owner asks, and each run is recorded in docs/FUTURE_WORK.md.
 
 The golden cases run through the same analysis as the intake form (one is
 submitted through the Arabic form and must match its English twin). Their
@@ -362,7 +363,7 @@ rules); without `--rag` the AI is switched off. With `--rag` they measure
 how many expected statements a checked RAG quote covers, any statement the
 case must not show that one covers, the gap sources, what the quote check
 removed, and tokens, time and estimated cost. The tests never call the API
-(`tests/__init__.py` switches it off; `tests/helpers.py` has a fake writer). Without
+(`shared/testing.py` switches it off and has a fake writer). Without
 the search model or the vector store (or with `--no-search`) their gap
 checks are skipped and the rest still run; the model is never downloaded.
 A difference fails a case marked "reviewed" and warns for an "unreviewed" one.
@@ -374,34 +375,74 @@ checked on their gaps only: there is no orthotic answer key yet.
 python scripts/verify_all.py      # the checks for prompts 0-2, then the golden cases
 ```
 
-## Layout
+## Folder layout
+
+One folder per part of the system (since 2026-10-24, the owner's decision),
+following the parts of the target design (`docs/design/SYSTEM_DESIGN.md` §3):
+the shared core, the shared parts, then one folder per clinical domain. Each
+part holds its own code, its pages (`templates/<part>/`) and its tests
+(`tests/`); the data is grouped the same way. Gait analysis, rehabilitation,
+search and education, and the patient record will each get a folder of their
+own when they are built.
 
 ```
-app.py              Flask entry point; registers the intake and review pages
-templates/          Every page's shared look: header (domain switch, modules, case bar), style, page layout
-shared/             Case schema, config (paths, settings, disclaimer), case store
-                    (memory + data/cases/), interface text in English and Arabic (i18n.py)
-intake/             Intake form -> Case -> runs knowledge + reasoning -> review page
-knowledge/          Source catalog, text extraction, ingestion, search, evaluation,
-                    knowledge items (the curated statements with their evidence fields)
-reasoning/          The RAG: topics, the AI writer (Gemini or Claude API), the quote check, and the page's
-                    shapes; gap analysis without the AI; the hand-written statements and
-                    their rules (the answer key)
-review/             Specialist review page and decision log (writes data/review_log.jsonl)
-orthotics/          Use case 03, stroke ankle-foot orthosis (drafts): intake form, topics, the AI's instructions,
-                    and modules 2-4 (requirements, design options, digital design: plan.py, sources.py, modules.py)
-tests/              unittest suite (a tiny fake embedder and a fake AI writer: no model, no API)
-data/sources/       Knowledge documents: catalog.json in git, the PDFs kept local
+app.py              Flask entry point: registers each part's pages
+README.md, CLAUDE.md, requirements.txt
+
+shared/             What every part uses: the case core (case_schema.py), the domain registry
+                    (domains.py), the case store (store.py: memory + data/records/cases/), the forms'
+                    parsers (forms.py), the field guide's mechanics, the interface text in English and
+                    Arabic (i18n.py), the Arabic term sheet, config (paths, settings, disclaimers)
+  templates/        Every page's shared look: header (domain switch, modules, case bar), style, base page
+  testing.py        What every part's tests share: the AI switched off, a fake writer and embedder,
+                    the route-test base
+  tests/
+knowledge/          Knowledge layer: source catalog, text extraction, ingestion, search, search-quality
+                    evaluation, knowledge items with the owner's evidence rules
+  tests/
+reasoning/          The reasoning pathway every domain shares: pathway.py (search, AI summaries, gaps,
+                    components, fitting), the RAG pipeline (rag.py, rag_topics.py), the AI writer
+                    (Gemini or Claude API), the quote check, sentence checks, gap analysis without the AI,
+                    the page's shapes (models.py), citations
+  tests/
+review/             Specialist review: the review page and the append-only decision log
+                    (data/records/review_log.jsonl)
+  templates/review/
+  tests/
+quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
+                    trial-case loader
+  tests/
+prosthetics/        Use cases 01-02: the case (case.py), its gap fields (fields.py), topics, the AI's
+                    instructions (rag.py), the hand-written statements behind the answer key
+                    (component_guide.py, fitting_guide.py) and their support, the intake form (intake.py)
+  templates/prosthetics/
+  tests/
+orthotics/          Use case 03, stroke ankle-foot orthosis (drafts): the same files as prosthetics, plus
+                    sources.py and modules 1-6 (plan.py, fit.py, followup.py, hard_stops.py, modules.py)
+  templates/orthotics/
+  tests/
+scripts/            verify_all.py and the checks for prompts 0-2
+
+docs/               SYSTEM_DESCRIPTION.md (what is built), FUTURE_WORK.md (decisions, measurements, open
+                    items), the independent blueprint, older hand-offs and manual checks
+  design/           The target system: SYSTEM_DESIGN.md and its screen designs (open index.html)
+
 data/knowledge/     The owner's evidence rules, the knowledge items and the items to curate (in git)
-data/extracted/     Cleaned text per document (generated, not in git)
-data/vector_store/  Chunks and their vectors (generated, not in git)
-data/eval/          Retrieval evaluation queries, the orthotic topic yardstick, golden cases and the
-                    frozen held-out cases (in git)
-data/cases/         One JSON file per case entered (not in git)
-data/trial/         Arabic term sheet, prepared trial cases (in git); trial report (not in git)
+  sources/          Knowledge documents: catalog.json and the registry in git, the PDFs kept local
+  extracted/        Cleaned text per document (generated, not in git)
+  vector_store/     Chunks and their vectors (generated, not in git)
+  eval/             The search-quality queries and the orthotic topic searches (in git)
+data/quality/       golden_cases/ and the frozen golden_cases_held_out/ with their manifest, measurement
+                    baselines, and trial/ (Arabic term sheet, prepared trial cases; the report not in git)
+data/records/       What the app records on this machine (not in git): cases/ (one JSON file per case)
+                    and the review logs
 ```
+
+A new clinical domain adds a package with the same files as the others (case.py,
+fields.py, topics.py, rag.py, intake.py, and plan.py if it has modules after the
+analysis) and its name in `shared/domains.py`; shared code reaches it there.
 
 ## Plan and open decisions
 
-[FUTURE_WORK.md](FUTURE_WORK.md) tracks the build steps, open decisions and
+[docs/FUTURE_WORK.md](docs/FUTURE_WORK.md) tracks the build steps, open decisions and
 known simplifications.

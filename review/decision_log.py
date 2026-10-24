@@ -1,7 +1,7 @@
 """Review decision log: every specialist decision, appended to a JSON-lines file.
 
 This is the brief's last pathway step, "documented outcome". Each decision
-becomes one line of REVIEW_LOG_PATH (data/review_log.jsonl): a complete JSON
+becomes one line of REVIEW_LOG_PATH (data/records/review_log.jsonl): a complete JSON
 object that can be read on its own, holding
 - the decision (approve / edit / reject), the reviewer's note and the time,
 - the reviewer's judgement on each gap: needed, not needed, or not marked,
@@ -83,7 +83,12 @@ STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
 # 8 (2026-10-23, prompt rag-v3): an entry of generation.parts.*.removed may
 # have "dropped": "repeat", a quote already shown under an earlier topic (not
 # a failed check: reasoning/rag.py drop_repeats); before, only "item" or "grade".
-LOG_VERSION = 8
+# 9 (2026-10-23, the design canvas's screens): "plan" gains the keys of case
+# file version 4 (shared/store.py), an orthotic "case" gains goals by ICF level,
+# "measured_how" and exam.ulcer_infection_or_poor_blood_supply, and a design
+# choice's plan.chosen may be "F", the referral to discuss FES. Older lines
+# lack these keys.
+LOG_VERSION = 9
 
 # The development server answers requests in threads; one write at a time
 # keeps two decisions from mixing into one line.

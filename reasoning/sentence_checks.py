@@ -1,6 +1,6 @@
 """Flags on the AI's kept sentences: measurement only. Nothing is removed, changed or shown.
 
-  python -m reasoning.sentence_checks [CASE_FILE ...]   flags in stored case files (default: data/cases/*.json)
+  python -m reasoning.sentence_checks [CASE_FILE ...]   flags in stored case files (default: data/records/cases/*.json)
 
 The quote check (reasoning/quote_check.py) proves a quote is in its passage,
 not that the AI's sentence says only what the quote says. These checks look,

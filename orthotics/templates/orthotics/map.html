@@ -1,0 +1,83 @@
+{% extends "ui_base.html" %}
+{# The canvas's "System map" (2026-10-21): the reasoning chain, the six modules mapped to the brief's
+   capabilities, the knowledge behind them, the owner's hard stops and the roll-out. Each module links to
+   the orthotic case saved last (none yet: module 1 opens a new case). #}
+{% block title %}{{ t('map.title') }}{% endblock %}
+{% block kicker %}{{ t('domain.orthotics') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('map.intro') }}</p>{% endblock %}
+{% block brief %}تقويم العظام — خريطة النظام{% endblock %}
+{% block content %}
+{% set endpoints = {'analysis': 'orthotic_modules.analysis', 'requirements': 'orthotic_modules.requirements',
+                    'options': 'orthotic_modules.options', 'design': 'orthotic_modules.design',
+                    'fit': 'orthotic_modules.fit', 'follow_up': 'orthotic_modules.follow_up'} %}
+{% set briefs = {'analysis': 'تحليل الحالات الوظيفية', 'requirements': 'الجسر بين التحليل والتصميم',
+                 'options': 'اختيار وتصميم الأجهزة التقويمية · ربط الحالة بالمكونات والمواد',
+                 'design': 'دعم سير عمل التصميم الرقمي',
+                 'fit': 'فهم العلاقة بين الجهاز والأداء · ربط الجهاز بالتدريب الوظيفي',
+                 'follow_up': 'المتابعة والتقييم · متابعة تطور الحالة'} %}
+
+<div class="ui-section-label">{{ t('map.chain_heading') }}</div>
+<div class="ui-chain">
+  {% for key in ['impairments', 'gait', 'requirements', 'options', 'fabrication'] %}
+  <div{% if key == 'requirements' %} class="ui-chain-now"{% endif %}><span><b>{{ loop.index }} · {{ t('chain.' ~ key) }}</b><small>{{ t('chain_module.' ~ key) }}</small></span>
+    {% if not loop.last %}<span class="ui-arrow" aria-hidden="true">{{ '←' if lang == 'ar' else '→' }}</span>{% endif %}</div>
+  {% endfor %}
+  <div class="ui-chain-dark"><span><b>{{ t('map.decides') }}</b><small>{{ t('map.principle') }}</small></span></div>
+  {% for key, n in [('follow_up', 8), ('training', 7), ('fit', 6)] %}
+  <div><span><b>{{ n }} · {{ t('chain.' ~ key) }}</b><small>{{ t('chain_module.' ~ key) }}</small></span>
+    {% if not loop.last %}<span class="ui-arrow" aria-hidden="true">{{ '→' if lang == 'ar' else '←' }}</span>{% endif %}</div>
+  {% endfor %}
+  <div class="ui-chain-loop">{{ t('map.loop_back') }}</div>
+</div>
+
+<div class="ui-section-label">{{ t('map.modules_heading') }}</div>
+<div class="ui-modules" style="margin-top: 0">
+  {% for key in modules %}
+  <section class="ui-card">
+    <h2>{{ loop.index }} · {{ t('map_name.' ~ key) }}</h2>
+    <p class="ui-note" style="color: var(--ui-muted-2)">{{ t('map_does.' ~ key) }}</p>
+    <p class="ui-note"><span class="ui-brief" lang="ar" dir="rtl" style="font-size: 0.95rem">{{ briefs[key] }}</span></p>
+    {% if latest %}
+    <p style="margin: 0.5rem 0 0"><a href="{{ url_for(endpoints[key], case_id=latest) }}" style="font-weight: 600">{{ t('map.open_screen', n=loop.index) }}</a></p>
+    {% elif loop.first %}
+    <p style="margin: 0.5rem 0 0"><a href="{{ url_for('orthotic_intake.show_form') }}" style="font-weight: 600">{{ t('map.new_case') }}</a></p>
+    {% else %}<p class="ui-note">{{ t('map.from_case') }}</p>{% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% if latest %}<p class="ui-note">{{ t('map.latest', id=latest) }} <a href="{{ url_for('orthotic_intake.show_form') }}">{{ t('map.new_case') }}</a></p>{% endif %}
+
+<div class="ui-section-label">{{ t('map.knowledge_heading') }}</div>
+<div class="ui-kbox">
+  {% for key in ['guidelines', 'manuals', 'graph', 'cases', 'expertise', 'data', 'glossary'] %}
+  <div{% if key == 'graph' %} class="ui-chain-now"{% endif %}><b>{{ t('know.' ~ key) }}</b><span style="color: var(--ui-muted)">{{ t('know_does.' ~ key) }}</span>
+    {% if key == 'glossary' %} · <span lang="ar" dir="rtl">المقاويم</span>{% endif %}
+    <div class="ui-note" style="margin-top: 0.35rem">{{ t('know_here.' ~ key) }}</div></div>
+  {% endfor %}
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1rem">
+  <div style="flex: 1 1 420px; min-width: 0">
+    <div class="ui-section-label">{{ t('map.safety_heading') }}</div>
+    <section class="ui-warm">
+      <h2>{{ t('hard.heading') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">
+        {% for rule in rules %}<li>{{ t('hard_rule.' ~ rule) }}</li>{% endfor %}
+      </ul>
+      <p class="ui-note" style="color: #3A1A0B">{{ t('hard.owners_rules') }}</p>
+    </section>
+  </div>
+  <div style="flex: 1 1 420px; min-width: 0">
+    <div class="ui-section-label">{{ t('map.rollout_heading') }}</div>
+    <section class="ui-card">
+      <h2>{{ t('map.rollout_title') }}</h2>
+      <ol class="ui-plain" style="margin-top: 0.5rem">
+        {% for key in ['stroke_afo', 'cp_afo', 'diabetic_foot', 'scoliosis_kafo', 'digital'] %}
+        <li>{{ t('rollout.' ~ key) }}{% if loop.first %} · <span class="ui-tag ui-tag-accent">{{ t('map.rollout_now') }}</span>{% endif %}</li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+</div>
+<div class="ui-draft">{{ t('mod.draft') }}</div>
+{% endblock %}
