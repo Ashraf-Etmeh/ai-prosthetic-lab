@@ -998,8 +998,9 @@ TEXT: dict[str, dict[str, str]] = {
     },
     "know_here.cases": {"en": "Not built yet.", "ar": "لم تُبنَ بعد."},
     "know_here.expertise": {
-        "en": "The owner's hard-stop rules below, and the owner's rule table for the evidence.",
-        "ar": "قواعد التوقف الإلزامي التي وضعها المالك أدناه، وجدول قواعد المالك للأدلة.",
+        "en": "The draft hard-stop rules below (awaiting the owner's approval), and the owner's rule table for the "
+              "evidence.",
+        "ar": "قواعد التوقف الإلزامي المسوّدة أدناه (بانتظار موافقة المالك)، وجدول قواعد المالك للأدلة.",
     },
     "know_here.data": {
         "en": "As the orthotist enters them: measures at each visit, the clinic's stock on each option.",
@@ -1017,16 +1018,26 @@ TEXT: dict[str, dict[str, str]] = {
         "ar": "مشدّات الجنف، وجهاز تقويم الركبة والكاحل والقدم بعد إصابة الحبل الشوكي",
     },
     "rollout.digital": {"en": "Digital design", "ar": "التصميم الرقمي"},
-    # The owner's hard stops (orthotics/hard_stops.py): the rules as the design's map words them.
-    "hard.heading": {"en": "Hard stops route the case to a doctor", "ar": "التوقفات الإلزامية تحيل الحالة إلى طبيب"},
-    "hard.owners_rules": {
-        "en": "The owner's rules, from the design's system map (a draft): the tool applies them to what the intake "
-              "records and never infers a value. The orthotist and the doctor decide.",
-        "ar": "قواعد المالك من خريطة النظام في التصميم (مسوّدة): تطبّقها الأداة على ما تسجّله استمارة الحالة ولا "
-              "تستنتج أي قيمة. القرار لأخصائي التقويم وللطبيب.",
+    # The hard stops (orthotics/hard_stops.py): DRAFT rules as the design's map words them, awaiting the
+    # owner's approval (owner, 2026-10-24: "not yet, keep as drafts"). Every line quotes the draft rule;
+    # none says in the tool's own voice what to do.
+    "hard.heading": {
+        "en": "Hard stops (draft rules, awaiting the owner's approval): a rule that matches routes the case to a doctor",
+        "ar": "التوقفات الإلزامية (قواعد مسوّدة بانتظار موافقة المالك): القاعدة التي تنطبق تحيل الحالة إلى طبيب",
     },
-    "hard.checks_heading": {"en": "Hard-stop checks", "ar": "فحوص التوقف الإلزامي"},
-    "hard.stop_banner": {"en": "Hard stop: route the case to a doctor.", "ar": "توقف إلزامي: أحِل الحالة إلى طبيب."},
+    "hard.draft_rules": {
+        "en": "Draft rules from the design's system map, awaiting the owner's approval: they are not the clinic's "
+              "rules yet. The tool only looks up what the intake records and never infers a value; the orthotist "
+              "and the doctor decide.",
+        "ar": "قواعد مسوّدة من خريطة النظام في التصميم، بانتظار موافقة المالك: ليست قواعد العيادة بعد. تكتفي "
+              "الأداة بالنظر فيما تسجّله استمارة الحالة ولا تستنتج أي قيمة؛ والقرار لأخصائي التقويم وللطبيب.",
+    },
+    "hard.checks_heading": {"en": "Hard-stop checks (draft rules)", "ar": "فحوص التوقف الإلزامي (قواعد مسوّدة)"},
+    "hard.stop_banner": {
+        "en": "A draft hard stop (awaiting the owner's approval) matches what was recorded; the draft rule routes "
+              "the case to a doctor:",
+        "ar": "ينطبق توقف إلزامي مسوّد (بانتظار موافقة المالك) على ما سُجِّل؛ والقاعدة المسوّدة تحيل الحالة إلى طبيب:",
+    },
     "hard.ulcer": {"en": "Ulcer, infection or poor blood supply", "ar": "قرحة أو عدوى أو ضعف التروية الدموية"},
     "hard.insensate": {"en": "Reduced sensation", "ar": "ضعف الإحساس"},
     "hard.contracture": {"en": "Calf shortness, dorsiflexion with the knee extended", "ar": "قِصَر الساق، الانثناء الظهري والركبة ممدودة"},
@@ -1041,43 +1052,53 @@ TEXT: dict[str, dict[str, str]] = {
         "ar": "تقفّع ثابت يتجاوز ما يستطيع التصميم استيعابه",
     },
     "hard_rule.fes_implant": {"en": "FES with an implanted electronic device", "ar": "التنبيه الكهربائي الوظيفي مع جهاز إلكتروني مزروع"},
-    "hard_detail.ulcer_yes": {"en": "Recorded: yes. The rule routes the case to a doctor.", "ar": "مسجَّل: نعم. تحيل القاعدة الحالة إلى طبيب."},
+    "hard_detail.ulcer_yes": {
+        "en": "Recorded: yes. The draft rule routes the case to a doctor.",
+        "ar": "مسجَّل: نعم. تحيل القاعدة المسوّدة الحالة إلى طبيب.",
+    },
     "hard_detail.ulcer_no": {"en": "None recorded", "ar": "لم يُسجَّل شيء منها"},
     "hard_detail.unknown": {"en": "Recorded as unknown: not checked yet", "ar": "مسجَّل كغير معروف: لم يُفحص بعد"},
     "hard_detail.not_recorded": {"en": "Not recorded: not checked yet", "ar": "غير مسجَّل: لم يُفحص بعد"},
     "hard_detail.insensate": {
-        "en": "Recorded as reduced or absent: any rigid design needs pressure relief and lining.",
-        "ar": "مسجَّل منخفضاً أو غائباً: أي تصميم صلب يحتاج إلى تخفيف للضغط وبطانة.",
+        "en": "Recorded as reduced or absent. The draft rule is about a rigid device on insensate skin without "
+              "pressure relief; the orthotist checks each design against it.",
+        "ar": "مسجَّل منخفضاً أو غائباً. تخصّ القاعدة المسوّدة جهازاً صلباً على جلد فاقد للإحساس دون تخفيف للضغط؛ "
+              "ويتحقق أخصائي التقويم من كل تصميم مقابلها.",
     },
     "hard_detail.insensate_options": {
-        "en": "Recorded as reduced or absent, and option {ids} lists no lining: any rigid design needs pressure "
-              "relief and lining.",
-        "ar": "مسجَّل منخفضاً أو غائباً، والخيار {ids} لا يذكر بطانة: أي تصميم صلب يحتاج إلى تخفيف للضغط وبطانة.",
+        "en": "Recorded as reduced or absent, and option {ids} lists no lining. The draft rule is about a rigid "
+              "device on insensate skin without pressure relief; the orthotist checks whether it applies.",
+        "ar": "مسجَّل منخفضاً أو غائباً، والخيار {ids} لا يذكر بطانة. تخصّ القاعدة المسوّدة جهازاً صلباً على جلد "
+              "فاقد للإحساس دون تخفيف للضغط؛ ويتحقق أخصائي التقويم مما إذا كانت تنطبق.",
     },
     "hard_detail.sensation_intact": {"en": "Recorded as intact", "ar": "مسجَّل سليماً"},
     "hard_detail.contracture": {
         "en": "Recorded: {n}°. The orthotist judges whether the design can accommodate it.",
         "ar": "مسجَّل: {n}°. يقدّر أخصائي التقويم ما إذا كان التصميم يستطيع استيعابه.",
     },
-    "hard_detail.implant_yes": {"en": "Recorded: yes. A hard stop if FES is chosen.", "ar": "مسجَّل: نعم. توقف إلزامي إذا اختير التنبيه الكهربائي."},
+    "hard_detail.implant_yes": {
+        "en": "Recorded: yes. A draft hard stop if FES is chosen.",
+        "ar": "مسجَّل: نعم. توقف إلزامي في المسوّدة إذا اختير التنبيه الكهربائي.",
+    },
     "hard_detail.implant_fes_chosen": {
-        "en": "Recorded: yes, and the FES referral is chosen: route the case to a doctor.",
-        "ar": "مسجَّل: نعم، واختيرت إحالة التنبيه الكهربائي: أحِل الحالة إلى طبيب.",
+        "en": "Recorded: yes, and the FES referral is chosen. The draft rule routes the case to a doctor.",
+        "ar": "مسجَّل: نعم، واختيرت إحالة التنبيه الكهربائي. تحيل القاعدة المسوّدة الحالة إلى طبيب.",
     },
     "hard_detail.implant_no": {"en": "Recorded: no", "ar": "مسجَّل: لا"},
     "hard_detail.not_asked": {"en": "Not asked yet", "ar": "لم يُسأل عنه بعد"},
     "hard.option_insensate": {
-        "en": "Sensation is recorded as reduced or absent and this option lists no lining. The rule: a rigid device "
-              "on insensate skin without pressure relief routes the case to a doctor. The orthotist confirms whether "
-              "it applies.",
-        "ar": "الإحساس مسجَّل منخفضاً أو غائباً وهذا الخيار لا يذكر بطانة. القاعدة: الجهاز الصلب على جلد فاقد للإحساس "
-              "دون تخفيف للضغط يحيل الحالة إلى طبيب. ويؤكد أخصائي التقويم ما إذا كانت تنطبق.",
+        "en": "Sensation is recorded as reduced or absent and this option lists no lining. The draft rule (awaiting "
+              "the owner's approval): a rigid device on insensate skin without pressure relief routes the case to a "
+              "doctor. The orthotist confirms whether it applies.",
+        "ar": "الإحساس مسجَّل منخفضاً أو غائباً وهذا الخيار لا يذكر بطانة. القاعدة المسوّدة (بانتظار موافقة المالك): "
+              "الجهاز الصلب على جلد فاقد للإحساس دون تخفيف للضغط يحيل الحالة إلى طبيب. ويؤكد أخصائي التقويم ما إذا "
+              "كانت تنطبق.",
     },
     "hard_status.clear": {"en": "Clear", "ar": "لا مانع"},
     "hard_status.warn": {"en": "Warning", "ar": "تحذير"},
     "hard_status.judge": {"en": "Orthotist to judge", "ar": "يقدّره أخصائي التقويم"},
     "hard_status.not_checked": {"en": "Not checked yet", "ar": "لم يُفحص بعد"},
-    "hard_status.stop": {"en": "Hard stop", "ar": "توقف إلزامي"},
+    "hard_status.stop": {"en": "Hard stop (draft rule)", "ar": "توقف إلزامي (قاعدة مسوّدة)"},
     # Module 1, the analysis page
     "analysis.title": {"en": "Functional case analysis", "ar": "تحليل الحالة الوظيفية"},
     "analysis.conditions": {"en": "Condition module", "ar": "وحدة الحالة المرضية"},

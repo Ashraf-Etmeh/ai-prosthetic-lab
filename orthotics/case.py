@@ -137,7 +137,7 @@ class OrthoticExam:
     protective_sensation: Optional[SensationStatus] = None
     proprioception: Optional[SensationStatus] = None
     skin_condition: Optional[str] = None
-    # The first hard stop of the owner's design map (orthotics/hard_stops.py); never a gap.
+    # The first of the design map's draft hard stops (orthotics/hard_stops.py, awaiting the owner); never a gap.
     ulcer_infection_or_poor_blood_supply: Optional[YesNoUnknown] = None
 
     def __post_init__(self) -> None:

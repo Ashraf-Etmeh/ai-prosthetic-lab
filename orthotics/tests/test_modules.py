@@ -30,19 +30,12 @@ from orthotics.plan import (
     StepStatus,
     case_findings,
 )
-from orthotics.tests.test_orthotics import full_case, orthotic_retrieval, passage
+from orthotics.tests.helpers import OrthoticPageTestCase
+from orthotics.tests.test_orthotics import full_case
 from prosthetics.case import Case
 from review.decision_log import read_decisions
 from shared.store import CaseRecord, CaseStore, store
-from shared.testing import RouteTestCase, chunk_record, fake_embed, visible_text
-
-STRAPS_PASSAGE = passage("afo_manufacturing_icrc_2010-0009", "Preparation of the straps: for the proximal strap, ...",
-                         page=9)
-
-
-def fake_passages(items):
-    """Stands in for orthotics.sources.find_passages: one passage for straps, none for anything else."""
-    return {key: ([STRAPS_PASSAGE] if key == "part.straps" else []) for key in items}
+from shared.testing import chunk_record, fake_embed, visible_text
 
 
 class PlanTests(unittest.TestCase):
@@ -190,30 +183,7 @@ class SourcesTests(unittest.TestCase):
         self.assertEqual(set(sources.STEPS), set(Step))
 
 
-class ModulePageTests(RouteTestCase):
-    def setUp(self):
-        super().setUp()
-        for target, fake in (("reasoning.pathway.retrieve_relevant_chunks", orthotic_retrieval),
-                             ("orthotics.modules.find_passages", fake_passages)):
-            replaced = patch(target, side_effect=fake)
-            replaced.start()
-            self.addCleanup(replaced.stop)
-        resp = self.client.post("/intake/orthotics", data={
-            "condition": "stroke", "side": "left", "months_since_onset": "7", "deviation": ["toe_drag"],
-            "df_knee_ext": "-5", "requirements": "clear the toes in swing", "footwear": "trainers"})
-        self.assertEqual(resp.status_code, 302)
-        self.case_id = store.all()[-1].case.case_id
-        self.writer_calls = len(self.writer.calls)
-
-    def url(self, page):
-        return f"/orthotics/{self.case_id}/{page}"
-
-    def page(self, url, lang="en"):
-        self.client.set_cookie("lang", lang)
-        resp = self.client.get(url)
-        self.assertEqual(resp.status_code, 200)
-        return visible_text(resp.get_data(as_text=True))
-
+class ModulePageTests(OrthoticPageTestCase):
     def save_options(self, **extra):
         data = {"form": "options", "opt_A_device": "hinged_afo", "opt_A_mark_R1": "yes", "opt_A_part_1": "straps",
                 "opt_A_part_1_req": "R1", "opt_A_notes": "bulkier at the ankle",
@@ -232,7 +202,11 @@ class ModulePageTests(RouteTestCase):
         page = self.client.get(f"/review/{self.case_id}").get_data(as_text=True)
         self.assertIn('class="ui-page"', page)
         self.assertIn(f'href="{self.url("requirements")}"', page)
-        self.assertIn('aria-current="page">1 Analyse', page)
+        # The review step, reached from module 1 (the analysis page), is not module 1 itself.
+        self.assertIn(f'href="{self.url("analysis")}">1 Analyse', page)
+        self.assertNotIn('aria-current="page">', page)  # no module tab is current
+        self.assertIn("What the sources say, and your review", visible_text(page))
+        self.assertNotIn("Module 1", visible_text(page).split("What the sources say, and your review")[0])
         self.assertIn('href="/orthotics" aria-current="true">Orthotics', page)  # the domain switch
         # A prosthetic case's page: the same header, with the prosthetic modules (its own sections).
         prosthetic = self.client.post("/intake", data={"amputation_level": "transtibial", "side": "left"})
@@ -243,7 +217,9 @@ class ModulePageTests(RouteTestCase):
 
     def test_requirements_tied_to_findings_with_a_priority(self):
         page = self.page(self.url("requirements"))
-        self.assertIn("clear the toes in swing", page)  # written at intake: R1
+        # Written at intake: R1, in its row's text box for the orthotist to change (the design's requirement rows).
+        self.assertIn('name="req_1_text" value="clear the toes in swing"',
+                      self.client.get(self.url("requirements")).get_data(as_text=True))
         self.assertIn("Swing: toe drag", page)
         resp = self.client.post(self.url("requirements"), data={
             "rows": "2", "req_1_id": "R1", "req_1_text": "Clear the toes in swing", "req_1_priority": "must",
@@ -274,7 +250,7 @@ class ModulePageTests(RouteTestCase):
         self.assertLess(page.index("Option A"), page.index("Option B"))  # in the order written
         self.assertIn("Hinged AFO, ankle joints and plantarflexion stop", page)
         self.assertIn("Serves R1Clear the toes ← Swing: toe drag", page)  # part -> requirement -> finding
-        self.assertIn("Marked by the orthotist as not addressing a Must requirement: R1", page)
+        self.assertIn("Marked by the orthotist as not addressing a Must requirement: R1 Clear the toes", page)
         self.assertIn("Preparation of the straps", page)  # the source's own words, quoted
         self.assertIn("Orthotic source (2024), p. 9", page)
         self.assertIn("No passage in the source library mentions this.", page)  # the device types found none
@@ -320,7 +296,8 @@ class ModulePageTests(RouteTestCase):
         self.assertIn("3D scan", page)
         refused = self.client.post(self.url("design"), data={"action": "steps", "step_capture_method": "printing_3d"})
         self.assertEqual(refused.status_code, 400)  # not a capture method
-        self.assertIn("سير عمل التصميم الرقمي", self.page(self.url("design"), "ar"))
+        self.assertIn("دعم سير عمل التصميم الرقمي", page)  # the brief's name, next to the English heading
+        self.assertIn("التصميم الرقمي", self.page(self.url("design"), "ar"))  # the Arabic page's own heading
 
     def test_nothing_here_calls_the_ai_and_the_plan_survives_a_restart(self):
         self.client.post(self.url("requirements"), data={"rows": "1", "req_1_id": "R1", "req_1_text": "Clear the toes"})

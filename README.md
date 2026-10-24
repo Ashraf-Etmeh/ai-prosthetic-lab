@@ -126,24 +126,35 @@ most three passages from one document per search. To measure that search:
 python -m knowledge.evaluate --orthotics
 ```
 
-After the review page, the header leads to three more modules (2026-10-23,
-from the "Orthotics Module Design" canvas; drafts like the rest), so the
-brief's four orthotics capabilities each have a page. Module 1 is functional
-case analysis: the intake form and the review page.
+The form leads to six module pages (2026-10-23, from the design's orthotics
+screens in `docs/design/03-orthotics/`; drafts like the rest):
 
+- **1 Analysis**: the case as recorded, each exam value with how it was
+  measured, gait phase by phase, the information still needed, and the
+  hard-stop checks. The review page (what the sources say, and the
+  reviewer's marks) is one link away.
 - **2 Requirements**: what the orthosis must do, in the orthotist's words,
-  each tied to the findings it comes from, with a priority.
-- **3 Options**: up to three design options side by side, never ranked.
-  Each has a device type and its materials and parts, each part tied to the
-  requirements it serves. The orthotist marks what each option addresses,
-  then chooses and gives a reason, which goes to the review log as a
-  "design_choice".
-- **4 Digital design**: the steps from capture to release, and the design
-  parameters, every save kept as a version.
+  each tied to the findings it comes from, with a priority and any conflicts.
+- **3 Options**: up to three design options side by side, never ranked, and
+  the FES referral. Each has a device type, what it costs the patient, its
+  materials and parts (each tied to a requirement and so to a finding),
+  stock and checks at fitting. The orthotist marks what each option
+  addresses, then chooses and gives a reason, which goes to the review log
+  as a "design_choice".
+- **4 Digital design**: the steps from capture to release, simulation
+  results as entered, the design parameters with their basis and approval,
+  every save kept as a version; the fabrication sheet to print.
+- **5 Fit, tune and train**: check-out, tuning, before and after, the
+  training plan, and the patient leaflet the orthotist writes in Arabic and
+  English.
+- **6 Follow-up**: visits, outcome measures over time, alerts that loop back
+  to modules 5, 3 or 1, and a summary for the physiotherapist.
 
-Each device type, part and step shows the passages the local search finds
-about it, quoted as printed and not summarised. Nothing on these pages is
-sent to the AI, and the tool suggests no value. The module map is at
+The four hard stops on the design's map are shown as **draft rules awaiting
+the owner's approval**, never as the clinic's rules. Each device type, part
+and step shows the passages the local search finds about it, quoted as
+printed and not summarised. Nothing on these pages is sent to the AI, and
+the tool suggests no value. The module map is at
 http://127.0.0.1:5000/orthotics.
 
 ## The pages

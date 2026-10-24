@@ -23,7 +23,7 @@ analysis: the intake form and the analysis page):
 - Modules 5 and 6: orthotics/fit.py and orthotics/followup.py.
 
 Nothing here is written, chosen or suggested by code or the AI: every value is
-the orthotist's (owner's decision 2026-10-23: the design's screens, filled by the
+the orthotist's (owner's decision 2026-10-23, and docs/design/SYSTEM_DESIGN.md §11.7: the design's screens, filled by the
 orthotist where the design shows a suggestion). The vocabularies below (device
 types, parts, steps, methods, parameters, bases) are a PROPOSAL awaiting the
 owner and an orthotist; only their fixed words are ever searched

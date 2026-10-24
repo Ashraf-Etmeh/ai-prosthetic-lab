@@ -131,10 +131,12 @@ against (`python -m quality.golden_cases --rag`).
    Built 2026-10-22 from Claude's proposal as drafts, at the owner's
    request (`orthotics/`, branch `orthotics`): they stay marked as awaiting
    the owner's and an orthotist's review until the owner confirms them.
-   2026-10-23: modules 2-4 from the owner's design canvas (requirements,
-   design options with materials and parts, digital design workflow;
-   `orthotics/plan.py`, `modules.py`); every value on them is the
-   orthotist's, never the tool's.
+   2026-10-23: modules 1-6 from the owner's design (analysis, requirements,
+   design options with materials and parts, digital design workflow, fit
+   and tune, follow-up; `orthotics/plan.py`, `fit.py`, `followup.py`,
+   `modules.py`); every value on them is the orthotist's, never the tool's.
+   The design's four hard stops are draft rules awaiting the owner
+   (`orthotics/hard_stops.py`; owner, 2026-10-24).
 
 ## Commands
 

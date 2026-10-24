@@ -1,7 +1,7 @@
 """The orthotics pages after the intake, from the owner's "Orthotics Module Design" canvas (2026-10-23).
 
 GET  /orthotics                         the system map: the reasoning chain, the six modules, the knowledge
-                                        behind them, the owner's hard stops and the roll-out
+                                        behind them, the draft hard stops and the roll-out
 GET  /orthotics/<id>/analysis           module 1: functional case analysis (goals by ICF level, the structured
                                         exam with how each value was measured, gait phase by phase, the
                                         information needed and the hard-stop checks)
@@ -24,7 +24,7 @@ GET  /orthotics/<id>/summary            what was recorded, for the physiotherapi
 Every value saved here is the orthotist's (or the physiotherapist's): owner's
 decision 2026-10-23, the design's screens with the orthotist filling what the
 design shows as a suggestion. The pages add only what code can know: the
-recorded facts, what the orthotist linked, the owner's hard-stop rules applied to
+recorded facts, what the orthotist linked, the design's draft hard-stop rules (awaiting the owner) applied to
 recorded values (orthotics/hard_stops.py), and what the source library says about
 each device type, part and step, found by local search on fixed wording
 (orthotics/sources.py) and quoted as printed. Nothing is sent to the AI. A refused

@@ -43,11 +43,12 @@
 </head>
 <body class="ui-page">
   {# The header of every page (shared/templates/ui_header.html): the case's domain, its modules and the case bar.
-     Orthotics: this page is module 1, functional case analysis. Prosthetics: its sections are the modules. #}
-  {% with module = 'analyse' if orthotic else 'review' %}{% include "ui_header.html" %}{% endwith %}
+     Orthotics: this page is the specialist review (the design's pathway step 05), reached from module 1, the
+     analysis page; no module tab is current. Prosthetics: its sections are the modules. #}
+  {% with module = 'review' %}{% include "ui_header.html" %}{% endwith %}
   <main class="ui-wrap ui-main ui-review">
   {% if orthotic %}
-  <div class="ui-kicker">{{ t('map.module', n=1) }} · {{ t('review.ort_kicker') }} · <span lang="ar" dir="rtl">تحليل الحالات الوظيفية</span></div>
+  <div class="ui-kicker">{{ t('review.ort_kicker') }} · <span lang="ar" dir="rtl">مراجعة المختص</span></div>
   <p><a href="{{ url_for('orthotic_modules.analysis', case_id=case.case_id) }}">{{ t('review.to_analysis') }}</a></p>
   {% else %}
   <div class="ui-kicker">{{ t('pmod.review_kicker') }} · <span lang="ar" dir="rtl">الأطراف الاصطناعية</span></div>

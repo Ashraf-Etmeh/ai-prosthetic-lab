@@ -53,8 +53,10 @@ OTHER_LANGUAGES = [lang for lang in LANGUAGES if lang != "en"]
 
 # Literal keys in the templates and code: t('intake.heading'),
 # TranslatableError("error.yes_no", ...), InvalidDecision("error.edit_needs_note")
+# A whole key, never a prefix a key is built from at runtime ('fu.back_to.' ~ b ends with its dot:
+# the keys it builds are in test_keys_built_from_values_exist).
 _KEY_IN_SOURCE = re.compile(
-    r"""(?:\bt|TranslatableError|InvalidDecision)\(\s*['"]([a-z_]+\.[a-z_. ]+)['"]"""
+    r"""(?:\bt|TranslatableError|InvalidDecision)\(\s*['"]([a-z_]+\.[a-z_. ]*[a-z_])['"]"""
 )
 
 

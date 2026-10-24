@@ -2,7 +2,7 @@
 {% from "orthotics/macros.html" import recorded, status_icon, value_name with context %}
 {# Module 1, functional case analysis (the canvas's screen 1): the condition module, goals by ICF level,
    the structured exam with how each value was measured, gait phase by phase, the information needed (each
-   with the source's own words or the AI's checked summary) and the owner's hard-stop checks. #}
+   with the source's own words or the AI's checked summary) and the draft hard-stop checks (awaiting the owner). #}
 {% block title %}{{ t('analysis.title') }}{% endblock %}
 {% block kicker %}{{ t('map.module', n=1) }}{% endblock %}
 {% block brief %}تحليل الحالات الوظيفية{% endblock %}
@@ -117,7 +117,7 @@
         <li>{{ status_icon(check.status) }}<span><b>{{ t('hard.' ~ check.rule) }}</b><br><span style="color: var(--ui-muted)">{{ t('hard_detail.' ~ check.detail, **check.params) }}</span></span></li>
         {% endfor %}
       </ul>
-      <p class="ui-note">{{ t('hard.owners_rules') }}</p>
+      <p class="ui-note">{{ t('hard.draft_rules') }}</p>
     </section>
 
     <a class="ui-btn" href="{{ url_for('orthotic_modules.requirements', case_id=case.case_id) }}" style="min-height: 52px; font-size: 1rem">{{ t('analysis.continue') }}</a>

@@ -1,7 +1,7 @@
 # AI Prosthetic Lab — system description (functional and structural)
 
-State of the working tree on 2026-10-22 (the RAG, §4.8; orthotics as drafts,
-§4.9, on the branch `orthotics`). Everything below runs and is tested
+State of the working tree on 2026-10-24 (the RAG, §4.8; orthotics as drafts,
+modules 1-6, §4.9, on the branch `orthotics`). Everything below runs and is tested
 offline; the live run of the AI writer (Gemini's free tier since
 2026-10-13, or the Claude API) is still to be measured. More history and the reasons behind each decision are in
 `docs/FUTURE_WORK.md`; how to run it is in `README.md`; principles, working
@@ -114,7 +114,7 @@ python -m knowledge.items      # knowledge items with the owner's rules applied 
 python -m quality.golden_cases  # development golden cases vs the app (gap checks need the model)
 python -m quality.golden_cases --rag  # also measure the RAG (cloud model: free-tier quota or money)
 python -m quality.golden_cases --held-out  # the frozen held-out cases (only when the owner asks)
-python -m unittest             # 492 tests, about 40 s, no model, no API
+python -m unittest             # 540 tests, about 2 min, no model, no API
 python scripts/verify_all.py   # the 0-2 checks, then the golden cases
 ```
 
@@ -442,7 +442,7 @@ review (FUTURE_WORK.md, "Orthotics").
 | Part | Where | What it does |
 |---|---|---|
 | Intake | `orthotics/intake.py`, `/intake/orthotics` | `OrthoticCase`: condition (stroke), affected side, months since onset, goals, walking (status, aid, gait speed with its test, falls, deviations ticked by gait phase), exam (dorsiflexion with the knee extended and flexed, signed; plantarflexor tone grade with its scale; strengths; knee in stance; foot posture; sensation; proprioception; skin), footwear, donning, prior orthoses or FES, the orthotist's "what the orthosis must do" lines |
-| Gaps | `shared/field_guide.py` `ORTHOTIC_FIELDS` | 23 fields; 6 marked critical (months since onset, goals, both dorsiflexion ranges, protective sensation, skin): the page marks them, hides nothing |
+| Gaps | `orthotics/fields.py` `FIELDS` | 23 fields; 6 marked critical (months since onset, goals, both dorsiflexion ranges, protective sensation, skin): the page marks them, hides nothing |
 | Topics | `orthotics/topics.py` | devices: AFO or FES for walking, AFO types, effects and limits, cautions; design and fitting: design, fitting and check-out, timing and training, outcome measures. Each searched in its own wording (no case words: they cost right passages) |
 | Search | `knowledge/retrieval.py` | only documents with the "orthotics" domain (`ORTHOTIC_RETRIEVAL_DOMAINS`), at most 3 passages per document (`ORTHOTIC_PASSAGES_PER_DOCUMENT`); prosthetic searches unchanged |
 | Ask | `orthotics/rag.py` (`PROFILE`, rag-ort-v1) | three parts (gaps, devices, design and fitting); only condition, limb, side and months since onset sent; never sets angles, materials, trim lines or wearing times, never says whether this patient should have an orthosis or FES; another condition's passage only where the source says it applies to stroke |
@@ -453,25 +453,43 @@ cases, 13 topics each): a right passage among those the AI sees in 22 of
 26 searches, up from 10 at the first build. Still missed: protective
 sensation and plantarflexor tone, for which the library has little.
 
-**After the analysis: modules 2-4 (2026-10-23, from the design canvas).**
-Every value is the orthotist's (`orthotics/plan.py` `OrthoticPlan`, saved
-in the case file, version 3); the tool writes, suggests and ranks nothing.
+**The six modules (2026-10-23, from the design's screens, `docs/design/03-orthotics/`; drafts).**
+Every value is the orthotist's or the physiotherapist's (`orthotics/plan.py`
+`OrthoticPlan` with `fit.py` and `followup.py`, saved in the case file,
+version 4); the tool writes, suggests and ranks nothing. Module 1 is the
+analysis page; the review page (what the sources say, the reviewer's marks)
+is the review step reached from it, not a module.
 
 | Module (brief capability) | Page | What it holds |
 |---|---|---|
-| Map | `/orthotics` | the modules and the brief's capabilities they cover |
-| 2 Requirements (the bridge) | `/orthotics/<id>/requirements` | what the orthosis must do, in the orthotist's words, each tied to the case findings it comes from (gait deviations by phase, exam values, goals) and given a priority; the information still missing beside it |
-| 3 Options (choosing and designing devices; linking the case to components and materials) | `/orthotics/<id>/options` | up to three options side by side, never ranked: device type, materials and parts each tied to the requirements it serves (so a part leads back to a finding), the orthotist's yes/partly/no marks and notes; the choice with its required reason, appended to the review log ("design_choice", `LOG_VERSION` 7, with the whole plan); saving the options again keeps the choice only if the chosen option is still the same device with the same parts |
-| 4 Digital design (the digital design workflow) | `/orthotics/<id>/design` | capture, rectify, parameters, fabricate, release: status, method and notes per step; the design parameters, every save a new version |
+| Map | `/orthotics` | the reasoning chain, the six modules and the brief's capabilities they cover, the knowledge behind them, the draft hard stops, the roll-out |
+| 1 Analysis (functional case analysis) | `/orthotics/<id>/analysis` | the condition module, goals by ICF level, the structured exam with how each value was measured and its status, gait phase by phase, the information needed (each with the source's own words or the AI's checked summary), the draft hard-stop checks |
+| 2 Requirements (the bridge) | `/orthotics/<id>/requirements` | what the orthosis must do, in the orthotist's words, each tied to the case findings it comes from (gait deviations by phase, exam values, goals) and given a priority; provisional while a value it names is missing; conflicts between requirements, as the orthotist writes them |
+| 3 Options (choosing and designing devices; linking the case to components and materials) | `/orthotics/<id>/options` | up to three option cards side by side, never ranked: device type, what each addresses (the orthotist's marks), what it costs the patient, materials and parts each tied to a requirement and so to a finding, clinic stock, checks at fitting; the FES referral to discuss with the rehabilitation team; the choice with its required reason, appended to the review log ("design_choice", `LOG_VERSION` 9, with the whole plan) |
+| 4 Digital design (the digital design workflow) | `/orthotics/<id>/design`, `/fabrication-sheet` | capture, rectify, parameters, simulate, manufacture, release: status, method and notes per step; simulation results and pressure hot spots as entered from the design tool; each parameter with its basis (orthotist, practice rule, scan) and the orthotist's approval, every save a new version; send to manufacture once all are approved; the fabrication sheet to print |
+| 5 Fit, tune and train | `/orthotics/<id>/fit`, `/leaflet` | check-out (starting from the chosen option's checks and the requirements), tuning log, before and after measures, the training plan as the physiotherapist set it, the patient leaflet the orthotist writes in Arabic and English (flagged until an Arabic-reading orthotist has checked the Arabic) |
+| 6 Follow-up | `/orthotics/<id>/follow-up`, `/summary` | visits with their dates and status, outcome measures entered at each visit (shown as recorded, no conclusion drawn), wearing and device condition, alerts in the clinician's words that loop back to module 5, 3 or 1, the next review due, a summary for the physiotherapist to print |
+
+**Hard stops (drafts).** The design's map lists four rules that route a case
+to a doctor (an ulcer with infection or poor blood supply; a rigid device on
+insensate skin without pressure relief; a fixed contracture beyond what the
+design can accommodate; FES with an implanted electronic device).
+`orthotics/hard_stops.py` checks them against what was recorded, never
+inferring a value. They are draft rules awaiting the owner's approval (the
+owner, 2026-10-24: "not yet, keep as drafts"): every page labels them so,
+and every line quotes the draft rule instead of saying in the tool's own
+voice what to do. Nothing is blocked.
 
 Next to each device type, part and step: what the source library says,
 found by local search on fixed wording with topic words
 (`orthotics/sources.py`), quoted as printed with its page, labelled as not
 summarised and not checked to support the case. Nothing on these pages goes
-to the AI. All orthotic pages share the canvas's look (header with the
-modules, case bar, cards; system fonts). Not built from the canvas: modules
-5-6, AI-suggested parameters and code-made judgements (principles 1-2),
-hard stops (await the owner's rules), the scan viewer and simulation.
+to the AI. Not built from the design: AI-suggested parameters and code-made
+judgements (principles 1-2; SYSTEM_DESIGN.md §11.7), the scan viewer and
+pressure map (no scan data reaches the app), the "smallest real change" next
+to each outcome measure and alerts from clinic rules (both wait for the
+owner, SYSTEM_DESIGN.md §11.2-11.3), the hard stops as a versioned clinic
+rule file.
 
 ---
 
@@ -480,7 +498,7 @@ hard stops (await the owner's rules), the scan viewer and simulation.
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 504 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 540 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -689,7 +707,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **492 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **540 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,

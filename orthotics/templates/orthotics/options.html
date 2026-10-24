@@ -1,5 +1,5 @@
 {% extends "ui_base.html" %}
-{% from "orthotics/macros.html" import device_icon, status_icon with context %}
+{% from "orthotics/macros.html" import device_icon, finding_label, status_icon with context %}
 {# Module 3 (the canvas's screen 3): up to three option cards side by side in the order written, never ranked,
    each with what it addresses (the orthotist's marks), what it costs the patient, what the source library says
    (quoted, never summarised here), its materials and parts tied to the requirements, the clinic's stock and
@@ -57,7 +57,7 @@
       {% endif %}
       {% set unmet = option.unaddressed(plan.requirements) %}
       {% if unmet %}
-      <div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('options.unaddressed', ids='') }} {% for r in unmet %}<b>{{ r.id }} <bdi>{{ r.text }}</bdi></b>{{ ', ' if not loop.last }}{% endfor %}</span></div>
+      <div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('options.unaddressed', ids='') | trim }} {% for r in unmet %}<b>{{ r.id }} <bdi>{{ r.text }}</bdi></b>{{ ', ' if not loop.last }}{% endfor %}</span></div>
       {% endif %}
 
       <div><h3>{{ t('options.addresses') }}</h3>
@@ -76,7 +76,10 @@
         <ul>
           {% for p in option.parts %}
           <li>{{ t('part.' ~ p.part.value) }}{% if p.note %}: <bdi>{{ p.note }}</bdi>{% endif %}
-            {% if p.requirements %}<span class="ui-note" style="display: inline"> · {{ t('options.serves') }} {% for rid in p.requirements %}{% set r = plan.requirement(rid) %}{{ r.id }}{{ ', ' if not loop.last }}{% endfor %}</span>{% endif %}
+            {# Why the part is there for this case: part -> requirement -> the findings it comes from. #}
+            {% for rid in p.requirements %}{% set r = plan.requirement(rid) %}
+            <div class="ui-note">{{ t('options.serves') }} <span class="ui-rid">{{ r.id }}</span><bdi>{{ r.text }}</bdi>{% if r.findings %} ← {% for f in findings if f.key in r.findings %}{{ finding_label(f) }}{{ '; ' if not loop.last }}{% endfor %}{% endif %}</div>
+            {% endfor %}
             {% if passages.get('part.' ~ p.part.value) %}<details><summary style="font-size: 0.8rem">{{ t('options.part_sources', n=passages['part.' ~ p.part.value] | length) }}</summary>{{ evidence(passages['part.' ~ p.part.value]) }}</details>{% endif %}
           </li>
           {% endfor %}

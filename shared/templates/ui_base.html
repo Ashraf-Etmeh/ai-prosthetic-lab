@@ -15,7 +15,8 @@
         <h1 class="ui-title">{{ self.title() }}</h1>
         {% block lead %}{% endblock %}
       </div>
-      {# The brief's own Arabic name for this page; an Arabic page's heading already says it. #}
+      {# The brief's own Arabic name for this page; an Arabic page's heading already says it (the map lists the
+         brief's names in both languages). #}
       {% if lang != 'ar' %}<div class="ui-brief" lang="ar" dir="rtl">{% block brief %}{% endblock %}</div>{% endif %}
     </div>
     {% if error %}<div class="ui-error" role="alert">{{ error }}</div>{% endif %}

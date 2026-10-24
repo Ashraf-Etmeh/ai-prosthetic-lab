@@ -1433,7 +1433,9 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
 - **Waiting on the owner:** the vocabularies and wording (drafts); whether
   hard stops are wanted and their rules; modules 5-6; AI summaries for the
   option and step passages (they would go to the cloud model, open item 2
-  of the previous section); the Arabic terms (an orthotist).
+  of the previous section); the Arabic terms (an orthotist). (Later:
+  modules 5-6 were built that evening, and the hard stops are kept as draft
+  rules: "Orthotic modules 1, 5, 6 and the hard stops" below.)
 
 ## One look for both domains (2026-10-23)
 
@@ -1640,6 +1642,70 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   `python -m shared.arabic_terms apply` writes the Arabic reviewer's
   corrections back into that one file, and the reviewer checks one sheet.
   Splitting it per part is possible but changes that tool; the owner's call.
+
+## Orthotic modules 1, 5, 6 and the hard stops (built 2026-10-23 evening, repaired 2026-10-24)
+
+- **Built on 2026-10-23 evening, not recorded at the time** (committed with
+  the folder layout in `4a492f8`): the rest of the design's orthotics screens.
+  Module 1, the analysis page (goals by ICF level, the exam with how each
+  value was measured, gait phase by phase, the information needed, the
+  hard-stop checks); module 5, fit, tune and train (check-out, tuning,
+  before and after, training plan, patient leaflet in Arabic and English);
+  module 6, follow-up (visits, outcome measures, alerts that loop back,
+  wearing and device, a summary for the physiotherapist); the fabrication
+  sheet. The plan gained conflicts, the FES referral, the option cards'
+  costs, checks at fitting and stock, simulation results and hot spots as
+  entered, each parameter's basis and approval, and send to manufacture.
+  Case file version 4, `LOG_VERSION` 9; golden-ort-01..03 gained the new
+  case fields, all empty. Every value is the orthotist's (SYSTEM_DESIGN.md
+  §11.7): the tool suggests no parameter.
+- **Found wrong on 2026-10-24:** 4 tests failing; no tests for
+  `orthotics/hard_stops.py`, `fit.py`, `followup.py` or the six new pages;
+  these records not updated; the four hard stops labelled "the owner's
+  rules" (citing an owner's decision of 2026-10-23 the owner says was not
+  made); some of their lines stating clinical advice in the tool's own voice
+  ("any rigid design needs pressure relief and lining"), against principle
+  2; two pages headed as module 1; the option cards' part → requirement →
+  finding trace cut down to "Serves R1".
+- **Owner's answers (2026-10-24):** repair the work, don't discard it; the
+  hard stops are "not yet" the owner's rules: keep them as drafts.
+- **Repaired (2026-10-24):**
+  - The 4 tests: the requirements test reads the requirement in its text box
+    (the page shows it there, for the orthotist to change); the Arabic design
+    page is checked for its own heading and the English one for the brief's
+    Arabic name; the option cards show the trace again ("Serves R1 Clear
+    the toes ← Swing: toe drag"), and the unmet-Must flag lost a stray
+    space; the i18n key check skips a prefix a key is built from
+    (`'fu.back_to.' ~ b`), as it already did for one-level prefixes.
+  - Hard stops: every text says "draft rule, awaiting the owner's approval"
+    (`hard.draft_rules` replaces `hard.owners_rules`), and every line quotes
+    the draft rule instead of advising ("Recorded as reduced or absent. The
+    draft rule is about a rigid device on insensate skin without pressure
+    relief; the orthotist checks each design against it."). Checks, statuses
+    and what triggers them unchanged.
+  - One module 1: the analysis page; the review page is headed as the review
+    step ("What the sources say, and your review · مراجعة المختص", the
+    design's pathway step 05) and highlights no module tab.
+  - 36 new tests (540 in all, every one passing): `orthotics/tests/
+    test_hard_stops.py` (each rule's statuses, the option check, the draft
+    wording, the pages' labels), `test_fit_followup.py` (dates, round trips,
+    the next review due, values as entered, a version-3 plan read with
+    modules 5-6 empty), `test_module_pages.py` (the six pages in English
+    and Arabic, each form saved and refused, nothing sent to the AI, a
+    version-3 case file and a version-8 log line still read). The orthotic
+    page tests share `orthotics/tests/helpers.py`.
+- **Owner's answers (2026-10-24, after the repair):** keep the golden-ort-01..03
+  edits (the new case fields, all empty; no expectation changed); export the
+  Arabic term sheet again: `data/quality/trial/arabic_terms.csv` now has all
+  899 texts (it had 561, and no corrections, so nothing was lost), and
+  `verify_prompts_0_2.py` check 2.1 passes.
+- **Waiting on the owner:**
+  1. The hard stops: approve, change or drop each draft rule. Once approved
+     they go into a versioned clinic-rule file (plan Part 2), not code.
+  2. As before: the vocabularies, fields, topics and wording of the
+     orthotic drafts (an orthotist), the Arabic terms (an Arabic-reading
+     orthotist, on the new sheet), and whether orthotic passages may go to
+     the cloud model.
 
 ## Open decisions
 

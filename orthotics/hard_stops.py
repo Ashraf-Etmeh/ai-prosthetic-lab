@@ -1,17 +1,20 @@
-"""Hard stops: the owner's four rules, from the "Orthotics Module Design" map (2026-10-21).
+"""Hard stops: four DRAFT rules from the design's orthotics map, awaiting the owner's approval.
 
-The map's "Safety built in" says: "Hard stops route the case to a doctor", for
+The map's "Safety built in" (docs/design/03-orthotics/Main.html; SYSTEM_DESIGN.md
+§6.2) says: "Hard stops route the case to a doctor", for
 - an ulcer with infection or poor blood supply,
 - a rigid device on insensate skin without pressure relief,
 - a fixed contracture beyond what the design can accommodate,
 - FES with an implanted electronic device.
 
-The rules are the owner's (owner's decision 2026-10-23: apply them as the owner's
-rules); the code only looks up what the intake and the plan record, and never
-infers a value or a device's rigidity. A rule whose recorded facts match it says
-so ("route the case to a doctor"); one that needs the orthotist's judgement says
-that; one whose facts aren't recorded says it isn't checked yet. Nothing is
-blocked: the orthotist and the doctor decide.
+They are not the clinic's rules yet: SYSTEM_DESIGN.md §11.3 leaves hard stops to
+the owner, and the owner answered on 2026-10-24 "not yet, keep as drafts". So
+every page labels them as draft rules, and every line quotes the draft rule
+instead of saying in the tool's own voice what to do. The code only looks up what
+the intake and the plan record, and never infers a value or a device's rigidity.
+A draft rule whose recorded facts match it says so; one that needs the
+orthotist's judgement says that; one whose facts aren't recorded says it isn't
+checked yet. Nothing is blocked: the orthotist and the doctor decide.
 """
 
 from dataclasses import dataclass, field
@@ -22,7 +25,7 @@ from orthotics.plan import FES_REFERRAL, DesignOption, OrthoticPlan, Part
 from shared.case_schema import YesNoUnknown
 
 # How a rule stands for the case, worst first.
-STOP = "stop"  # the recorded facts match the rule: route the case to a doctor
+STOP = "stop"  # the recorded facts match the draft rule, which routes the case to a doctor
 WARN = "warn"  # the rule applies to part of the design: the orthotist checks it there
 JUDGE = "judge"  # only the orthotist can judge it from the recorded value
 CLEAR = "clear"  # the recorded facts don't match the rule
@@ -39,7 +42,7 @@ DETAILS = ("ulcer_yes", "ulcer_no", "unknown", "not_recorded", "insensate", "ins
 
 @dataclass(frozen=True)
 class Check:
-    rule: str  # one of RULES: its name and the owner's wording are i18n "hard.<rule>", "hard_rule.<rule>"
+    rule: str  # one of RULES: its name and the design's wording are i18n "hard.<rule>", "hard_rule.<rule>"
     status: str  # one of STATUSES
     detail: str  # i18n key "hard_detail.<detail>": what the code found, never a clinical sentence
     params: dict = field(default_factory=dict)
