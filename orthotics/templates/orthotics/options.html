@@ -1,5 +1,6 @@
 {% extends "ui_base.html" %}
-{% from "orthotics/macros.html" import device_icon, finding_label, status_icon with context %}
+{% from "orthotics/macros.html" import device_icon, finding_label with context %}
+{% from "ui_macros.html" import evidence_list, line_list, option_marks, requirement_chips, rule_status, status_icon, stop_banner, unmet_flag with context %}
 {# Module 3 (the canvas's screen 3): up to three option cards side by side in the order written, never ranked,
    each with what it addresses (the orthotist's marks), what it costs the patient, what the source library says
    (quoted, never summarised here), its materials and parts tied to the requirements, the clinic's stock and
@@ -10,31 +11,13 @@
 {% block brief %}اختيار وتصميم الأجهزة التقويمية{% endblock %}
 
 {% block content %}
-{% macro evidence(chunks) %}
-  {% if chunks %}
-  <div style="display: flex; flex-direction: column; gap: 0.4rem">
-    {% for chunk in chunks %}{% set kind = source_types.get(chunk.doc_id, 'scientific_reference') %}
-    <details class="ui-ev{{ ' ui-ev-guideline' if kind == 'protocol' }}">
-      <summary style="color: inherit; min-height: 0"><b>{{ t('source_type.' ~ kind) }}</b>{% if kind == 'professional_knowledge' %} · {{ t('options.no_outcome_evidence') }}{% endif %} · <span dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</span></summary>
-      {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
-      <blockquote dir="auto" lang="{{ chunk.language }}" style="margin: 0.4rem 0 0; white-space: pre-line">{{ chunk.text }}</blockquote>
-    </details>
-    {% endfor %}
-  </div>
-  {% else %}<p class="ui-note" style="margin: 0">{{ t('mod.no_passage') }}</p>{% endif %}
-{% endmacro %}
 {% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
 {% if library_warning %}<div class="ui-error">{{ t('review.not_searched') }} <span lang="en" dir="ltr">{{ library_warning }}</span></div>{% endif %}
-{% set stops = checks | selectattr('status', 'equalto', 'stop') | list %}
-{% if stops %}<div class="ui-stopflag" role="alert" style="margin-top: 1rem">{{ status_icon('stop') }}<span><b>{{ t('hard.stop_banner') }}</b> {% for c in stops %}{{ t('hard.' ~ c.rule) }}{{ '; ' if not loop.last }}{% endfor %}</span></div>{% endif %}
+{{ stop_banner(checks) }}
 
 {# The requirements, as written in module 2. #}
 {% if plan.requirements %}
-<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; font-size: 0.8rem">
-  {% for r in plan.requirements %}
-  <span style="padding: 0.4rem 0.65rem; border-radius: 8px; background: #FFFFFF; border: 1px solid var(--ui-line)"><b>{{ r.id }}</b> <bdi>{{ r.text }}</bdi>{% if r.priority %} · {{ t('priority.' ~ r.priority.value) }}{% endif %}</span>
-  {% endfor %}
-</div>
+{{ requirement_chips(plan.requirements) }}
 {% else %}
 <p class="ui-note">{{ t('options.no_requirements') }} <a href="{{ url_for('orthotic_modules.requirements', case_id=case.case_id) }}">{{ t('mod.requirements') }}</a></p>
 {% endif %}
@@ -53,23 +36,18 @@
           {% if option.summary %}<div style="font-size: 0.875rem; color: var(--ui-muted)"><bdi>{{ option.summary }}</bdi></div>{% endif %}</div>
       </div>
       {% if lacks_lining.get(option.id) %}
-      <div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('hard.option_insensate') }}</span></div>
+      <div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('hard.option_insensate') }} {{ rule_status((checks | selectattr('rule', 'equalto', 'insensate') | first).clinic_rule) }}</span></div>
       {% endif %}
       {% set unmet = option.unaddressed(plan.requirements) %}
       {% if unmet %}
-      <div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('options.unaddressed', ids='') | trim }} {% for r in unmet %}<b>{{ r.id }} <bdi>{{ r.text }}</bdi></b>{{ ', ' if not loop.last }}{% endfor %}</span></div>
+      {{ unmet_flag(unmet) }}
       {% endif %}
 
-      <div><h3>{{ t('options.addresses') }}</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem">
-          {% for r in plan.requirements %}{% set mark = option.marks.get(r.id) %}
-          <span class="ui-mark ui-mark-{{ mark.value if mark else 'none' }}">{{ r.id }} {{ option.mark_notes.get(r.id) or (t('mark.' ~ mark.value) if mark else t('options.mark_unset')) }}</span>
-          {% endfor %}
-        </div></div>
+      {{ option_marks(plan.requirements, option) }}
 
-      {% if option.costs %}<div><h3>{{ t('options.costs') }}</h3><ul>{% for c in option.costs %}<li><bdi>{{ c }}</bdi></li>{% endfor %}</ul></div>{% endif %}
+      {{ line_list(t('options.costs'), option.costs) }}
 
-      <div><h3>{{ t('options.evidence') }}</h3>{{ evidence(passages.get('device.' ~ option.device.value, [])) }}</div>
+      <div><h3>{{ t('options.evidence') }}</h3>{{ evidence_list(passages.get('device.' ~ option.device.value, []), source_types) }}</div>
 
       <div><h3>{{ t('options.parts_for_case') }}</h3>
         {% if option.parts %}
@@ -80,7 +58,7 @@
             {% for rid in p.requirements %}{% set r = plan.requirement(rid) %}
             <div class="ui-note">{{ t('options.serves') }} <span class="ui-rid">{{ r.id }}</span><bdi>{{ r.text }}</bdi>{% if r.findings %} ← {% for f in findings if f.key in r.findings %}{{ finding_label(f) }}{{ '; ' if not loop.last }}{% endfor %}{% endif %}</div>
             {% endfor %}
-            {% if passages.get('part.' ~ p.part.value) %}<details><summary style="font-size: 0.8rem">{{ t('options.part_sources', n=passages['part.' ~ p.part.value] | length) }}</summary>{{ evidence(passages['part.' ~ p.part.value]) }}</details>{% endif %}
+            {% if passages.get('part.' ~ p.part.value) %}<details><summary style="font-size: 0.8rem">{{ t('options.part_sources', n=passages['part.' ~ p.part.value] | length) }}</summary>{{ evidence_list(passages['part.' ~ p.part.value], source_types) }}</details>{% endif %}
           </li>
           {% endfor %}
         </ul>
@@ -88,7 +66,7 @@
         {% if option.stock %}<div style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 600; color: var(--ui-accent)">{{ t('options.stock') }}: <bdi>{{ option.stock }}</bdi></div>{% endif %}
       </div>
 
-      {% if option.checks %}<div><h3>{{ t('options.checks') }}</h3><ul>{% for c in option.checks %}<li><bdi>{{ c }}</bdi></li>{% endfor %}</ul></div>{% endif %}
+      {{ line_list(t('options.checks'), option.checks) }}
       {% if option.notes %}<div><h3>{{ t('options.other_notes') }}</h3><p style="margin: 0; font-size: 0.875rem; white-space: pre-line"><bdi>{{ option.notes }}</bdi></p></div>{% endif %}
 
       <label class="ui-pick"><input type="radio" name="chosen" value="{{ option.id }}"{{ " checked" if option.id == chosen }}>
@@ -102,7 +80,7 @@
     <div style="flex: 2 1 420px; min-width: 0">
       <div class="ui-kicker">{{ t('options.fes_kicker') }}</div>
       <h2 style="margin: 0.15rem 0 0.4rem; font-size: 1.25rem">{{ t('options.fes_title') }}</h2>
-      {{ evidence(passages.get('device.fes', [])) }}
+      {{ evidence_list(passages.get('device.fes', []), source_types) }}
     </div>
     <div style="flex: 1 1 300px; min-width: 0; font-size: 0.875rem; line-height: 1.35rem">
       <b>{{ t('options.check_first') }}</b>
@@ -111,7 +89,7 @@
         {% for c in plan.fes.checks %}<li><bdi>{{ c }}</bdi></li>{% endfor %}
       </ul>
       {% if plan.fes.note %}<p class="ui-note"><bdi>{{ plan.fes.note }}</bdi></p>{% endif %}
-      {% for c in checks if c.rule == 'fes_implant' and c.status in ('stop', 'warn') %}<div class="ui-stopflag" style="margin-top: 0.5rem">{{ status_icon(c.status) }}<span>{{ t('hard_detail.' ~ c.detail) }}</span></div>{% endfor %}
+      {% for c in checks if c.rule == 'fes_implant' and c.status in ('stop', 'warn') %}<div class="ui-stopflag" style="margin-top: 0.5rem">{{ status_icon(c.status) }}<span>{{ t('hard_detail.' ~ c.detail) }} {{ rule_status(c.clinic_rule) }}</span></div>{% endfor %}
     </div>
     <label class="ui-pick" style="flex: 0 0 auto; margin: 0"><input type="radio" name="chosen" value="{{ fes_id }}"{{ " checked" if chosen == fes_id }}>
       <span><span class="ui-pick-off">{{ t('options.choose_referral') }}</span><span class="ui-pick-on">{{ t('options.referral_chosen') }}</span></span></label>

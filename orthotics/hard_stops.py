@@ -7,10 +7,12 @@ The map's "Safety built in" (docs/design/03-orthotics/Main.html; SYSTEM_DESIGN.m
 - a fixed contracture beyond what the design can accommodate,
 - FES with an implanted electronic device.
 
-They are not the clinic's rules yet: SYSTEM_DESIGN.md §11.3 leaves hard stops to
-the owner, and the owner answered on 2026-10-24 "not yet, keep as drafts". So
-every page labels them as draft rules, and every line quotes the draft rule
-instead of saying in the tool's own voice what to do. The code only looks up what
+Whether each rule is a draft or the clinic's, in which version, approved by
+whom and when, is the owner's to say in data/knowledge/clinic_rules.csv
+(knowledge/clinic_rules.py; since 2026-10-24): the pages show each check with
+its rule's status. All four are drafts there: SYSTEM_DESIGN.md §11.3 leaves hard
+stops to the owner, who answered on 2026-10-24 "not yet, keep as drafts". Every
+line quotes the rule instead of saying in the tool's own voice what to do. The code only looks up what
 the intake and the plan record, and never infers a value or a device's rigidity.
 A draft rule whose recorded facts match it says so; one that needs the
 orthotist's judgement says that; one whose facts aren't recorded says it isn't
@@ -20,12 +22,13 @@ checked yet. Nothing is blocked: the orthotist and the doctor decide.
 from dataclasses import dataclass, field
 from typing import Optional
 
+from knowledge.clinic_rules import ClinicRule, rules_for
 from orthotics.case import OrthoticCase, SensationStatus
 from orthotics.plan import FES_REFERRAL, DesignOption, OrthoticPlan, Part
 from shared.case_schema import YesNoUnknown
 
 # How a rule stands for the case, worst first.
-STOP = "stop"  # the recorded facts match the draft rule, which routes the case to a doctor
+STOP = "stop"  # the recorded facts match the rule, which routes the case to a doctor
 WARN = "warn"  # the rule applies to part of the design: the orthotist checks it there
 JUDGE = "judge"  # only the orthotist can judge it from the recorded value
 CLEAR = "clear"  # the recorded facts don't match the rule
@@ -46,6 +49,7 @@ class Check:
     status: str  # one of STATUSES
     detail: str  # i18n key "hard_detail.<detail>": what the code found, never a clinical sentence
     params: dict = field(default_factory=dict)
+    clinic_rule: Optional[ClinicRule] = None  # the rule's row in the owner's file: its status and version
 
 
 def _ulcer(case: OrthoticCase) -> Check:
@@ -86,9 +90,25 @@ def _fes(case: OrthoticCase, plan: Optional[OrthoticPlan]) -> Check:
     return Check(FES_IMPLANT, NOT_CHECKED, "unknown" if implanted is YesNoUnknown.UNKNOWN else "not_asked")
 
 
+def clinic_rules() -> dict[str, ClinicRule]:
+    """The four rules' rows in the owner's file (data/knowledge/clinic_rules.csv), by rule id.
+
+    ValueError if the file and RULES differ: a rule the code applies must be in the owner's file, and the
+    file names no orthotic hard stop the code doesn't know.
+    """
+    rows = rules_for("orthotics", "hard_stop")
+    if set(rows) != set(RULES):
+        raise ValueError(f"data/knowledge/clinic_rules.csv and orthotics/hard_stops.py RULES differ: "
+                         f"in the file only {sorted(set(rows) - set(RULES)) or 'none'}, "
+                         f"in the code only {sorted(set(RULES) - set(rows)) or 'none'}")
+    return rows
+
+
 def case_checks(case: OrthoticCase, plan: Optional[OrthoticPlan] = None) -> list[Check]:
-    """The four rules for this case, in the map's order."""
-    return [_ulcer(case), _insensate(case, plan), _contracture(case), _fes(case, plan)]
+    """The four rules for this case, in the map's order, each with its row in the owner's file."""
+    rows = clinic_rules()
+    checks = [_ulcer(case), _insensate(case, plan), _contracture(case), _fes(case, plan)]
+    return [Check(c.rule, c.status, c.detail, c.params, rows[c.rule]) for c in checks]
 
 
 def stops(checks: list[Check]) -> list[Check]:

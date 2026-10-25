@@ -14,22 +14,9 @@ and the deviations recorded), never from the code.
 """
 
 from dataclasses import asdict, dataclass, field
-from datetime import date
 from typing import Any, Optional
 
-
-class FitError(ValueError):
-    """A fit record that can't be kept as it is."""
-
-
-def check_date(value: Optional[str]) -> Optional[str]:
-    """A date as YYYY-MM-DD, or None. Raises FitError otherwise."""
-    if value is None:
-        return None
-    try:
-        return date.fromisoformat(value).isoformat()
-    except ValueError:
-        raise FitError(f"not a date: {value!r}") from None
+from shared.dates import check_date
 
 
 @dataclass

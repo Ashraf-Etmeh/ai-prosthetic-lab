@@ -74,7 +74,11 @@ differ it says where the build is heading, and this file still sets the rules).
   fills them in; neither does Claude, and neither edits the rule table.
   Copying a grade exactly as the source prints it is allowed (and tested,
   as `grade_as_printed`); anything without an owner's rule or value stays
-  "unassigned" or empty.
+  "unassigned" or empty. Clinic rules (hard stops so far) are likewise the
+  owner's: `data/knowledge/clinic_rules.csv` holds each rule's status (draft
+  or approved), version, owner and approval date (`knowledge/clinic_rules.py`);
+  the code applies a rule by its id and shows its status from that file, a
+  draft as a draft. Neither code nor Claude approves a rule or edits the file.
 - **Held-out golden cases stay held out.** The cases in
   `data/quality/golden_cases_held_out/` are frozen (content hashes in
   `data/quality/golden_cases_held_out.json`, checked by
@@ -84,7 +88,7 @@ differ it says where the build is heading, and this file still sets the rules).
   and its measurements use `data/quality/golden_cases/` only.
 - **The yardstick asks first.** Claude Code asks the owner before Claude
   edits the golden cases, the held-out manifest, the two guides, the rule
-  table or the review logs (`.claude/hooks/protect_yardstick.py`, in
+  table, the clinic rules or the review logs (`.claude/hooks/protect_yardstick.py`, in
   `.claude/settings.json`); such a prompt is intended, not an error.
 - **Ask the owner first** before committing, pushing (the owner decides
   when to push), adding a dependency, deleting data, or starting the next
@@ -95,8 +99,12 @@ differ it says where the build is heading, and this file still sets the rules).
   domain: `prosthetics/`, `orthotics/`), each with its own `templates/<part>/`
   and `tests/`; the data likewise under `data/knowledge/`, `data/quality/`,
   `data/records/`. A domain has the same files as the others (`case.py`,
-  `fields.py`, `topics.py`, `rag.py`, `intake.py`, ...), and shared code
-  reaches it through `shared/domains.py`, never by naming it.
+  `fields.py`, `topics.py`, `rag.py`, `intake.py`, `nav.py`, ...), and shared
+  code reaches it through `shared/domains.py`, never by naming it
+  (`shared/tests/test_domains.py` checks both). What every domain's screens
+  share is built once (SYSTEM_DESIGN.md §5): the page pieces in
+  `shared/templates/ui_macros.html`, the header in `ui_header.html`, and the
+  building blocks in `shared/requirements.py` and `shared/followup.py`.
 
 ## Roadmap (in this order, by track)
 

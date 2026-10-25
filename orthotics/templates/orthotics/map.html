@@ -1,4 +1,5 @@
 {% extends "ui_base.html" %}
+{% from "ui_macros.html" import rule_status, rules_note with context %}
 {# The canvas's "System map" (2026-10-21): the reasoning chain, the six modules mapped to the brief's
    capabilities, the knowledge behind them, the draft hard stops (awaiting the owner) and the roll-out. Each module links to
    the orthotic case saved last (none yet: module 1 opens a new case). #}
@@ -62,9 +63,9 @@
     <section class="ui-warm">
       <h2>{{ t('hard.heading') }}</h2>
       <ul class="ui-plain" style="margin-top: 0.5rem">
-        {% for rule in rules %}<li>{{ t('hard_rule.' ~ rule) }}</li>{% endfor %}
+        {% for rule in rules %}<li>{{ t('hard_rule.' ~ rule) }} {{ rule_status(clinic_rules[rule]) }}</li>{% endfor %}
       </ul>
-      <p class="ui-note" style="color: #3A1A0B">{{ t('hard.draft_rules') }}</p>
+      <p class="ui-note" style="color: #3A1A0B">{{ rules_note(clinic_rules.values() | list) }}</p>
     </section>
   </div>
   <div style="flex: 1 1 420px; min-width: 0">

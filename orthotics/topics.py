@@ -20,10 +20,15 @@ passages say, and the orthotist decides.
 
 from orthotics.case import OrthoticCase
 from reasoning.rag_topics import GAPS, Topic
+from shared.config import ORTHOTIC_PASSAGES_PER_DOCUMENT, ORTHOTIC_RETRIEVAL_DOMAINS
 from shared.field_guide import build_query, missing_fields
 
 DEVICES, DESIGN_FITTING = "devices", "design_fitting"
 PARTS = (GAPS, DEVICES, DESIGN_FITTING)
+# What an orthotic case searches (knowledge/retrieval.py): only documents with the "orthotics" domain, at most
+# ORTHOTIC_PASSAGES_PER_DOCUMENT passages from one document (shared/config.py).
+SEARCH_DOMAINS = ORTHOTIC_RETRIEVAL_DOMAINS
+PASSAGES_PER_DOCUMENT = ORTHOTIC_PASSAGES_PER_DOCUMENT
 
 # key: (label for the AI, what to search for). Keys never clash with a field
 # path or a prosthetic topic key (the prosthetic "fitting" is "orthosis_fitting" here).

@@ -1,6 +1,6 @@
 """Claude Code PreToolUse hook: ask the owner before Claude changes the evaluation yardstick.
 
-The answer key, the golden cases, the owner's rule table and the review logs
+The answer key, the golden cases, the owner's rule tables and the review logs
 measure the app; an agent must not "fix" a failing measurement by editing
 them (CLAUDE.md working rules; blueprint §5). For Edit, Write and
 NotebookEdit on one of these paths, and for a shell command that names one
@@ -29,6 +29,7 @@ PROTECTED = (
     "prosthetics/component_guide.py",  # the answer key's component statements
     "prosthetics/fitting_guide.py",  # the answer key's fitting statements
     "data/knowledge/evidence_rules.csv",  # the owner's rule table
+    "data/knowledge/clinic_rules.csv",  # the owner's clinic rules: each rule's status, version and approval
     "data/records/review_log.jsonl",  # append-only: the app adds lines, nobody edits them
     "data/records/review_log.test.jsonl",
     "data/records/review_log.test-2026-10-23.jsonl",  # the 2 test lines moved out before the trial

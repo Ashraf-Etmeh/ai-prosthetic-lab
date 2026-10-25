@@ -7,6 +7,7 @@
       "Edit(prosthetics/component_guide.py)",
       "Edit(prosthetics/fitting_guide.py)",
       "Edit(data/knowledge/evidence_rules.csv)",
+      "Edit(data/knowledge/clinic_rules.csv)",
       "Edit(data/records/review_log.jsonl)",
       "Edit(data/records/review_log.test.jsonl)"
     ]

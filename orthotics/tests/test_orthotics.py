@@ -23,7 +23,8 @@ from orthotics.topics import DESIGN_FITTING, DESIGN_SECTIONS, DEVICE_SECTIONS, D
 from prosthetics.case import Case
 from prosthetics.rag import PROFILE as PROSTHETICS
 from reasoning.pathway import analyse_case
-from reasoning.rag import ORTHOTIC_AI_OFF, generate, profile_for
+from orthotics.rag import AI_OFF as ORTHOTIC_AI_OFF
+from reasoning.rag import generate, profile_for
 from reasoning.rag_topics import GAPS
 from reasoning.writer import ClaudeWriter, GeminiWriter, WriterUnavailable
 from review.decision_log import build_entry, record_decision
@@ -283,7 +284,7 @@ class CloudSwitchTests(unittest.TestCase):
 
     def test_the_owner_can_switch_it_on(self):
         case = full_case(months_since_onset=None)
-        with patch("reasoning.rag.ORTHOTIC_CLOUD_AI", True):
+        with patch("shared.config.ORTHOTIC_CLOUD_AI", True):
             generate(case, orthotic_retrieval(case), GeminiWriter())
         self.assertEqual(len(self.calls), 3)
 

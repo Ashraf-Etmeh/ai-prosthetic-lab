@@ -20,7 +20,10 @@ analysis: the intake form and the analysis page):
   entered from the CAD tool, and the design parameters, each with its basis and
   the requirements it serves, every save a new version, each value approved by
   the orthotist; sending to manufacture once all are approved.
-- Modules 5 and 6: orthotics/fit.py and orthotics/followup.py.
+- Modules 5 and 6: orthotics/fit.py and the shared follow-up records (shared/followup.py).
+
+Requirements, priorities, marks and conflicts are shared with every domain
+(shared/requirements.py).
 
 Nothing here is written, chosen or suggested by code or the AI: every value is
 the orthotist's (owner's decision 2026-10-23, and docs/design/SYSTEM_DESIGN.md §11.7: the design's screens, filled by the
@@ -37,21 +40,8 @@ from typing import Any, Optional
 
 from orthotics.case import OrthoticCase
 from orthotics.fit import FitRecord
-from orthotics.followup import FollowUp
-
-
-class Priority(str, Enum):
-    MUST = "must"
-    SHOULD = "should"
-    NICE = "nice"
-
-
-class Mark(str, Enum):
-    """The orthotist's mark: does this option address that requirement?"""
-
-    YES = "yes"
-    PARTLY = "partly"
-    NO = "no"
+from shared.followup import FollowUp
+from shared.requirements import Conflict, Mark, Priority, Requirement, next_requirement_id
 
 
 class DeviceType(str, Enum):
@@ -134,6 +124,8 @@ PARAMETERS = ("ankle_angle", "plantarflexion_stop", "joint_axis", "trim_lines", 
               "closure", "joints", "heel_wedge")
 
 OPTION_IDS = ("A", "B", "C")
+# Where a follow-up alert may loop back to (the design's "Loop back"): module 5, 3 or 1's page.
+BACK_TO = ("fit", "options", "analysis")
 FES_REFERRAL = "F"  # the referral to discuss FES: chosen like an option (the design's fourth card)
 MAX_PARTS_PER_OPTION = 6
 MAX_LIST = 8  # lines in a typed list (costs, checks at fitting)
@@ -155,27 +147,6 @@ def _now() -> str:
 def _design(option: "DesignOption") -> tuple:
     """What an option is: its device and its parts (not the orthotist's marks or notes on it)."""
     return option.device, sorted(part.part.value for part in option.parts)
-
-
-@dataclass
-class Requirement:
-    id: str  # "R1", "R2", ...: kept when the text changes
-    text: str  # the orthotist's words
-    # What it comes from: case_findings() keys (a deviation, or a value's path, recorded or not).
-    findings: list[str] = field(default_factory=list)
-    priority: Optional[Priority] = None
-
-    def __post_init__(self) -> None:
-        self.priority = _enum(Priority, self.priority)
-
-
-@dataclass
-class Conflict:
-    """Two requirements that pull against each other, and the orthotist's note on it."""
-
-    first: str  # requirement ids
-    second: str
-    note: str
 
 
 @dataclass
@@ -277,6 +248,11 @@ class OrthoticPlan:
     fit: FitRecord = field(default_factory=FitRecord)
     follow_up: FollowUp = field(default_factory=FollowUp)
 
+    def __post_init__(self) -> None:
+        wrong = [a.back_to for a in self.follow_up.alerts if a.back_to is not None and a.back_to not in BACK_TO]
+        if wrong:
+            raise PlanError(f"an alert loops back to one of {BACK_TO}, not {wrong}")
+
     # ---- Reading ----------------------------------------------------------
 
     def requirement(self, requirement_id: str) -> Optional[Requirement]:
@@ -310,8 +286,7 @@ class OrthoticPlan:
         return [key for key in PARAMETERS if key in self.parameters and not self.approved(key)]
 
     def next_requirement_id(self) -> str:
-        numbers = [int(r.id[1:]) for r in self.requirements if r.id[1:].isdigit()]
-        return f"R{max(numbers, default=0) + 1}"
+        return next_requirement_id(self.requirements)
 
     # ---- Changing (each checks before it changes anything) ----------------
 

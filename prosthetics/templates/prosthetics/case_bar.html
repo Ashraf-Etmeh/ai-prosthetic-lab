@@ -1,0 +1,6 @@
+{# The case bar's summary of a prosthetic case (shared/templates/ui_header.html): level, side, recorded K-level,
+   months since amputation, age and weight. #}
+    <span>{{ value_label(case.amputation_level) }} · {{ t('pmod.side', side=value_label(case.side)) }}{% if case.is_lower_limb and case.activity.k_level %} · {{ t('pmod.k_level', k=value_label(case.activity.k_level)) }}{% endif %}{% if case.months_since_amputation is not none %} · {{ t('pmod.months', n="%g" | format(case.months_since_amputation)) }}{% endif %}</span>
+    {% if case.age_years is not none or case.body_weight_kg is not none %}
+    <span style="color: var(--ui-muted)">{% if case.age_years is not none %}{{ t('mod.age', n=case.age_years) }}{% endif %}{% if case.age_years is not none and case.body_weight_kg is not none %} · {% endif %}{% if case.body_weight_kg is not none %}{{ t('mod.weight', n="%g" | format(case.body_weight_kg)) }}{% endif %}</span>
+    {% endif %}

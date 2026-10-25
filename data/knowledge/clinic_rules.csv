@@ -1,0 +1,5 @@
+rule_id,domain,kind,status,version,owner,approved_on,source
+ulcer,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in (docs/design/03-orthotics/Main.html; SYSTEM_DESIGN.md §6.2): ulcer with infection or poor blood supply"
+insensate,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in: a rigid device on insensate skin without pressure relief"
+contracture,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in: fixed contracture beyond what the design can accommodate"
+fes_implant,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in: FES with an implanted electronic device"

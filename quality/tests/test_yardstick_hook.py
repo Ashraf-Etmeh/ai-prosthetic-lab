@@ -23,7 +23,8 @@ class FileToolTests(unittest.TestCase):
     def test_every_yardstick_path_asks(self):
         for path in ("data/quality/golden_cases/golden-01.json", "data/quality/golden_cases_held_out/golden-06.json",
                      "data/quality/golden_cases_held_out.json", "prosthetics/component_guide.py",
-                     "prosthetics/fitting_guide.py", "data/knowledge/evidence_rules.csv", "data/records/review_log.jsonl",
+                     "prosthetics/fitting_guide.py", "data/knowledge/evidence_rules.csv",
+                     "data/knowledge/clinic_rules.csv", "data/records/review_log.jsonl",
                      "data/records/review_log.test.jsonl"):
             with self.subTest(path):
                 self.assertTrue(decide("Edit", file_path=str(PROJECT_ROOT / path)))

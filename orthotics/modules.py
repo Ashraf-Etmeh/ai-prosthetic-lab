@@ -41,9 +41,9 @@ from knowledge.retrieval import KnowledgeBaseMissing
 from orthotics import hard_stops, sources
 from orthotics.case import GAIT_PHASES
 from orthotics.fields import FIELDS as ORTHOTIC_FIELDS
-from orthotics.fit import BeforeAfter, CheckItem, FitError, TuningRow, check_date
-from orthotics.followup import BACK_TO, Alert, FollowUp, MeasureDef, Visit, VisitStatus
+from orthotics.fit import BeforeAfter, CheckItem, TuningRow
 from orthotics.plan import (
+    BACK_TO,
     FES_REFERRAL,
     MAX_LIST,
     MAX_PARTS_PER_OPTION,
@@ -52,18 +52,14 @@ from orthotics.plan import (
     PARAMETERS,
     STEP_METHODS,
     Basis,
-    Conflict,
     DesignOption,
     DeviceType,
     FesReferral,
-    Mark,
     Method,
     OptionPart,
     OrthoticPlan,
     Part,
     PlanError,
-    Priority,
-    Requirement,
     SimulationRow,
     Step,
     StepRecord,
@@ -76,7 +72,10 @@ from orthotics.plan import (
 )
 from review.decision_log import read_decisions, record_design_choice
 from shared.config import CASES_DIR
+from shared.dates import DateError, check_date
+from shared.followup import Alert, FollowUp, MeasureDef, Visit, VisitStatus
 from shared.i18n import LANGUAGES, TextKey, TranslatableError, language_from_cookies, t
+from shared.requirements import Conflict, Mark, Priority, Requirement
 from shared.store import CaseRecord, store
 
 bp = Blueprint("orthotic_modules", __name__, template_folder="templates")
@@ -155,7 +154,7 @@ def _member(cls, raw: Optional[str]):
 def _date(raw: Optional[str], label: str) -> Optional[str]:
     try:
         return check_date((raw or "").strip() or None)
-    except FitError:
+    except DateError:
         raise TranslatableError("error.date", field=TextKey(label)) from None
 
 
@@ -236,7 +235,8 @@ def _save(record: CaseRecord, plan: OrthoticPlan, endpoint: str, **args):
 def module_map():
     case_id = latest_case_id()
     return render_template("orthotics/map.html", case=None, domain="orthotics", module="map", here=request.path,
-                           latest=case_id, modules=MODULES, rules=hard_stops.RULES)
+                           latest=case_id, modules=MODULES, rules=hard_stops.RULES,
+                           clinic_rules=hard_stops.clinic_rules())
 
 
 # ---- Module 1: functional case analysis -------------------------------------------
@@ -547,7 +547,7 @@ def fit(case_id: str):
                 record_.leaflet_checked_by = _text(form.get("leaflet_checked_by"), "fit.checked_by")
             else:
                 raise TranslatableError("error.invalid_input")
-        except (TranslatableError, FitError) as e:
+        except (TranslatableError, DateError) as e:
             return _fit_page(record, plan, 400, error=_refused(e), form=request.form)
         return _save(record, plan, "orthotic_modules.fit")
     return _fit_page(record, plan)
@@ -638,7 +638,7 @@ def follow_up(case_id: str):
                 follow.alerts = alerts
             else:
                 raise TranslatableError("error.invalid_input")
-        except (TranslatableError, FitError, ValueError) as e:
+        except (TranslatableError, DateError, ValueError) as e:
             return _follow_up_page(record, plan, 400, error=_refused(e), form=request.form)
         return _save(record, plan, "orthotic_modules.follow_up")
     return _follow_up_page(record, plan)

@@ -1,9 +1,10 @@
-"""Module 6, follow-up (added 2026-10-23, from the "Orthotics Module Design" canvas).
+"""Follow-up and evaluation (SYSTEM_DESIGN.md §5), shared by every domain's follow-up module.
 
-The brief's "follow-up and evaluation" and "following how the case develops": the
-visits with their dates, the outcome measures the clinician enters at each visit,
-wearing time and the device's condition, and alerts that loop back to tuning,
-redesign or re-assessment.
+The visits with their dates, the outcome measures the clinician enters at each
+visit, wearing time and the device's condition, and alerts in the clinician's
+words that loop back to the module where the fix would happen (built for
+orthotics module 6 on 2026-10-23; the domain says where an alert may loop back
+to, e.g. orthotics/plan.py BACK_TO).
 
 The visits belong to one case, whose id is random (no patient identifiers): the case
 is the pseudonymous link between visits. Every value is shown as recorded and the
@@ -15,17 +16,13 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
-from orthotics.fit import check_date
+from shared.dates import check_date
 
 
 class VisitStatus(str, Enum):
     DONE = "done"
     DUE = "due"
     NOT_BOOKED = "not_booked"
-
-
-# Where an alert loops back to (the design's "Loop back"): a module's page.
-BACK_TO = ("fit", "options", "analysis")
 
 
 @dataclass
@@ -54,12 +51,8 @@ class Visit:
 @dataclass
 class Alert:
     text: str  # in the clinician's words
-    back_to: Optional[str] = None  # one of BACK_TO
+    back_to: Optional[str] = None  # the module it loops back to: one the domain allows (its plan checks)
     resolved: bool = False
-
-    def __post_init__(self) -> None:
-        if self.back_to is not None and self.back_to not in BACK_TO:
-            raise ValueError(f"back_to must be one of {BACK_TO}")
 
 
 @dataclass

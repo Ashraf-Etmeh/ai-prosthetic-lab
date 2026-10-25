@@ -63,7 +63,7 @@ from reasoning.rag_topics import GAPS, Topic, topics_for_case
 from reasoning.writer import OfflineWriter, Writer, WriterUnavailable, is_cloud
 from shared import domains
 from shared.case_schema import CaseCore
-from shared.config import LLM_EFFORT, MAX_ITEMS_PER_TOPIC, ORTHOTIC_CLOUD_AI
+from shared.config import LLM_EFFORT, MAX_ITEMS_PER_TOPIC
 from shared.field_guide import missing_fields
 
 log = logging.getLogger(__name__)
@@ -71,8 +71,6 @@ log = logging.getLogger(__name__)
 OK, UNAVAILABLE, NO_PASSAGES = "ok", "unavailable", "no passages"
 # Part.removed "dropped" for an item whose quote is already shown under an earlier topic (drop_repeats).
 REPEAT = "repeat"
-# Why an orthotic page has no summaries while shared/config.py ORTHOTIC_CLOUD_AI is off.
-ORTHOTIC_AI_OFF = "the AI writer is switched off for orthotic cases (ORTHOTIC_CLOUD_AI in shared/config.py)"
 # The strengths of recommendation a passage may print (VA/DoD's wording). A
 # grade outside this list can't be given; "" is "none printed".
 GRADE_PHRASES = ("Strong for", "Weak for", "Neither for nor against", "Weak against", "Strong against")
@@ -200,6 +198,10 @@ class Profile:
     case_for_prompt: Callable
     case_heading: str
     prompt_version: str
+    # Whether the domain's cases may go to a cloud writer (asked at each run; the owner's switch, e.g.
+    # shared/config.py ORTHOTIC_CLOUD_AI), and why its pages have no summaries while they may not.
+    cloud_ai: Callable[[], bool] = lambda: True
+    ai_off_reason: str = ""
 
 
 def profile_for(case) -> "Profile":
@@ -351,12 +353,13 @@ def generate(case: CaseCore, passages: dict[str, list[ProtocolChunk]], writer: W
              topics: Optional[list[Topic]] = None) -> Generation:
     """The three parts, asked at the same time. `passages` maps topic keys to the passages found.
 
-    An orthotic case never reaches a cloud writer while ORTHOTIC_CLOUD_AI is
-    off, whoever passes the writer (the app, the trial loader, golden_cases --rag).
+    A case whose domain's profile keeps it from the cloud (an orthotic case while
+    ORTHOTIC_CLOUD_AI is off) never reaches a cloud writer, whoever passes the
+    writer (the app, the trial loader, golden_cases --rag).
     """
     profile = profile_for(case)
-    if case.domain == "orthotics" and not ORTHOTIC_CLOUD_AI and is_cloud(writer):
-        writer = OfflineWriter(ORTHOTIC_AI_OFF)
+    if is_cloud(writer) and not profile.cloud_ai():
+        writer = OfflineWriter(profile.ai_off_reason)
     topics = topics if topics is not None else topics_for_case(case)
     with ThreadPoolExecutor(max_workers=len(profile.parts)) as pool:
         futures = {part: pool.submit(run_part, part, case, [t for t in topics if t.part == part], passages, writer,

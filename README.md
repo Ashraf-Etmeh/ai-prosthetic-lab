@@ -150,8 +150,11 @@ screens in `docs/design/03-orthotics/`; drafts like the rest):
 - **6 Follow-up**: visits, outcome measures over time, alerts that loop back
   to modules 5, 3 or 1, and a summary for the physiotherapist.
 
-The four hard stops on the design's map are shown as **draft rules awaiting
-the owner's approval**, never as the clinic's rules. Each device type, part
+The four hard stops on the design's map are checked against what was
+recorded; each is shown with its status from the owner's file
+`data/knowledge/clinic_rules.csv`. All four are **draft rules awaiting the
+owner's approval** there; once the owner approves one (status, version, owner,
+date in that file), its pages show it as the clinic's rule. Each device type, part
 and step shows the passages the local search finds about it, quoted as
 printed and not summarised. Nothing on these pages is sent to the AI, and
 the tool suggests no value. The module map is at
@@ -402,14 +405,21 @@ README.md, CLAUDE.md, requirements.txt
 
 shared/             What every part uses: the case core (case_schema.py), the domain registry
                     (domains.py), the case store (store.py: memory + data/records/cases/), the forms'
-                    parsers (forms.py), the field guide's mechanics, the interface text in English and
+                    parsers (forms.py), the field guide's mechanics, the building blocks of every domain's
+                    modules (requirements.py: requirements, priorities, marks, conflicts; followup.py:
+                    visits, outcome measures, alerts; dates.py), the interface text in English and
                     Arabic (i18n.py), the Arabic term sheet, config (paths, settings, disclaimers)
-  templates/        Every page's shared look: header (domain switch, modules, case bar), style, base page
+  templates/        Every page's shared look: the header (AI Prosthetic Lab / <part>, the domain switch,
+                    the numbered module tabs, EN | العربية, the case bar), the style, the base page, and the
+                    screen pieces every domain reuses (ui_macros.html: measured-value status, information
+                    needed, hard-stop checks with each rule's status, requirement chips, option marks,
+                    evidence, outcome charts, alerts, loop back)
   testing.py        What every part's tests share: the AI switched off, a fake writer and embedder,
                     the route-test base
   tests/
 knowledge/          Knowledge layer: source catalog, text extraction, ingestion, search, search-quality
-                    evaluation, knowledge items with the owner's evidence rules
+                    evaluation, knowledge items with the owner's evidence rules, the clinic rules
+                    (clinic_rules.py: each rule's status, version, owner, approval date)
   tests/
 reasoning/          The reasoning pathway every domain shares: pathway.py (search, AI summaries, gaps,
                     components, fitting), the RAG pipeline (rag.py, rag_topics.py), the AI writer
@@ -425,7 +435,8 @@ quality/            Quality and audit: the golden cases, retrieval misses, the t
   tests/
 prosthetics/        Use cases 01-02: the case (case.py), its gap fields (fields.py), topics, the AI's
                     instructions (rag.py), the hand-written statements behind the answer key
-                    (component_guide.py, fitting_guide.py) and their support, the intake form (intake.py)
+                    (component_guide.py, fitting_guide.py) and their support, the intake form (intake.py),
+                    what the header shows for it (nav.py, templates/prosthetics/case_bar.html)
   templates/prosthetics/
   tests/
 orthotics/          Use case 03, stroke ankle-foot orthosis (drafts): the same files as prosthetics, plus
@@ -438,7 +449,8 @@ docs/               SYSTEM_DESCRIPTION.md (what is built), FUTURE_WORK.md (decis
                     items), the independent blueprint, older hand-offs and manual checks
   design/           The target system: SYSTEM_DESIGN.md and its screen designs (open index.html)
 
-data/knowledge/     The owner's evidence rules, the knowledge items and the items to curate (in git)
+data/knowledge/     The owner's evidence rules and clinic rules, the knowledge items and the items to
+                    curate (in git)
   sources/          Knowledge documents: catalog.json and the registry in git, the PDFs kept local
   extracted/        Cleaned text per document (generated, not in git)
   vector_store/     Chunks and their vectors (generated, not in git)
@@ -450,8 +462,9 @@ data/records/       What the app records on this machine (not in git): cases/ (o
 ```
 
 A new clinical domain adds a package with the same files as the others (case.py,
-fields.py, topics.py, rag.py, intake.py, and plan.py if it has modules after the
-analysis) and its name in `shared/domains.py`; shared code reaches it there.
+fields.py, topics.py, rag.py, intake.py, nav.py, and plan.py if it has modules
+after the analysis) and its name in `shared/domains.py`; shared code reaches it
+there, and its pages reuse the shared header and screen pieces.
 
 ## Plan and open decisions
 

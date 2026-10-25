@@ -1,4 +1,4 @@
-{# Shared pieces of the orthotic module pages. #}
+{# The orthotic module pages' own pieces; what every part shares is in shared/templates/ui_macros.html. #}
 
 {# A recorded value, as recorded: a choice by its label, an angle in degrees, a number as typed. #}
 {% macro recorded(path, value) -%}
@@ -19,22 +19,6 @@
   {%- else %}{{ value_name(finding.path) }}: {{ recorded(finding.path, finding.value) }}{% endif -%}
 {%- endmacro %}
 
-{# A hard-stop check's status (orthotics/hard_stops.py), as the design draws it: a tick, a warning, an
-   "orthotist to judge" mark, a dashed "not checked" ring, or a stop. #}
-{% macro status_icon(status) -%}
-  {%- if status == 'clear' -%}
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B5C60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.clear') }}"><path d="M5 12l4 4 10-10"></path></svg>
-  {%- elif status == 'warn' -%}
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4430E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.warn') }}"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>
-  {%- elif status == 'judge' -%}
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A4B00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.judge') }}"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
-  {%- elif status == 'stop' -%}
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8F3510" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.stop') }}"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"></path><path d="M9 9l6 6"></path><path d="M15 9l-6 6"></path></svg>
-  {%- else -%}
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.not_checked') }}"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"></circle></svg>
-  {%- endif -%}
-{%- endmacro %}
-
 {# An option card's drawing of its device type (the design's side views; FES: an electrode). #}
 {% macro device_icon(device) -%}
 <svg width="64" height="64" viewBox="0 0 120 120" fill="none" stroke="#0B5C60" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -45,23 +29,3 @@
   {%- endif %}
 </svg>
 {%- endmacro %}
-
-{# What the source library says about one item: the passages the local search found, quoted as printed. #}
-{% macro passages_for(chunks, heading) %}
-  <details>
-    <summary>{{ heading }} ({{ chunks | length }})</summary>
-    {% if chunks %}
-    <ul class="ui-passages">
-      {% for chunk in chunks %}
-      <li>
-        <div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>
-        {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
-        <blockquote dir="auto" lang="{{ chunk.language }}">{{ chunk.text }}</blockquote>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="ui-note">{{ t('mod.no_passage') }}</p>
-    {% endif %}
-  </details>
-{% endmacro %}

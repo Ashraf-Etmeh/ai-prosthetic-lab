@@ -1,13 +1,17 @@
 """Tests for orthotics/hard_stops.py: the design's four DRAFT hard-stop rules, applied to what was recorded.
 
-The owner answered on 2026-10-24 "not yet, keep as drafts": the pages label them
-as draft rules awaiting the owner's approval, and every line quotes the draft
+The owner answered on 2026-10-24 "not yet, keep as drafts". Each rule's status
+(draft or the clinic's, with its version) comes from the owner's file
+data/knowledge/clinic_rules.csv and is shown beside it; every line quotes the
 rule instead of saying in the tool's own voice what to do.
 """
 
-import re
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from knowledge.clinic_rules import COLUMNS
 from orthotics import hard_stops
 from orthotics.hard_stops import (
     CLEAR,
@@ -104,8 +108,9 @@ class RuleTests(unittest.TestCase):
                 self.assertTrue(TEXT[key]["en"] and TEXT[key]["ar"])
 
 
-class DraftWordingTests(unittest.TestCase):
-    """The owner's answer of 2026-10-24: the rules are drafts, not the owner's or the clinic's rules yet."""
+class WordingTests(unittest.TestCase):
+    """The owner's answer of 2026-10-24: the rules are drafts, not the owner's or the clinic's rules yet. Since then
+    each rule's status comes from the owner's file (data/knowledge/clinic_rules.csv), not from its wording."""
 
     def test_no_text_calls_them_the_owners_rules(self):
         for key, texts in TEXT.items():
@@ -116,36 +121,75 @@ class DraftWordingTests(unittest.TestCase):
                     for claim in ("قواعد المالك من خريطة", "التي وضعها المالك"):
                         self.assertNotIn(claim, texts["ar"])
 
-    def test_every_line_that_routes_a_case_says_draft(self):
-        for key, texts in TEXT.items():
-            if key.startswith("hard") and re.search(r"(?i)route|doctor", texts["en"]):
-                with self.subTest(key):
-                    self.assertIn("draft", texts["en"].lower())
-                    self.assertIn("مسوّد", texts["ar"])
-
     def test_no_line_advises_in_the_tools_own_voice(self):
         for key in [k for k in TEXT if k.startswith("hard_detail.")]:
             with self.subTest(key):
                 self.assertNotRegex(TEXT[key]["en"], r"(?i)\bneeds?\b|\bmust\b|\bshould\b")
 
+    def test_each_check_carries_its_rules_row_in_the_owners_file(self):
+        rows = hard_stops.clinic_rules()
+        self.assertEqual(set(rows), set(RULES))
+        for found in case_checks(full_case()):
+            self.assertEqual(found.clinic_rule, rows[found.rule])
 
-class DraftLabelOnThePagesTests(OrthoticPageTestCase):
-    def test_the_analysis_page_and_the_map_label_them_as_drafts(self):
+    def test_the_code_and_the_owners_file_must_name_the_same_rules(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "clinic_rules.csv"
+            path.write_text(",".join(COLUMNS) + "\nulcer,orthotics,hard_stop,draft,1,,,design map\n", encoding="utf-8")
+            with patch("knowledge.clinic_rules.config.CLINIC_RULES_PATH", path), self.assertRaises(ValueError):
+                hard_stops.clinic_rules()
+
+
+def rule_file(folder: Path, approved: dict) -> Path:
+    """A copy of the four rules with some approved: {rule_id: (version, owner, date)}."""
+    rows = [",".join(COLUMNS)]
+    for rule in RULES:
+        if rule in approved:
+            version, owner, day = approved[rule]
+            rows.append(f"{rule},orthotics,hard_stop,approved,{version},{owner},{day},design map")
+        else:
+            rows.append(f"{rule},orthotics,hard_stop,draft,1,,,design map")
+    path = folder / "clinic_rules.csv"
+    path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    return path
+
+
+class StatusOnThePagesTests(OrthoticPageTestCase):
+    def test_while_drafts_each_rule_says_so_on_the_analysis_page_and_the_map(self):
         for url in (self.url("analysis"), "/orthotics"):
             with self.subTest(url):
                 page = self.page(url)
+                self.assertEqual(page.count("Draft rule, awaiting the owner's approval"), len(RULES))
                 self.assertIn("Draft rules from the design's system map, awaiting the owner's approval", page)
                 self.assertNotIn("The owner's rules", page)
-                self.assertIn("قواعد مسوّدة من خريطة النظام في التصميم", self.page(url, "ar"))
+                arabic = self.page(url, "ar")
+                self.assertEqual(arabic.count("قاعدة مسوّدة بانتظار موافقة المالك"), len(RULES))
+                self.assertIn("قواعد مسوّدة من خريطة النظام في التصميم", arabic)
         page = self.page(self.url("analysis"))
-        self.assertIn("Hard-stop checks (draft rules)", page)
+        self.assertIn("Hard-stop checks", page)
         self.assertIn("Recorded: -5°. The orthotist judges whether the design can accommodate it.", page)
 
-    def test_a_matched_draft_rule_is_flagged_as_a_draft(self):
+    def test_a_matched_rule_shows_its_status_in_the_banner(self):
         resp = self.client.post("/intake/orthotics", data={**self.intake, "ulcer": "yes"})
         page = self.page(resp.headers["Location"])
-        self.assertIn("A draft hard stop (awaiting the owner's approval) matches what was recorded", page)
-        self.assertIn("Recorded: yes. The draft rule routes the case to a doctor.", page)
+        self.assertIn("A hard-stop rule matches what was recorded; the rule routes the case to a doctor: "
+                      "Ulcer, infection or poor blood supply Draft rule, awaiting the owner's approval", page)
+        self.assertIn("Recorded: yes. The rule routes the case to a doctor.", page)
+
+    def test_an_approved_rule_is_shown_as_the_clinics_with_its_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = rule_file(Path(tmp), {"ulcer": (2, "Dr Owner", "2026-10-24")})
+            with patch("knowledge.clinic_rules.config.CLINIC_RULES_PATH", path):
+                page = self.page(self.url("analysis"))
+                self.assertIn("Clinic rule, version 2, approved by Dr Owner on 2026-10-24", page)
+                self.assertEqual(page.count("Draft rule, awaiting the owner's approval"), len(RULES) - 1)
+                self.assertIn("awaiting the owner's approval: they are not the clinic's rules yet", page)  # 3 drafts
+                self.assertIn("قاعدة العيادة، الإصدار", self.page(self.url("analysis"), "ar"))
+            path = rule_file(Path(tmp), {rule: (1, "Dr Owner", "2026-10-24") for rule in RULES})
+            with patch("knowledge.clinic_rules.config.CLINIC_RULES_PATH", path):
+                page = self.page("/orthotics")
+                self.assertNotIn("Draft rule", page)
+                self.assertIn("Rules set and versioned by the clinic.", page)
 
 
 if __name__ == "__main__":

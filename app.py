@@ -22,6 +22,8 @@ from orthotics.intake import bp as orthotic_intake_bp
 from orthotics.modules import bp as orthotic_modules_bp
 from prosthetics.intake import bp as prosthetic_intake_bp
 from review.routes import bp as review_bp
+from shared import domains
+from shared.case_schema import DEFAULT_DOMAIN
 from shared.i18n import (
     LANGUAGES,
     field_label,
@@ -62,6 +64,10 @@ def create_app() -> Flask:
             "value_label": lambda member: value_label(member, lang),
             # (authors, licence) of a licensed source document, or None (knowledge/catalog.py).
             "attribution": lambda doc_id: attributions().get(doc_id),
+            # The header's domains and what each shows (<domain>/nav.py), without naming a domain.
+            "all_domains": domains.DOMAINS,
+            "default_domain": DEFAULT_DOMAIN,
+            "domain_nav": lambda name: domains.part(name, "nav"),
         }
 
     @app.route("/")

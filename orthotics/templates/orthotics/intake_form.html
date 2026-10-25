@@ -21,23 +21,15 @@
     .phase { margin-top: 0.6rem; font-size: 0.85rem; font-weight: 600; color: #444; }
     .device { border-top: 1px dashed #ddd; margin-top: 0.8rem; }
     .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 0.8rem; }
-    .lang-switch { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; }
-    .lang-switch button { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: LinkText; text-decoration: underline; cursor: pointer; }
-    .default-submit { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
   </style>
   {% include "ui_style.html" %}
 </head>
 <body class="ui-page">
-  {% with domain = 'orthotics', module = 'analyse', no_lang = true %}{% include "ui_header.html" %}{% endwith %}
+  {# The header of every page (shared/templates/ui_header.html). Its language button posts this form, which comes
+     back filled in, in the other language; nothing is saved. #}
+  {% with domain = 'orthotics', module = 'analyse', lang_form = 'orthotic-form' %}{% include "ui_header.html" %}{% endwith %}
   <main class="ui-wrap ui-main ui-intake">
-  {# Enter in a field submits the form with its first submit button: this invisible one sends the case. #}
-  <button type="submit" form="orthotic-form" class="default-submit" tabindex="-1" aria-hidden="true"></button>
-  <nav class="lang-switch">
-    <a href="{{ url_for('prosthetic_intake.show_form') }}">{{ t('ort.prosthetic_link') }}</a>
-    {# Posts the form: it comes back filled in, in the other language; nothing is saved. #}
-    <button type="submit" form="orthotic-form" name="switch_language" value="{{ t('nav.other_code') }}"
-            formnovalidate lang="{{ t('nav.other_code') }}">{{ t('nav.other_language') }}</button>
-  </nav>
+  <p class="hint"><a href="{{ url_for('prosthetic_intake.show_form') }}">{{ t('ort.prosthetic_link') }}</a></p>
   <h1>{{ t('ort.reassess_heading', id=editing) if editing else t('ort.heading') }}</h1>
   <div class="banner">{{ t('ort.banner') }}</div>
   {% if editing %}<div class="banner">{{ t('ort.reassess_note') }}</div>{% endif %}

@@ -17,19 +17,17 @@ from orthotics.case import OrthoticExam, Walking
 from orthotics.plan import (
     DesignOption,
     DeviceType,
-    Mark,
     Method,
     OptionPart,
     OrthoticPlan,
     Part,
     PlanError,
-    Priority,
-    Requirement,
     Step,
     StepRecord,
     StepStatus,
     case_findings,
 )
+from shared.requirements import Mark, Priority, Requirement
 from orthotics.tests.helpers import OrthoticPageTestCase
 from orthotics.tests.test_orthotics import full_case
 from prosthetics.case import Case

@@ -1,5 +1,6 @@
 {% extends "ui_base.html" %}
-{% from "orthotics/macros.html" import recorded, status_icon, value_name with context %}
+{% from "orthotics/macros.html" import recorded, value_name with context %}
+{% from "ui_macros.html" import hard_stop_list, need_item, rules_note, stop_banner, value_status with context %}
 {# Module 1, functional case analysis (the canvas's screen 1): the condition module, goals by ICF level,
    the structured exam with how each value was measured, gait phase by phase, the information needed (each
    with the source's own words or the AI's checked summary) and the draft hard-stop checks (awaiting the owner). #}
@@ -8,8 +9,7 @@
 {% block brief %}تحليل الحالات الوظيفية{% endblock %}
 {% block content %}
 {% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
-{% set stops = checks | selectattr('status', 'equalto', 'stop') | list %}
-{% if stops %}<div class="ui-stopflag" role="alert" style="margin-top: 1rem">{{ status_icon('stop') }}<span><b>{{ t('hard.stop_banner') }}</b> {% for c in stops %}{{ t('hard.' ~ c.rule) }}{{ '; ' if not loop.last }}{% endfor %}</span></div>{% endif %}
+{{ stop_banner(checks) }}
 
 <div class="ui-conds" role="group" aria-label="{{ t('analysis.conditions') }}">
   {% for key in conditions %}
@@ -50,10 +50,7 @@
                 {% else %}{% if case.measured_how.get(path) %}<bdi>{{ case.measured_how[path] }}</bdi>{% else %}—{% endif %}{% endif %}
               </td>
               <td>
-                {% if how_kind == 'implant' and value is none %}<span class="ui-tag">{{ t('analysis.not_asked') }}</span>
-                {% elif value is none %}<span class="ui-tag ui-tag-alert">{{ t('status.not recorded') }}</span>
-                {% elif unknown %}<span class="ui-tag ui-tag-warn">{{ t('status.recorded as unknown') }}</span>
-                {% else %}<span class="ui-tag">{{ t('analysis.recorded') }}</span>{% endif %}
+                {{ value_status('not_asked' if (how_kind == 'implant' and value is none) else ('not_recorded' if value is none else ('unknown' if unknown else 'recorded'))) }}
                 {% if path in critical and (value is none or unknown) %} <span class="ui-critical" style="font-size: 0.75rem">{{ t('ort.critical') }}</span>{% endif %}
               </td>
             </tr>
@@ -87,21 +84,7 @@
       <h2>{{ t('analysis.needed') }}</h2>
       <p class="ui-note">{{ t('analysis.needed_note') }}</p>
       <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.9rem">
-        {% for gap in record.gaps %}
-        {% set summary = gap.summary(lang) %}
-        <div class="ui-need {{ 'ui-need-not' if gap.status == 'not recorded' else 'ui-need-unknown' }}">
-          <div class="ui-need-head"><b>{{ field_label(gap.field) }}</b><span class="ui-need-status"{% if gap.status != 'not recorded' %} style="color: var(--ui-warn-ink)"{% endif %}>{{ t('status.' ~ gap.status) }}</span></div>
-          {% if gap.field in critical %}<div class="ui-critical" style="font-size: 0.75rem">{{ t('ort.critical') }}</div>{% endif %}
-          {% if summary %}
-          <div style="margin-top: 0.3rem"><span class="ui-tag ui-tag-warn">{{ t('analysis.ai_label') }}</span> <span dir="auto">{{ summary }}</span></div>
-          {% endif %}
-          {% if gap.excerpt and gap.evidence %}
-          <blockquote dir="auto" lang="{{ gap.evidence.language }}" style="margin: 0.4rem 0 0; padding-inline-start: 0.6rem; border-inline-start: 3px solid #B7D9D5; color: var(--ui-muted-2); font-size: 0.8rem">{{ gap.excerpt }}</blockquote>
-          <div class="ui-note" dir="auto" style="margin-top: 0.2rem">{{ gap.evidence.citation }}</div>
-          <a href="{{ url_for('review.show_case', case_id=case.case_id) }}#gaps" style="display: inline-block; margin-top: 0.3rem; font-weight: 600">{{ t('analysis.source_passage') }}</a>
-          {% else %}<div class="ui-note">{{ t('analysis.no_source') }}</div>{% endif %}
-        </div>
-        {% endfor %}
+        {% for gap in record.gaps %}{{ need_item(gap, critical, url_for('review.show_case', case_id=case.case_id)) }}{% endfor %}
         {% if case.implanted_electronic_device is none %}
         <div class="ui-need"><div class="ui-need-head"><b>{{ t('ort.implanted_short') }}</b><span class="ui-need-status" style="color: var(--ui-muted)">{{ t('analysis.not_asked') }}</span></div>
           <div class="ui-note">{{ t('analysis.implant_note') }}</div></div>
@@ -112,12 +95,8 @@
 
     <section class="ui-card">
       <h2>{{ t('hard.checks_heading') }}</h2>
-      <ul class="ui-checklist">
-        {% for check in checks %}
-        <li>{{ status_icon(check.status) }}<span><b>{{ t('hard.' ~ check.rule) }}</b><br><span style="color: var(--ui-muted)">{{ t('hard_detail.' ~ check.detail, **check.params) }}</span></span></li>
-        {% endfor %}
-      </ul>
-      <p class="ui-note">{{ t('hard.draft_rules') }}</p>
+      {{ hard_stop_list(checks) }}
+      <p class="ui-note">{{ rules_note(checks | map(attribute='clinic_rule') | list) }}</p>
     </section>
 
     <a class="ui-btn" href="{{ url_for('orthotic_modules.requirements', case_id=case.case_id) }}" style="min-height: 52px; font-size: 1rem">{{ t('analysis.continue') }}</a>

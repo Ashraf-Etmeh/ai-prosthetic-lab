@@ -21,6 +21,7 @@ from reasoning.models import ComponentSection, ComponentSupport, FittingSupport
 from reasoning.rag import FAITHFULNESS, GRADE_PHRASES, Generation, Profile, statements_for, terms_line
 from reasoning.rag_topics import GAPS
 from shared.case_schema import recorded_value
+from shared import config
 from shared.config import MAX_ITEMS_PER_TOPIC
 
 # Changes whenever these instructions change; logged with every decision. rag-ort-v2
@@ -122,7 +123,12 @@ def case_for_prompt(case: OrthoticCase) -> str:
     return json.dumps(data, ensure_ascii=False, indent=1)
 
 
-PROFILE = Profile(PARTS, SYSTEM_PROMPT, TASKS, MAX_ITEMS, case_for_prompt, CASE_HEADING, PROMPT_VERSION)
+# Owner's decision 2026-10-23: no orthotic case goes to the cloud writer while shared/config.py
+# ORTHOTIC_CLOUD_AI is off; its pages then show the passages without summaries, and say why.
+AI_OFF = "the AI writer is switched off for orthotic cases (ORTHOTIC_CLOUD_AI in shared/config.py)"
+
+PROFILE = Profile(PARTS, SYSTEM_PROMPT, TASKS, MAX_ITEMS, case_for_prompt, CASE_HEADING, PROMPT_VERSION,
+                  cloud_ai=lambda: config.ORTHOTIC_CLOUD_AI, ai_off_reason=AI_OFF)
 
 
 def components_from(case: OrthoticCase, generation: Generation) -> ComponentSupport:

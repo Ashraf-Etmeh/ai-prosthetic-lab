@@ -70,7 +70,8 @@ def where_used(key: str, sources: dict[Path, str], root: Path) -> str:
         if found:
             break
         prefix = re.escape(".".join(parts[:cut]) + ".")
-        built = re.compile(rf"""(['"]){prefix}\1\s*~|f(['"]){prefix}\{{""")
+        # Built in a template ('component.' ~ key), in an f-string, or a domain's tab labels (<domain>/nav.py LABELS).
+        built = re.compile(rf"""(['"]){prefix}\1\s*~|f(['"]){prefix}\{{|\bLABELS\s*=\s*(['"]){prefix}\3""")
         found = [path for path, text in sources.items() if built.search(text)]
     return "; ".join(path.relative_to(root).as_posix() for path in found) or "(not found)"
 

@@ -131,7 +131,8 @@ class CompletenessTests(unittest.TestCase):
             expected |= {f"{prefix}.{key}" for key in ("impairments", "gait", "requirements", "options", "fabrication",
                                                         "fit", "training", "follow_up")}
         from orthotics import hard_stops, modules
-        from orthotics.followup import BACK_TO, VisitStatus
+        from orthotics.plan import BACK_TO
+        from shared.followup import VisitStatus
         for prefix in ("map_name", "map_does"):
             expected |= {f"{prefix}.{key}" for key in modules.MODULES}
         expected |= {f"req_group.{group}" for group in ("gait", "exam", "other", "missing")}

@@ -1,12 +1,14 @@
-"""Tests for orthotics/fit.py (module 5) and orthotics/followup.py (module 6): what the orthotist and the
-physiotherapist record, kept as written; the only thing worked out is which review is due next."""
+"""Tests for orthotics/fit.py (module 5) and the follow-up records orthotics module 6 keeps (shared/followup.py,
+shared/dates.py): what the orthotist and the physiotherapist record, kept as written; the only thing worked out
+is which review is due next."""
 
 import json
 import unittest
 
-from orthotics.fit import BeforeAfter, CheckItem, FitError, FitRecord, TuningRow, check_date
-from orthotics.followup import BACK_TO, Alert, FollowUp, MeasureDef, Visit, VisitStatus
-from orthotics.plan import OrthoticPlan
+from orthotics.fit import BeforeAfter, CheckItem, FitRecord, TuningRow
+from orthotics.plan import BACK_TO, OrthoticPlan, PlanError
+from shared.dates import DateError, check_date
+from shared.followup import Alert, FollowUp, MeasureDef, Visit, VisitStatus
 
 
 class FitRecordTests(unittest.TestCase):
@@ -14,7 +16,7 @@ class FitRecordTests(unittest.TestCase):
         self.assertEqual(check_date("2026-08-03"), "2026-08-03")
         self.assertIsNone(check_date(None))
         for bad in ("3 Aug", "2026-13-01", ""):
-            with self.subTest(bad), self.assertRaises(FitError):
+            with self.subTest(bad), self.assertRaises(DateError):
                 check_date(bad)
 
     def test_round_trip_keeps_every_value_as_written(self):
@@ -35,7 +37,7 @@ class FitRecordTests(unittest.TestCase):
         self.assertTrue(FitRecord().empty)
         self.assertTrue(FitRecord.from_dict(None).empty)  # a plan saved before module 5
         self.assertFalse(FitRecord(training_by="physiotherapist").empty)
-        with self.assertRaises(FitError):
+        with self.assertRaises(DateError):
             FitRecord(delivered_on="tomorrow")
 
 
@@ -55,14 +57,17 @@ class FollowUpTests(unittest.TestCase):
         self.assertIs(Visit("x", status="due").status, VisitStatus.DUE)
         with self.assertRaises(ValueError):
             Visit("x", status="maybe")
-        with self.assertRaises(FitError):
+        with self.assertRaises(DateError):
             Visit("x", date="next week")
 
-    def test_an_alert_loops_back_only_to_a_module(self):
+    def test_an_alert_loops_back_only_to_an_orthotic_module(self):
+        # The shared Alert keeps the module named; the orthotic plan says which modules an alert may name.
         self.assertEqual(BACK_TO, ("fit", "options", "analysis"))
         self.assertEqual(Alert("x", "options").back_to, "options")
-        with self.assertRaises(ValueError):
-            Alert("x", "manufacture")
+        plan = OrthoticPlan(follow_up=FollowUp(alerts=[Alert("x", "options")]))
+        self.assertEqual(OrthoticPlan.from_dict(plan.to_dict()), plan)
+        with self.assertRaises(PlanError):
+            OrthoticPlan(follow_up=FollowUp(alerts=[Alert("x", "manufacture")]))
 
     def test_the_next_review_is_the_earliest_dated_one_marked_due(self):
         follow = self.follow_up()

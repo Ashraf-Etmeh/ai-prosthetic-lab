@@ -26,11 +26,16 @@ from prosthetics.component_support import recorded_k_level
 from prosthetics.fitting_guide import SECTIONS
 from reasoning.rag_topics import GAPS, Topic
 from shared.case_schema import Side
+from shared.config import RETRIEVAL_DOMAINS
 from shared.field_guide import build_query, missing_fields
 
 COMPONENTS_PART, FITTING = "components", "fitting"
 PARTS = (GAPS, COMPONENTS_PART, FITTING)
 FUNCTIONAL_LEVEL = "functional_level"
+# What a prosthetic case searches (knowledge/retrieval.py): documents whose catalog domains include one of these,
+# with no limit on the passages from one document.
+SEARCH_DOMAINS = RETRIEVAL_DOMAINS
+PASSAGES_PER_DOCUMENT = None
 
 
 # Component and fitting topics: label for the model, and what to search for.

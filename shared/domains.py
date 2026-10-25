@@ -6,8 +6,9 @@ quality/):
 
     <domain>/case.py       its section of the case, on shared/case_schema.py CaseCore
     <domain>/fields.py     its field guide: FIELDS (the gap fields) and query_for()
-    <domain>/topics.py     what it searches for: topics_for_case()
-    <domain>/rag.py        its RAG: PROFILE, components_from(), fitting_from()
+    <domain>/topics.py     what it searches for: topics_for_case(), SEARCH_DOMAINS (the catalog domains
+                           searched) and PASSAGES_PER_DOCUMENT (None: no limit)
+    <domain>/rag.py        its RAG: PROFILE (with its cloud switch), components_from(), fitting_from()
     <domain>/intake.py     its intake form (a Flask blueprint)
     <domain>/plan.py       optional: the specialist's work after the analysis (PLAN)
     <domain>/templates/<domain>/   its pages

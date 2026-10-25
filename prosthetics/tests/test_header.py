@@ -21,12 +21,26 @@ class ProstheticHeaderTests(ProstheticRouteTestCase):
         self.client.set_cookie("lang", "ar")
         self.assertIn("الأطراف الاصطناعية: الوحدات", visible_text(self.client.get("/prosthetics").get_data(as_text=True)))
 
-    def test_the_intake_form_has_the_header_and_keeps_its_language_button(self):
+    def test_the_header_names_the_part_and_switches_language_en_or_arabic(self):
+        # SYSTEM_DESIGN.md §5: the brand and the part's name, the modules as numbered tabs, an EN | العربية switch.
+        page = self.client.get("/prosthetics").get_data(as_text=True)
+        self.assertIn('<span class="ui-part">/ Prosthetics</span>', page)
+        self.assertIn('<span aria-current="true" lang="en">EN</span>', page)  # the current language
+        self.assertIn('<a href="/language/ar?next=/prosthetics" lang="ar">العربية</a>', page)
+        self.client.set_cookie("lang", "ar")
+        page = self.client.get("/orthotics").get_data(as_text=True)
+        self.assertIn('<span class="ui-part">/ تقويم العظام</span>', page)
+        self.assertIn('<span aria-current="true" lang="ar">العربية</span>', page)
+        self.assertIn('<a href="/language/en?next=/orthotics" lang="en">EN</a>', page)
+
+    def test_on_the_intake_form_the_language_button_posts_the_form(self):
         page = self.client.get("/intake").get_data(as_text=True)
         self.assertIn('class="ui-page"', page)
         self.assertIn('href="/intake" aria-current="page">1 Evaluate', page)
-        self.assertIn('name="switch_language"', page)  # the form's own button: it keeps what was typed
-        self.assertNotIn('class="ui-lang"', page)  # the header's link would lose it
+        # The header's switch posts the form, so it comes back filled in (a link would lose what was typed).
+        self.assertIn('<button type="submit" form="intake-form" name="switch_language" value="ar" formnovalidate '
+                      'lang="ar">العربية</button>', page)
+        self.assertNotIn('href="/language/', page)
 
     def test_the_review_page_links_its_sections(self):
         location = self.post_intake(**{"k_level": "K3"}).headers["Location"]

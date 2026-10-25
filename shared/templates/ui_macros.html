@@ -1,0 +1,210 @@
+{# The screen pieces every part's pages share (docs/design/SYSTEM_DESIGN.md §5, "Conventions on every screen":
+   build them once and reuse them). Built for the orthotic modules (2026-10-23), shared since 2026-10-24.
+   Import with context: {% from "ui_macros.html" import status_icon, need_item with context %}.
+   Each shows what was recorded or quoted, as recorded; none writes a clinical sentence. #}
+
+{# A check's status, as the design draws it: a tick, a warning, a "specialist to judge" mark, a dashed
+   "not checked" ring, or a stop (orthotics/hard_stops.py STATUSES). #}
+{% macro status_icon(status) -%}
+  {%- if status == 'clear' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B5C60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.clear') }}"><path d="M5 12l4 4 10-10"></path></svg>
+  {%- elif status == 'warn' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4430E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.warn') }}"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>
+  {%- elif status == 'judge' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A4B00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.judge') }}"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+  {%- elif status == 'stop' -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8F3510" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.stop') }}"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"></path><path d="M9 9l6 6"></path><path d="M15 9l-6 6"></path></svg>
+  {%- else -%}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5E6B68" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.not_checked') }}"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"></circle></svg>
+  {%- endif -%}
+{%- endmacro %}
+
+{# ---- Measured values and the information needed (§5) -------------------------------------------- #}
+
+{# A measured value's status: 'recorded', 'not_recorded', 'not_asked' or 'unknown' (recorded as unknown). #}
+{% macro value_status(state) -%}
+  {%- if state == 'not_asked' %}<span class="ui-tag">{{ t('analysis.not_asked') }}</span>
+  {%- elif state == 'not_recorded' %}<span class="ui-tag ui-tag-alert">{{ t('status.not recorded') }}</span>
+  {%- elif state == 'unknown' %}<span class="ui-tag ui-tag-warn">{{ t('status.recorded as unknown') }}</span>
+  {%- else %}<span class="ui-tag">{{ t('analysis.recorded') }}</span>{% endif -%}
+{%- endmacro %}
+
+{# One piece of information still needed (a gap: reasoning/models.py Gap): its status, a critical mark, the AI's
+   checked summary when there is one, and the source's own words with a link to the passage on the review page. #}
+{% macro need_item(gap, critical, review_url) %}
+        {% set summary = gap.summary(lang) %}
+        <div class="ui-need {{ 'ui-need-not' if gap.status == 'not recorded' else 'ui-need-unknown' }}">
+          <div class="ui-need-head"><b>{{ field_label(gap.field) }}</b><span class="ui-need-status"{% if gap.status != 'not recorded' %} style="color: var(--ui-warn-ink)"{% endif %}>{{ t('status.' ~ gap.status) }}</span></div>
+          {% if gap.field in critical %}<div class="ui-critical" style="font-size: 0.75rem">{{ t('ort.critical') }}</div>{% endif %}
+          {% if summary %}
+          <div style="margin-top: 0.3rem"><span class="ui-tag ui-tag-warn">{{ t('analysis.ai_label') }}</span> <span dir="auto">{{ summary }}</span></div>
+          {% endif %}
+          {% if gap.excerpt and gap.evidence %}
+          <blockquote dir="auto" lang="{{ gap.evidence.language }}" style="margin: 0.4rem 0 0; padding-inline-start: 0.6rem; border-inline-start: 3px solid #B7D9D5; color: var(--ui-muted-2); font-size: 0.8rem">{{ gap.excerpt }}</blockquote>
+          <div class="ui-note" dir="auto" style="margin-top: 0.2rem">{{ gap.evidence.citation }}</div>
+          <a href="{{ review_url }}#gaps" style="display: inline-block; margin-top: 0.3rem; font-weight: 600">{{ t('analysis.source_passage') }}</a>
+          {% else %}<div class="ui-note">{{ t('analysis.no_source') }}</div>{% endif %}
+        </div>
+{% endmacro %}
+
+{# ---- Hard-stop checks (§5): rules set by the clinic; a check routes the case to a person, never decides ---- #}
+
+{# A rule's status, from the owner's file (knowledge/clinic_rules.py ClinicRule): a draft awaiting the owner's
+   approval, or the clinic's rule with its version, who approved it and when. #}
+{% macro rule_status(rule) -%}
+  {%- if rule and rule.approved %}<span class="ui-tag ui-tag-accent">{{ t('hard.status_approved', version=rule.version, owner=rule.owner, date=rule.approved_on) }}</span>
+  {%- else %}<span class="ui-tag ui-tag-warn">{{ t('hard.status_draft') }}</span>{% endif -%}
+{%- endmacro %}
+
+{# The note under the rules: drafts awaiting the owner's approval while any rule is one, else the clinic's rules. #}
+{% macro rules_note(rules) -%}
+  {{ t('hard.draft_rules') if (rules | rejectattr('approved') | list) else t('hard.clinic_rules') }}
+{%- endmacro %}
+
+{# The banner over a page when a rule's recorded facts match it. #}
+{% macro stop_banner(checks) -%}
+{% set stops = checks | selectattr('status', 'equalto', 'stop') | list %}
+{% if stops %}<div class="ui-stopflag" role="alert" style="margin-top: 1rem">{{ status_icon('stop') }}<span><b>{{ t('hard.stop_banner') }}</b> {% for c in stops %}{{ t('hard.' ~ c.rule) }} {{ rule_status(c.clinic_rule) }}{{ '; ' if not loop.last }}{% endfor %}</span></div>{% endif %}
+{%- endmacro %}
+
+{# Each rule's check: its name and status, and what was found for it (orthotics/hard_stops.py Check). #}
+{% macro hard_stop_list(checks) %}
+      <ul class="ui-checklist">
+        {% for check in checks %}
+        <li>{{ status_icon(check.status) }}<span><b>{{ t('hard.' ~ check.rule) }}</b> {{ rule_status(check.clinic_rule) }}<br><span style="color: var(--ui-muted)">{{ t('hard_detail.' ~ check.detail, **check.params) }}</span></span></li>
+        {% endfor %}
+      </ul>
+{% endmacro %}
+
+{# ---- Requirements and options side by side, never ranked (§5) ------------------------------------ #}
+
+{# The requirements as chips across the top of the options (shared/requirements.py Requirement). #}
+{% macro requirement_chips(requirements) %}
+<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; font-size: 0.8rem">
+  {% for r in requirements %}
+  <span style="padding: 0.4rem 0.65rem; border-radius: 8px; background: #FFFFFF; border: 1px solid var(--ui-line)"><b>{{ r.id }}</b> <bdi>{{ r.text }}</bdi>{% if r.priority %} · {{ t('priority.' ~ r.priority.value) }}{% endif %}</span>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# What an option addresses: the specialist's mark (yes, partly, no) against each requirement, or its note. #}
+{% macro option_marks(requirements, option) %}
+      <div><h3>{{ t('options.addresses') }}</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem">
+          {% for r in requirements %}{% set mark = option.marks.get(r.id) %}
+          <span class="ui-mark ui-mark-{{ mark.value if mark else 'none' }}">{{ r.id }} {{ option.mark_notes.get(r.id) or (t('mark.' ~ mark.value) if mark else t('options.mark_unset')) }}</span>
+          {% endfor %}
+        </div></div>
+{% endmacro %}
+
+{# The Must requirements the specialist marked an option as not addressing. #}
+{% macro unmet_flag(unmet) -%}
+<div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('options.unaddressed', ids='') | trim }} {% for r in unmet %}<b>{{ r.id }} <bdi>{{ r.text }}</bdi></b>{{ ', ' if not loop.last }}{% endfor %}</span></div>
+{%- endmacro %}
+
+{# A typed list under its heading (what an option costs the person, what to check at fitting), as written. #}
+{% macro line_list(heading, items) -%}
+{% if items %}<div><h3>{{ heading }}</h3><ul>{% for c in items %}<li><bdi>{{ c }}</bdi></li>{% endfor %}</ul></div>{% endif %}
+{%- endmacro %}
+
+{# What the source library says about an option: each passage with its kind of source ("practice, no outcome
+   evidence" for a manual), its citation and its own words, never summarised here. #}
+{% macro evidence_list(chunks, source_types) %}
+  {% if chunks %}
+  <div style="display: flex; flex-direction: column; gap: 0.4rem">
+    {% for chunk in chunks %}{% set kind = source_types.get(chunk.doc_id, 'scientific_reference') %}
+    <details class="ui-ev{{ ' ui-ev-guideline' if kind == 'protocol' }}">
+      <summary style="color: inherit; min-height: 0"><b>{{ t('source_type.' ~ kind) }}</b>{% if kind == 'professional_knowledge' %} · {{ t('options.no_outcome_evidence') }}{% endif %} · <span dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</span></summary>
+      {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
+      <blockquote dir="auto" lang="{{ chunk.language }}" style="margin: 0.4rem 0 0; white-space: pre-line">{{ chunk.text }}</blockquote>
+    </details>
+    {% endfor %}
+  </div>
+  {% else %}<p class="ui-note" style="margin: 0">{{ t('mod.no_passage') }}</p>{% endif %}
+{% endmacro %}
+
+{# What the source library says about one item, folded: the passages the local search found, quoted as printed. #}
+{% macro passages_for(chunks, heading) %}
+  <details>
+    <summary>{{ heading }} ({{ chunks | length }})</summary>
+    {% if chunks %}
+    <ul class="ui-passages">
+      {% for chunk in chunks %}
+      <li>
+        <div dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</div>
+        {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
+        <blockquote dir="auto" lang="{{ chunk.language }}">{{ chunk.text }}</blockquote>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="ui-note">{{ t('mod.no_passage') }}</p>
+    {% endif %}
+  </details>
+{% endmacro %}
+
+{# ---- Follow-up (§5): outcome measures as recorded, alerts that loop back (shared/followup.py) ---------- #}
+
+{# Each outcome measure's values over the visits, as bars, shown as recorded: no score, trend or verdict. #}
+{% macro outcome_charts(follow) %}
+      {% if follow.measures %}
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem">
+        {% for m in follow.measures %}
+        {% set series = follow.series(m.name) %}
+        {% set numbers = series | map(attribute=1) | select('number') | list %}
+        {% set top = (numbers | max) if numbers else 0 %}
+        <div style="flex: 1 1 220px; border: 1px solid var(--ui-line-soft); border-radius: 12px; padding: 0.9rem 1rem">
+          <div style="font-size: 0.875rem; font-weight: 600"><bdi>{{ m.name }}</bdi></div>
+          <div class="ui-note" style="margin: 0">{% if m.unit %}<bdi>{{ m.unit }}</bdi>{% endif %}{% if m.unit and m.how %} · {% endif %}{% if m.how %}<bdi>{{ m.how }}</bdi>{% endif %}</div>
+          {% if series %}
+          <div class="ui-bars" role="img" aria-label="{{ m.name }}: {% for visit, number, raw in series %}{{ raw }} ({{ visit.name }}){{ ', ' if not loop.last }}{% endfor %}">
+            {% for visit, number, raw in series %}
+            <div><span><bdi>{{ raw }}</bdi></span><i style="height: {{ ((number / top * 100) | round(0, 'floor') | int if (number is not none and top > 0) else 2) }}px"></i></div>
+            {% endfor %}
+          </div>
+          <div class="ui-bar-labels">{% for visit, number, raw in series %}<span><bdi>{{ visit.name }}</bdi></span>{% endfor %}</div>
+          {% else %}<p class="ui-note">{{ t('fu.no_values') }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<p class="ui-note">{{ t('fu.no_measures') }}</p>{% endif %}
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--ui-line-soft); font-size: 0.875rem">
+        {% if follow.due_next %}<span><b>{{ t('fu.due_next') }}:</b> <bdi>{{ follow.due_next }}</bdi></span>{% endif %}
+        <span style="color: var(--ui-muted)">{{ t('fu.as_recorded') }}</span>
+      </div>
+{% endmacro %}
+
+{# The review due and the open alerts, each linking back to the module where the fix would happen: the domain's
+   page `endpoint_prefix ~ alert.back_to` (e.g. 'orthotic_modules.' ~ 'fit'), labelled "fu.back_to.<module>". #}
+{% macro alert_list(follow, due, endpoint_prefix) %}
+      <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.9rem">
+        {% if due %}<div class="ui-alert ui-alert-due"><b>{{ t('fu.review_due', visit=due.name, date=due.date or t('fu.no_date')) }}</b>{% if follow.due_next %} {{ t('fu.due_with', what=follow.due_next) }}{% endif %}</div>{% endif %}
+        {% for a in follow.alerts if not a.resolved %}
+        <div class="ui-alert{{ ' ui-alert-skin' if a.back_to }}"><bdi>{{ a.text }}</bdi>{% if a.back_to %}<br><a href="{{ url_for(endpoint_prefix ~ a.back_to, case_id=case.case_id) }}" style="color: var(--ui-alert); font-weight: 600">{{ t('fu.back_to.' ~ a.back_to) }}</a>{% endif %}</div>
+        {% endfor %}
+        {% if not due and not (follow.alerts | rejectattr('resolved') | list) %}<p class="ui-note">{{ t('fu.no_alerts') }}</p>{% endif %}
+      </div>
+{% endmacro %}
+
+{# Wearing and the device's condition, from the last visit marked done. #}
+{% macro latest_visit_card(follow) %}
+    {% set latest = follow.latest() %}
+    <section class="ui-card">
+      <h2>{{ t('fu.wearing_heading') }}</h2>
+      {% if latest %}
+      <ul class="ui-kv">
+        {% for key in ['wearing', 'puts_on_alone', 'device_condition'] %}<li><span>{{ t('fu.' ~ key) }}</span><b><bdi>{{ latest[key] or '—' }}</bdi></b></li>{% endfor %}
+      </ul>
+      <p class="ui-note">{{ t('fu.from_visit', visit=latest.name) }}</p>
+      {% else %}<p class="ui-note">{{ t('fu.no_done_visit') }}</p>{% endif %}
+    </section>
+{% endmacro %}
+
+{# Loop back (§5): links to re-tune, redesign or re-assess; each (label, module label, url). #}
+{% macro loop_back_links(links) %}
+      <div style="margin-top: 0.6rem">
+        {% for label, module_label, url in links %}
+        <a href="{{ url }}">{{ label }} <span>{{ module_label }}</span></a>
+        {% endfor %}
+      </div>
+{% endmacro %}

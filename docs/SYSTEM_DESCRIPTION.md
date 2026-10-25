@@ -114,7 +114,7 @@ python -m knowledge.items      # knowledge items with the owner's rules applied 
 python -m quality.golden_cases  # development golden cases vs the app (gap checks need the model)
 python -m quality.golden_cases --rag  # also measure the RAG (cloud model: free-tier quota or money)
 python -m quality.golden_cases --held-out  # the frozen held-out cases (only when the owner asks)
-python -m unittest             # 540 tests, about 2 min, no model, no API
+python -m unittest             # 555 tests, about 2 min, no model, no API
 python scripts/verify_all.py   # the 0-2 checks, then the golden cases
 ```
 
@@ -475,9 +475,12 @@ to a doctor (an ulcer with infection or poor blood supply; a rigid device on
 insensate skin without pressure relief; a fixed contracture beyond what the
 design can accommodate; FES with an implanted electronic device).
 `orthotics/hard_stops.py` checks them against what was recorded, never
-inferring a value. They are draft rules awaiting the owner's approval (the
-owner, 2026-10-24: "not yet, keep as drafts"): every page labels them so,
-and every line quotes the draft rule instead of saying in the tool's own
+inferring a value. Each rule's status, version, owner and approval date are
+the owner's, in `data/knowledge/clinic_rules.csv` (`knowledge/clinic_rules.py`,
+since 2026-10-24; the yardstick hook protects it): every page shows each
+check with its rule's status. All four are drafts there (the owner,
+2026-10-24: "not yet, keep as drafts"); approving one is a change to that
+file only. Every line quotes the rule instead of saying in the tool's own
 voice what to do. Nothing is blocked.
 
 Next to each device type, part and step: what the source library says,
@@ -488,8 +491,7 @@ to the AI. Not built from the design: AI-suggested parameters and code-made
 judgements (principles 1-2; SYSTEM_DESIGN.md §11.7), the scan viewer and
 pressure map (no scan data reaches the app), the "smallest real change" next
 to each outcome measure and alerts from clinic rules (both wait for the
-owner, SYSTEM_DESIGN.md §11.2-11.3), the hard stops as a versioned clinic
-rule file.
+owner, SYSTEM_DESIGN.md §11.2-11.3).
 
 ---
 
@@ -498,7 +500,7 @@ rule file.
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 540 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 555 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -511,12 +513,17 @@ shared/
   domains.py               the clinical domains and part(domain, module): how shared code reaches a domain
   field_guide.py           FieldInfo, missing_fields(), build_query(), FIELDS_BY_PATH (every domain's fields)
   forms.py                 the intake forms' parsers (a refusal in the form's own words)
+  requirements.py          what every domain's modules share: Requirement, Priority, Mark, Conflict
+  followup.py              the follow-up records: visits, outcome measures, alerts, the next review due
+  dates.py                 a date as YYYY-MM-DD (check_date)
   config.py                paths, model, chunk and search settings, threshold, disclaimers, CODE_PACKAGES
   i18n.py                  all interface text in English and Arabic
   arabic_terms.py          Arabic term sheet: export for a prosthetist, apply corrections back
   store.py                 CaseRecord store: memory + one JSON file per case in data/records/cases/ (version 4)
-  templates/               every page's look (2026-10-23): ui_style.html, ui_header.html (domain switch,
-                           the domain's modules, case bar), ui_base.html (the map and module pages)
+  templates/               every page's look (2026-10-23): ui_style.html, ui_header.html (AI Prosthetic Lab /
+                           <part>, the domain switch, numbered module tabs, EN | العربية, the case bar: each
+                           domain's from its nav.py), ui_base.html (the map and module pages), ui_macros.html
+                           (the screen pieces every domain reuses, SYSTEM_DESIGN.md §5)
   testing.py               what every part's tests share: the AI switched off, a fake writer and embedder,
                            RouteTestCase
   tests/
@@ -531,6 +538,7 @@ knowledge/
                            KnowledgeItem (a curated statement with its evidence fields)
   items.py                 one KnowledgeItem per guide statement, rules applied; export to data/knowledge/
   evidence_rules.py        loads the owner's rule table, a condition per rule, applies the rules
+  clinic_rules.py          loads the owner's clinic rules: each rule's status, version, owner, approval date
   tests/
 reasoning/
   pathway.py               analyse_case(): search → AI summaries (quote-checked) → gaps, components, fitting
@@ -566,22 +574,23 @@ prosthetics/               use cases 01-02
   fitting_guide.py         hand-written design and fitting rules (the answer key)
   fitting_support.py       picks fitting statements; recorded readiness values
   intake.py                GET /prosthetics (map), GET/POST /intake: form → Case → analyse_case() → store
-  templates/prosthetics/   intake_form.html, map.html
+  nav.py                   what the header shows for prosthetics: map, intake, module tabs, who decides
+  templates/prosthetics/   intake_form.html, map.html, case_bar.html
   tests/
 orthotics/                 use case 03 (drafts)
   case.py, fields.py,      OrthoticCase and its 23 gap fields, topics, rag.py (PROFILE),
   topics.py, rag.py,       intake.py (/intake/orthotics)
   intake.py
   plan.py, fit.py,         OrthoticPlan (modules 2-6), sources.py (passages per device, part, step),
-  followup.py, sources.py, hard_stops.py (draft rules), modules.py (/orthotics: map and modules 1-6)
-  hard_stops.py, modules.py
+  sources.py, nav.py,      hard_stops.py (the four rules, each with its status from the clinic rules),
+  hard_stops.py, modules.py  nav.py (what the header shows), modules.py (/orthotics: map and modules 1-6)
   templates/orthotics/
   tests/
 scripts/                   verify_prompts_0_2.py (checks for prompts 0-2), verify_all.py (that + golden cases)
 docs/                      this file, FUTURE_WORK.md, the independent blueprint, design/ (the target system)
 data/
-  knowledge/               evidence_rules.csv (the owner's), items.json, items_to_curate.csv
-                           (in git; regenerate after changing a guide or the rule table)
+  knowledge/               evidence_rules.csv and clinic_rules.csv (the owner's), items.json,
+                           items_to_curate.csv (in git; regenerate after changing a guide or the rule table)
     sources/               catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
     extracted/             cleaned text per document (generated)
     vector_store/          vectors.npy, chunks.json, info.json (generated)
@@ -707,7 +716,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **540 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **555 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,

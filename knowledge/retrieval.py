@@ -23,12 +23,11 @@ import numpy as np
 from knowledge.embedding import embed_texts
 from knowledge.ingest import CHUNKS_FILE, INFO_FILE, VECTORS_FILE
 from knowledge.models import ProtocolChunk
-from prosthetics.case import Case
+from shared import domains
+from shared.case_schema import CaseCore
 from shared.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_MODEL_REVISION,
-    ORTHOTIC_PASSAGES_PER_DOCUMENT,
-    ORTHOTIC_RETRIEVAL_DOMAINS,
     RAG_TOP_K,
     RAG_TOPIC_EXCLUDED_DOCUMENTS,
     RETRIEVAL_DOMAINS,
@@ -172,7 +171,7 @@ def search_text(
 
 
 def retrieve_relevant_chunks(
-    case: Case,
+    case: CaseCore,
     top_k: int = RETRIEVAL_TOP_K,
     store: Optional[VectorStore] = None,
     embed: Callable[[list[str]], np.ndarray] = embed_texts,
@@ -204,16 +203,17 @@ def retrieve_relevant_chunks(
         return {}
     store = store if store is not None else get_store()
     limb = "lower" if case.is_lower_limb else "upper"
-    domains = domains_for(case)
-    per_document = ORTHOTIC_PASSAGES_PER_DOCUMENT if case.domain == "orthotics" else None
+    searched = domains_for(case)
+    per_document = domains.part(case.domain, "topics").PASSAGES_PER_DOCUMENT
     query_vectors = embed([query for _, query, _, _ in searches])
     return {
-        key: store.search(vector, k, domains=domains, languages=RETRIEVAL_LANGUAGES, limb=limb, exclude=exclude,
+        key: store.search(vector, k, domains=searched, languages=RETRIEVAL_LANGUAGES, limb=limb, exclude=exclude,
                           per_document=per_document)
         for (key, _, k, exclude), vector in zip(searches, query_vectors)
     }
 
 
 def domains_for(case) -> tuple[str, ...]:
-    """The catalog domains searched for the case: an orthotic case searches the orthotic sources."""
-    return ORTHOTIC_RETRIEVAL_DOMAINS if case.domain == "orthotics" else RETRIEVAL_DOMAINS
+    """The catalog domains searched for the case, as its domain says (<domain>/topics.py SEARCH_DOMAINS):
+    an orthotic case searches the orthotic sources."""
+    return domains.part(case.domain, "topics").SEARCH_DOMAINS

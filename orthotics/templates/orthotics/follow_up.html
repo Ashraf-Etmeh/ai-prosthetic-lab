@@ -1,4 +1,5 @@
 {% extends "ui_base.html" %}
+{% from "ui_macros.html" import alert_list, latest_visit_card, loop_back_links, outcome_charts with context %}
 {# Module 6 (the canvas's screen 6): the visits; the outcome measures the clinician enters at each visit, as bars
    over time, shown as recorded (the clinician judges the change: no score, trend or verdict is computed); the
    alerts, which loop back to tuning, redesign or re-assessment; wearing time and the device's condition. The
@@ -25,31 +26,7 @@
   <div class="ui-col-main">
     <section class="ui-card">
       <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('fu.measures') }}</h2><span class="ui-note" style="margin: 0">{{ t('fu.measures_note') }}</span></div>
-      {% if follow.measures %}
-      <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem">
-        {% for m in follow.measures %}
-        {% set series = follow.series(m.name) %}
-        {% set numbers = series | map(attribute=1) | select('number') | list %}
-        {% set top = (numbers | max) if numbers else 0 %}
-        <div style="flex: 1 1 220px; border: 1px solid var(--ui-line-soft); border-radius: 12px; padding: 0.9rem 1rem">
-          <div style="font-size: 0.875rem; font-weight: 600"><bdi>{{ m.name }}</bdi></div>
-          <div class="ui-note" style="margin: 0">{% if m.unit %}<bdi>{{ m.unit }}</bdi>{% endif %}{% if m.unit and m.how %} · {% endif %}{% if m.how %}<bdi>{{ m.how }}</bdi>{% endif %}</div>
-          {% if series %}
-          <div class="ui-bars" role="img" aria-label="{{ m.name }}: {% for visit, number, raw in series %}{{ raw }} ({{ visit.name }}){{ ', ' if not loop.last }}{% endfor %}">
-            {% for visit, number, raw in series %}
-            <div><span><bdi>{{ raw }}</bdi></span><i style="height: {{ ((number / top * 100) | round(0, 'floor') | int if (number is not none and top > 0) else 2) }}px"></i></div>
-            {% endfor %}
-          </div>
-          <div class="ui-bar-labels">{% for visit, number, raw in series %}<span><bdi>{{ visit.name }}</bdi></span>{% endfor %}</div>
-          {% else %}<p class="ui-note">{{ t('fu.no_values') }}</p>{% endif %}
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}<p class="ui-note">{{ t('fu.no_measures') }}</p>{% endif %}
-      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--ui-line-soft); font-size: 0.875rem">
-        {% if follow.due_next %}<span><b>{{ t('fu.due_next') }}:</b> <bdi>{{ follow.due_next }}</bdi></span>{% endif %}
-        <span style="color: var(--ui-muted)">{{ t('fu.as_recorded') }}</span>
-      </div>
+      {{ outcome_charts(follow) }}
 
       {% set f = form if action == 'measures' else none %}
       {% set n_rows = (f.get('measure_rows') | int) if f else (follow.measures | length) + new_rows %}
@@ -102,13 +79,7 @@
   <aside class="ui-col-side">
     <section class="ui-card">
       <h2>{{ t('fu.alerts') }}</h2>
-      <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.9rem">
-        {% if due %}<div class="ui-alert ui-alert-due"><b>{{ t('fu.review_due', visit=due.name, date=due.date or t('fu.no_date')) }}</b>{% if follow.due_next %} {{ t('fu.due_with', what=follow.due_next) }}{% endif %}</div>{% endif %}
-        {% for a in follow.alerts if not a.resolved %}
-        <div class="ui-alert{{ ' ui-alert-skin' if a.back_to }}"><bdi>{{ a.text }}</bdi>{% if a.back_to %}<br><a href="{{ url_for('orthotic_modules.' ~ a.back_to, case_id=case.case_id) }}" style="color: var(--ui-alert); font-weight: 600">{{ t('fu.back_to.' ~ a.back_to) }}</a>{% endif %}</div>
-        {% endfor %}
-        {% if not due and not (follow.alerts | rejectattr('resolved') | list) %}<p class="ui-note">{{ t('fu.no_alerts') }}</p>{% endif %}
-      </div>
+      {{ alert_list(follow, due, 'orthotic_modules.') }}
       {% set f = form if action == 'alerts' else none %}
       {% set n_rows = (f.get('alert_rows') | int) if f else (follow.alerts | length) + 1 %}
       <details{% if f %} open{% endif %}><summary>{{ t('fu.alerts_edit') }}</summary>
@@ -130,24 +101,13 @@
       </details>
     </section>
 
-    {% set latest = follow.latest() %}
-    <section class="ui-card">
-      <h2>{{ t('fu.wearing_heading') }}</h2>
-      {% if latest %}
-      <ul class="ui-kv">
-        {% for key in ['wearing', 'puts_on_alone', 'device_condition'] %}<li><span>{{ t('fu.' ~ key) }}</span><b><bdi>{{ latest[key] or '—' }}</bdi></b></li>{% endfor %}
-      </ul>
-      <p class="ui-note">{{ t('fu.from_visit', visit=latest.name) }}</p>
-      {% else %}<p class="ui-note">{{ t('fu.no_done_visit') }}</p>{% endif %}
-    </section>
+    {{ latest_visit_card(follow) }}
 
     <section class="ui-dark ui-loop">
       <h2 style="margin: 0; font-size: 1.125rem">{{ t('fu.loop_back') }}</h2>
-      <div style="margin-top: 0.6rem">
-        <a href="{{ url_for('orthotic_modules.fit', case_id=case.case_id) }}">{{ t('fu.retune') }} <span>{{ t('map.module', n=5) }}</span></a>
-        <a href="{{ url_for('orthotic_modules.options', case_id=case.case_id) }}">{{ t('fu.redesign') }} <span>{{ t('map.module', n=3) }}</span></a>
-        <a href="{{ url_for('orthotic_intake.show_form', case=case.case_id) }}">{{ t('fu.reassess') }} <span>{{ t('map.module', n=1) }}</span></a>
-      </div>
+      {{ loop_back_links([(t('fu.retune'), t('map.module', n=5), url_for('orthotic_modules.fit', case_id=case.case_id)),
+                          (t('fu.redesign'), t('map.module', n=3), url_for('orthotic_modules.options', case_id=case.case_id)),
+                          (t('fu.reassess'), t('map.module', n=1), url_for('orthotic_intake.show_form', case=case.case_id))]) }}
       <a class="ui-btn ui-btn-quiet" href="{{ url_for('orthotic_modules.summary', case_id=case.case_id) }}" style="width: 100%; box-sizing: border-box; margin-top: 0.9rem; background: transparent; color: #FFFFFF !important; border-color: #7FC4BE; justify-content: center">{{ t('fu.summary') }}</a>
     </section>
   </aside>

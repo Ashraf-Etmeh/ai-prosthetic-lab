@@ -1707,6 +1707,54 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
      orthotist, on the new sheet), and whether orthotic passages may go to
      the cloud model.
 
+## Shared screen pieces, built once (plan Part 2, 2026-10-24)
+
+- **Asked (owner, 2026-10-24):** "ensure this part is correct and then move to
+  the next part". Part 0 was checked again first: its diff read line by line,
+  every interface text searched for advice in the tool's own voice (none),
+  every page requested from the real server (all 200), `verify_all.py`; one
+  Arabic word fixed (draft rule: قاعدة … مسوّدة, not توقف … مسوّد).
+- **Built (SYSTEM_DESIGN.md §5, "build them once and reuse them"):**
+  1. *Building blocks:* `shared/requirements.py` (Requirement, Priority,
+     Mark, Conflict), `shared/followup.py` (visits, outcome measures, alerts,
+     moved from orthotics) and `shared/dates.py`. Where an orthotic alert may
+     loop back to (`BACK_TO`) is checked by the orthotic plan. Saved plans read
+     unchanged.
+  2. *Page pieces:* `shared/templates/ui_macros.html`: status icons, a
+     measured value's status, an information-needed item, the hard-stop
+     banner and list, requirement chips, an option's marks, the unmet-Must
+     flag, typed lists, evidence, passages, outcome charts, alerts, the
+     latest visit, loop-back links. The orthotic pages use them: every page
+     (102, with a fully filled fake case) rendered the same HTML before and
+     after. The requirement and option edit forms stay in orthotics until
+     prosthetics needs them (Part 3), so their shared shape is not guessed.
+  3. *Header:* "AI Prosthetic Lab / <part>", the domain switch, the modules as
+     numbered tabs, an EN | العربية pair with the current one marked (on an
+     intake form the other is a button that posts the form, so nothing typed
+     is lost; Enter still sends the case). Each domain says what its header
+     shows in its own `nav.py` and `templates/<domain>/case_bar.html`; the
+     header names no domain.
+  4. *Clinic rules:* `data/knowledge/clinic_rules.csv` (owner's; the yardstick
+     hook protects it): each rule's id, domain, kind, status (draft or
+     approved), version, owner, approval date and source, read by
+     `knowledge/clinic_rules.py`. The four orthotic hard stops are in it as
+     drafts; `orthotics/hard_stops.py` attaches each rule's row to its check
+     and refuses to run if the file and the code name different rules. The
+     pages show each rule's status ("Draft rule, awaiting the owner's
+     approval", or "Clinic rule, version N, approved by … on …") and the note
+     under them follows: approving a rule is a change to that file only. The
+     hard-stop texts no longer say "draft" themselves.
+  5. *Shared code names no domain:* the cloud switch is each domain's RAG
+     profile (`cloud_ai`, `ai_off_reason`; orthotics reads
+     `ORTHOTIC_CLOUD_AI` at each run); what a case searches is its domain's
+     `topics.py` (`SEARCH_DOMAINS`, `PASSAGES_PER_DOCUMENT`).
+     `shared/tests/test_domains.py` checks that every domain has the same
+     parts and that `shared/`, `knowledge/`, `reasoning/` and the shared
+     templates never check a domain by name.
+- **Left:** the review page (`review/routes.py`, `review.html`) still
+  branches on orthotics; it is rebuilt with the prosthetic module pages
+  (Part 3). Tests: 555, all passing.
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).
