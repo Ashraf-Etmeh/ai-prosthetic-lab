@@ -1851,6 +1851,37 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   held-out run only when the owner asks; the owner's first sign-off row.
 - Tests: 603, all passing; checks 0-2 fail only on 0.3 (uncommitted changes);
   golden cases OK; the Arabic term sheet exported again (1,197 texts).
+  Committed `243d0d0`, pushed; then `python scripts/verify_all.py --record` on
+  the clean tree (unit tests, checks 0-2 and golden cases all passed),
+  committed `0f3c8ae`, pushed (2026-10-25).
+
+## Knowledge layer pages (plan Part 5, 2026-10-25)
+
+- **Asked (owner, 2026-10-25):** "continue to part 5". Owner's answers:
+  commit, push, then record a release check first (done, `243d0d0`,
+  `0f3c8ae`); the Evidence page **read-only** (CLAUDE.md keeps the evidence
+  fields the owner's: no curator form); the Graph page **shows what exists**
+  (no new data files for the graph or glossary).
+- **Built** (SYSTEM_DESIGN.md §7.1; docs/SYSTEM_DESCRIPTION.md §4.12): the
+  shared part "Knowledge layer" in the header (`knowledge/nav.py`,
+  `knowledge/routes.py`) with 1 Sources (documents, text facts, status, the
+  registry's link-only and uncatalogued documents, the pipeline, what needs
+  a curator), 2 Evidence (the knowledge items, why each may need a curator,
+  one item's fields with the rule that set them, the owner's rule table) and
+  3 Graph and expertise (the clinic rules, the Arabic term sheet, what is not
+  built). `knowledge/library.py` gathers the facts; `knowledge.evaluate`
+  takes `--record` (kind "search_quality" in `quality/results.py`, listed in
+  the quality page's audit trail).
+- **Seen on the page, for the owner or a curator:** two guidelines need a
+  manual download (the APTA/ANPT AFO/FES guideline, the AHRQ review); a
+  search-quality test is due since the library build of 2026-10-22 (none
+  recorded yet).
+- **Not built, waiting for the owner:** who curates, and how; the design
+  knowledge graph (curator-set links ending in a source), a glossary with a
+  status per clinical term, the case library (use case 06), structured data
+  (component catalogues, stock, outcome-measure norms).
+- Tests: 612, all passing; checks 0-2 fail only on 0.3 (uncommitted changes);
+  golden cases OK; the Arabic term sheet exported again (1,318 texts).
 
 ## Open decisions
 

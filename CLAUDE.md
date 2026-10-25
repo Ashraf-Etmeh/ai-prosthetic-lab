@@ -162,6 +162,7 @@ python app.py                 # app at http://127.0.0.1:5000
 python -m knowledge.ingest    # rebuild data/knowledge/extracted/ and the search index
 python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
                               # --orthotics: the orthotic topic searches (data/knowledge/eval/orthotic_topics.json)
+                              # --record: add the result for the knowledge and quality pages
 python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
                               # (python -m knowledge.evidence_rules does the same)
 python -m quality.golden_cases # development golden cases vs the app (--no-search: no model needed)

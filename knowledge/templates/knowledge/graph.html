@@ -1,0 +1,46 @@
+{% extends "ui_base.html" %}
+{% from "ui_macros.html" import rule_status with context %}
+{# Knowledge 3, graph and expertise (docs/design/06-knowledge-layer/Graph.html; SYSTEM_DESIGN.md §7.1). What exists is
+   shown (owner's answer, 2026-10-25: "show what exists"): the clinic rules with their status, version, owner and
+   approval date (data/knowledge/clinic_rules.csv), and the Arabic term sheet's state. The design knowledge graph,
+   the glossary's statuses, the case library and structured data are listed as not built yet: who curates them is
+   the owner's to decide. #}
+{% block title %}{{ t('kgr.title') }}{% endblock %}
+{% block kicker %}{{ t('kgr.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('kgr.intro') }}</p>{% endblock %}
+{% block brief %}المخطط المعرفي والخبرة{% endblock %}
+{% block content %}
+<section class="ui-card" style="margin-top: 1.25rem">
+  <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('kgr.rules') }}</h2><span class="ui-note" style="margin: 0">{{ t('kgr.rules_note') }}</span></div>
+  <div class="ui-scroll" style="margin-top: 0.75rem">
+    <table class="ui-table" style="min-width: 720px">
+      <thead><tr><th scope="col">{{ t('kgr.col_rule') }}</th><th scope="col">{{ t('kgr.col_domain') }}</th><th scope="col">{{ t('kgr.col_status') }}</th><th scope="col">{{ t('kgr.col_source') }}</th></tr></thead>
+      <tbody>
+        {% for rule in clinic_rules %}
+        <tr><td><b>{{ t('hard.' ~ rule.rule_id) }}</b><div class="ui-note" style="margin: 0">{{ t('hard_rule.' ~ rule.rule_id) }}</div></td>
+          <td>{{ t('domain.' ~ rule.domain) }}</td>
+          <td>{{ rule_status(rule) }}</td>
+          <td class="ui-note" dir="auto" style="margin: 0">{{ rule.source }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="ui-grid">
+  <section class="ui-card">
+    <h2>{{ t('kgr.glossary') }}</h2>
+    <p class="ui-note" style="color: var(--ui-muted-2)">{{ t('kgr.glossary_now', n=texts, sheet=term_sheet) }}</p>
+    <p class="ui-note">{% if arabic_checked %}{{ t('gate.arabic_checked', by=arabic_checked.arabic_checked_by, on=arabic_checked.arabic_checked_on) }}{% else %}{{ t('gate.arabic_pending', n=texts) }}{% endif %}</p>
+    <p class="ui-note">{{ t('kgr.glossary_later') }}</p>
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('kgr.not_built') }}</h2>
+    <ul class="ui-plain" style="margin-top: 0.75rem">
+      {% for key in ['graph', 'cases', 'data'] %}<li><b>{{ t('kgr_part.' ~ key) }}</b> · {{ t('kgr_does.' ~ key) }}</li>{% endfor %}
+    </ul>
+    <p class="ui-note">{{ t('kgr.who_curates') }}</p>
+  </section>
+</div>
+{% endblock %}

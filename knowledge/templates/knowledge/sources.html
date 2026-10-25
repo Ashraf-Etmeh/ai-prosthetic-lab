@@ -1,0 +1,98 @@
+{% extends "ui_base.html" %}
+{# Knowledge 1, the source library and ingestion (docs/design/06-knowledge-layer/Main.html; SYSTEM_DESIGN.md §7.1):
+   every document the project knows, with its kind, language, licence as recorded ("not shown" when none), what
+   extraction did to its text and its status; the steps from document to search; what needs a curator. Facts
+   only, read from the catalog, the registry, the extracted text and the search index (knowledge/library.py). #}
+{% block title %}{{ t('ksrc.title') }}{% endblock %}
+{% block kicker %}{{ t('ksrc.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('ksrc.intro') }}</p>{% endblock %}
+{% block brief %}الطبقة المعرفية المتخصصة{% endblock %}
+{% block content %}
+{% macro facts_line(f) -%}
+  {%- if f is none %}<span class="ui-critical">{{ t('ksrc.no_text') }}</span>
+  {%- else %}{% set bits = [] %}
+    {%- if f.pages %}{% set _ = bits.append(t('ksrc.pages', n=f.pages)) %}{% endif %}
+    {%- if f.references_from %}{% set _ = bits.append(t('ksrc.references', p=f.references_from)) %}{% endif %}
+    {%- if f.header_lines %}{% set _ = bits.append(t('ksrc.headers', n=f.header_lines)) %}{% endif %}
+    {%- if f.search_lines %}{% set _ = bits.append(t('ksrc.search_lines', n=f.search_lines)) %}{% endif %}
+    {%- if f.split_words %}{% set _ = bits.append(t('ksrc.split_words')) %}{% endif %}
+    {%- if f.thin_pages %}{% set _ = bits.append(t('ksrc.thin_pages', n=f.thin_pages)) %}{% endif %}
+    {{- bits | join(' · ') if bits else t('ksrc.text_ok') }}
+  {%- endif -%}
+{%- endmacro %}
+
+<nav class="ui-conds" aria-label="{{ t('ksrc.kinds') }}">
+  <a href="{{ url_for('knowledge.sources', q=words or none) }}"{% if not kind %} aria-current="true"{% endif %}>{{ t('ksrc.all') }} · {{ total }}</a>
+  {% for k in kinds %}
+  <a href="{{ url_for('knowledge.sources', kind=k, q=words or none) }}"{% if kind == k %} aria-current="true"{% endif %}>{{ t('source_type.' ~ k) }} · {{ counts[k] }}</a>
+  {% endfor %}
+</nav>
+
+<div class="ui-cols" style="margin-top: 1.25rem">
+  <section class="ui-card ui-col-main">
+    <div class="ui-titlebar" style="align-items: flex-end">
+      <h2>{{ t('ksrc.documents') }}</h2>
+      <form method="get" action="{{ url_for('knowledge.sources') }}" style="display: flex; gap: 0.5rem; align-items: flex-end">
+        {% if kind %}<input type="hidden" name="kind" value="{{ kind }}">{% endif %}
+        <label>{{ t('ksrc.search') }}<input type="search" name="q" value="{{ words }}" dir="auto" placeholder="{{ t('ksrc.search_hint') }}"></label>
+        <button class="ui-btn ui-btn-quiet" type="submit">{{ t('ksrc.search_button') }}</button>
+      </form>
+    </div>
+    {% if catalogued %}
+    <div class="ui-scroll" style="margin-top: 0.75rem">
+      <table class="ui-table" style="min-width: 760px">
+        <thead><tr><th scope="col">{{ t('ksrc.col_document') }}</th><th scope="col">{{ t('ksrc.col_kind') }}</th><th scope="col">{{ t('ksrc.col_language') }}</th><th scope="col">{{ t('ksrc.col_licence') }}</th><th scope="col">{{ t('ksrc.col_text') }}</th><th scope="col">{{ t('ksrc.col_status') }}</th></tr></thead>
+        <tbody>
+          {% for row in catalogued %}
+          <tr>
+            <td><b dir="auto">{{ row.title }}</b>{% if row.year %} <span style="color: var(--ui-muted)">({{ row.year }})</span>{% endif %}
+              <div class="ui-note" style="margin: 0">{% for d in row.domains %}{{ t('kdomain.' ~ d) }}{{ ' · ' if not loop.last }}{% endfor %}</div></td>
+            <td>{{ t('source_type.' ~ row.source_type) }}</td>
+            <td>{{ row.language | upper }}</td>
+            <td>{% if row.licence %}<bdi>{{ row.licence }}</bdi>{% else %}<span style="color: var(--ui-muted)">{{ t('ksrc.not_shown') }}</span>{% endif %}</td>
+            <td style="font-size: 0.8rem">{{ facts_line(row.facts) }}</td>
+            <td><span class="ui-tag{{ ' ui-tag-accent' if row.status == 'searched' else ' ui-tag-warn' }}">{{ t('kstatus.' ~ row.status) }}</span>
+              {% if row.passages %}<div class="ui-note" style="margin: 0">{{ t('ksrc.passages', n=row.passages) }}</div>{% endif %}
+              {% if row.excluded_from_gaps %}<div class="ui-note" style="margin: 0">{{ t('ksrc.not_in_gap_search') }}</div>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="ui-note">{{ t('ksrc.none_found') }}</p>{% endif %}
+
+    {% if others and not kind %}
+    <h3 style="margin: 1.5rem 0 0.25rem; font-size: 0.95rem">{{ t('ksrc.registry') }}</h3>
+    <p class="ui-note" style="margin-top: 0">{{ t('ksrc.registry_note') }}</p>
+    <ul class="ui-plain">
+      {% for row in others %}<li><span dir="auto">{{ row.title }}</span> · <span class="ui-tag ui-tag-warn">{{ t('kstatus.' ~ row.status) }}</span>{% if row.licence %} · <bdi>{{ row.licence }}</bdi>{% endif %}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('ksrc.pipeline') }}</h2>
+      <ol class="ui-plain" style="margin-top: 0.75rem">
+        {% for step in ['licence', 'text', 'clean', 'passages', 'index'] %}<li><b>{{ t('kstep.' ~ step) }}</b> · {{ t('kstep_does.' ~ step) }}</li>{% endfor %}
+      </ol>
+      <p class="ui-note">{% if version %}{{ t('path_data.library', built=(version.built or '')[:10], n=version.passages) }}{% else %}{{ t('path_data.no_library') }}{% endif %}</p>
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('ksrc.curator') }}</h2>
+      {% if queue %}
+      <ul class="ui-plain" style="margin-top: 0.75rem">
+        {% for item in queue %}<li>{{ t('curate.' ~ item.what, **item.params) }}</li>{% endfor %}
+      </ul>
+      {% else %}<p class="ui-note">{{ t('ksrc.curator_none') }}</p>{% endif %}
+      {% if last_search %}<p class="ui-note">{{ t('ksrc.last_search', at=(last_search.recorded_at or '')[:10], hits=last_search.hit_at_5 if not last_search.orthotics else last_search.hits, n=last_search.queries if not last_search.orthotics else last_search.searches) }}</p>{% endif %}
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('ksrc.add') }}</h2>
+      <p class="ui-note" style="color: var(--ui-muted-2)">{{ t('ksrc.add_how') }}</p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

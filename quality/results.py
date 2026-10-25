@@ -10,6 +10,10 @@ itself appends one JSON line to data/quality/results/runs.jsonl
                                                  how (without search, with search, with the AI), the cases
                                                  that passed, and with the AI the answer key covered and what
                                                  the quote check kept and removed
+  python -m knowledge.evaluate --record          kind "search_quality" (plan Part 5): the search-quality
+                                                 queries' hit@1 and hit@5, or (--orthotics) the orthotic topic
+                                                 searches that found a right passage; the source page says a
+                                                 test is due when the library was built after the last one
 
 Every line carries the versions it ran with (current_versions(): the language
 model set, each domain's prompt version, the library build), so a result is
@@ -27,8 +31,8 @@ from knowledge.library import library_version
 from reasoning.writer import configured_model
 from shared import config, domains
 
-RELEASE_CHECK, GOLDEN_CASES = "release_check", "golden_cases"
-KINDS = (RELEASE_CHECK, GOLDEN_CASES)
+RELEASE_CHECK, GOLDEN_CASES, SEARCH_QUALITY = "release_check", "golden_cases", "search_quality"
+KINDS = (RELEASE_CHECK, GOLDEN_CASES, SEARCH_QUALITY)
 DEVELOPMENT, HELD_OUT = "development", "held_out"
 NO_SEARCH, SEARCH, RAG = "no_search", "search", "rag"
 

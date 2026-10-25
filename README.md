@@ -197,9 +197,28 @@ http://127.0.0.1:5000/orthotics.
 ## The pages
 
 Every page has the same header (since 2026-10-23): Prosthetics / Orthotics /
-Reasoning and review, the part's modules, and on a case's pages a bar with
-the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
+Knowledge layer / Reasoning and review, the part's modules, and on a case's
+pages a bar with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
 four prosthetic modules; the orthotics map is at /orthotics.
+
+**Knowledge layer** (2026-10-25, `docs/design/06-knowledge-layer/`) has three
+pages, all read-only:
+- **1 Sources** (`/knowledge`): every catalogued document with its kind,
+  language, licence as recorded ("not shown" when none), what extraction did
+  to its text (pages, references and headers removed, split words rejoined,
+  pages with almost no text) and its status (searched, or not in the index);
+  the registry's documents that are link only or not catalogued; the steps
+  from document to search; what needs a curator (e.g. a manual download, or
+  a search-quality test due after a new library build:
+  `python -m knowledge.evaluate --record`).
+- **2 Evidence** (`/knowledge/evidence`): each knowledge item's quote and
+  page, its grade as printed, its evidence fields and the owner's rule that
+  set them (or unassigned), why it may need a curator, and the owner's rule
+  table. Nothing on it writes a value: the fields come only from the owner.
+- **3 Graph and expertise** (`/knowledge/graph`): the clinic rules with
+  their status, version, owner and approval date; the Arabic term sheet's
+  state; and what is not built yet (the design knowledge graph, a glossary
+  with a status per term, the case library, structured data).
 
 **Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
 has three pages:
@@ -488,7 +507,9 @@ shared/             What every part uses: the case core (case_schema.py), the do
 knowledge/          Knowledge layer: source catalog, text extraction, ingestion, search, search-quality
                     evaluation, knowledge items with the owner's evidence rules, the clinic rules
                     (clinic_rules.py: each rule's status, version, owner, approval date), the library's
-                    build as its version (library.py)
+                    build and documents as the pages show them (library.py), and the knowledge pages
+                    (routes.py, nav.py: what the header shows for this shared part)
+  templates/knowledge/
   tests/
 reasoning/          The reasoning pathway every domain shares: pathway.py (search, AI summaries, gaps,
                     components, fitting), the RAG pipeline (rag.py, rag_topics.py), the AI writer

@@ -1,0 +1,77 @@
+{% extends "ui_base.html" %}
+{# Knowledge 2, evidence and curation (docs/design/06-knowledge-layer/Evidence.html; SYSTEM_DESIGN.md §7.1), read-only
+   (owner's answer, 2026-10-25): each knowledge item is the source's own words with its page, checked word for word;
+   its grade is copied as printed; its evidence layer, tag and confidence come from the owner's rule table (and say
+   which rule) or stay unassigned; its population and limitations come only from the owner's values (CLAUDE.md).
+   Nothing on this page writes a value. #}
+{% block title %}{{ t('kev.title') }}{% endblock %}
+{% block kicker %}{{ t('kev.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('kev.intro') }}</p>{% endblock %}
+{% block brief %}الأدلة والتنسيق{% endblock %}
+{% block content %}
+{% macro field(label, value, note) %}
+<div style="flex: 1 1 200px; border: 1px solid var(--ui-line); border-radius: 12px; padding: 0.75rem 1rem">
+  <div class="ui-note" style="margin: 0">{{ label }}</div>
+  <b style="display: block; margin-top: 0.2rem">{{ value }}</b>
+  {% if note %}<div class="ui-note" style="margin: 0">{{ note }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+<nav class="ui-conds" aria-label="{{ t('kev.reasons') }}">
+  <a href="{{ url_for('knowledge.evidence') }}"{% if not reason %} aria-current="true"{% endif %}>{{ t('kev.all') }} · {{ all_items }}</a>
+  {% for r in reason_keys %}<a href="{{ url_for('knowledge.evidence', reason=r) }}"{% if reason == r %} aria-current="true"{% endif %}>{{ t('kreason.' ~ r) }} · {{ reason_counts[r] }}</a>{% endfor %}
+</nav>
+
+<div class="ui-cols" style="margin-top: 1.25rem">
+  <section class="ui-card ui-col-side" style="max-height: 70vh; overflow-y: auto">
+    <h2>{{ t('kev.queue') }}</h2>
+    {% if items %}
+    <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+      {% for item in items %}
+      <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--ui-line-soft)">
+        <a href="{{ url_for('knowledge.evidence', item=item.knowledge_id, reason=reason) }}"{% if chosen and item.knowledge_id == chosen.knowledge_id %} aria-current="true" style="font-weight: 700"{% endif %}><code dir="ltr" style="font-size: 0.8rem">{{ item.knowledge_id }}</code></a>
+        <div class="ui-note" style="margin: 0">{{ t(topic_keys[item.topic]) }}{% for r in reasons[item.knowledge_id] %} · {{ t('kreason.' ~ r) }}{% endfor %}</div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="ui-note">{{ t('kev.none') }}</p>{% endif %}
+  </section>
+
+  <div class="ui-col-main">
+    {% if chosen %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2><code dir="ltr">{{ chosen.knowledge_id }}</code></h2><span class="ui-tag{{ ' ui-tag-accent' if chosen.validation_status != 'unreviewed' else ' ui-tag-warn' }}">{{ t('kvalidation.' ~ chosen.validation_status) }}</span></div>
+      <blockquote dir="auto" style="margin: 0.75rem 0 0; padding: 0.5rem 0.9rem; border-inline-start: 3px solid #9bb7d4; background: #F6F9FC">{{ chosen.statement }}{% if chosen.list_items %}<ul>{% for li in chosen.list_items %}<li>{{ li }}</li>{% endfor %}</ul>{% endif %}</blockquote>
+      <div class="ui-note" dir="auto">{{ chosen.citation }} · {{ t('kev.checked') }}</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem">
+        {{ field(t('kev.grade'), chosen.grade_as_printed or t('grade.none'), t('kev.grade_note')) }}
+        {{ field(t('kev.kind'), t('source_type.' ~ chosen.source_type), t('options.no_outcome_evidence') if chosen.source_type == 'professional_knowledge' else '') }}
+        {{ field(t('kev.layer'), chosen.evidence_layer if chosen.evidence_layer != unassigned else t('kev.unassigned'),
+                 t('kev.set_by', rule=chosen.assigned_by) if rule else t('kev.no_rule')) }}
+        {{ field(t('kev.tag'), chosen.evidence_tag if chosen.evidence_tag != unassigned else t('kev.unassigned'), '') }}
+        {{ field(t('kev.confidence'), chosen.confidence if chosen.confidence != unassigned else t('kev.unassigned'), '') }}
+        {{ field(t('kev.population'), chosen.population or t('kev.not_set'), t('kev.owners_value')) }}
+        {{ field(t('kev.limitations'), chosen.limitations or t('kev.not_set'), t('kev.owners_value')) }}
+      </div>
+      {% if rule %}<p class="ui-note" style="margin-top: 0.75rem"><b>{{ rule.rule_id }}</b> · <bdi>{{ rule.matches }}</bdi> · <bdi>{{ rule.basis }}</bdi></p>{% endif %}
+      <p class="ui-note">{{ t('kev.read_only') }}</p>
+    </section>
+    {% endif %}
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('kev.rules') }}</h2><span class="ui-note" style="margin: 0">{{ t('kev.rules_note') }}</span></div>
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 640px">
+          <thead><tr><th scope="col">{{ t('kev.col_rule') }}</th><th scope="col">{{ t('kev.col_when') }}</th><th scope="col">{{ t('kev.col_sets') }}</th><th scope="col">{{ t('kev.col_items') }}</th></tr></thead>
+          <tbody>
+            {% for r in rules %}
+            <tr><td><b>{{ r.rule_id }}</b></td><td dir="auto">{{ r.matches }}</td><td><bdi>{{ r.evidence_layer }}</bdi> · <bdi>{{ r.evidence_tag }}</bdi> · <bdi>{{ r.confidence }}</bdi></td><td>{{ rule_items[r.rule_id] }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="ui-note">{{ t('kev.rules_values') }}</p>
+    </section>
+  </div>
+</div>
+{% endblock %}

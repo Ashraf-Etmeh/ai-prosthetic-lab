@@ -131,7 +131,8 @@ capabilities they cover: 1 تقييم حالات البتر, 2–3 تحليل ا
 دعم اختيار المكونات, 4 دعم قرارات التصميم والتركيب, 5 المتابعة والتقييم; since
 2026-10-24 each is a page of its own (§4.10), and the review page below is
 the specialist review reached from module 1. The orthotics map (`/orthotics`)
-does the same for its six (§4.9).
+does the same for its six (§4.9). Two shared parts sit next to the domains:
+the knowledge layer (§4.12) and reasoning and review (§4.11).
 
 1. **Intake form** (`GET /intake`). The user enters a test case: amputation
    level (12 levels, 6 lower and 6 upper limb) and side (left, right,
@@ -567,6 +568,24 @@ library's version is its build time (`knowledge/library.py`, from
 `data/knowledge/vector_store/info.json`). Counts only, never a record's
 content (`quality/measures.py`).
 
+### 4.12 Knowledge layer pages (plan Part 5, 2026-10-25)
+
+The shared part "Knowledge layer" (SYSTEM_DESIGN.md §7.1;
+`docs/design/06-knowledge-layer/`; `knowledge/routes.py`, `knowledge/nav.py`)
+has three tabs, all read-only (nothing on them writes a value):
+
+| Tab | Page | What it holds |
+|---|---|---|
+| 1 Sources | `/knowledge` (`?kind=`, `?q=`) | every catalogued document with its kind, language, licence as recorded ("not shown" when none), the facts extraction recorded about its text (pages, references and repeated headers removed, search syntax removed, split words rejoined, pages with almost no text) and its status (searched, with its passages, or catalogued but not in the index; a note where the gap search leaves it out); the registry's documents that are link only (manual download) or downloaded but not catalogued (never quoted; regulations and datasets left out); the steps from document to search; what needs a curator: a document with no extracted text or not in the index, a manual download, and a search-quality test due when the library was built after the last recorded one (`python -m knowledge.evaluate --record`) |
+| 2 Evidence | `/knowledge/evidence` (`?item=`, `?reason=`) | the 59 knowledge items, each with why it may need a curator (no rule matched, layer unassigned, population not set, a practice manual with no outcome evidence: facts about its fields); one item's quote and page, grade as printed, kind of source, evidence layer, tag and confidence with the owner's rule that set them, population and limitations (the owner's values only); the owner's rule table with the items each rule set. Read-only by the owner's answer (2026-10-25): CLAUDE.md keeps these values the owner's |
+| 3 Graph and expertise | `/knowledge/graph` | the clinic rules with their status, version, owner, approval date and the source of their wording; the Arabic term sheet's state; not built yet: the design knowledge graph, a glossary with a status per clinical term, the case library and structured data (who curates them is the owner's to decide; owner's answer, 2026-10-25: "show what exists") |
+
+Facts only, from the catalog, the sources registry, the extracted texts, the
+search index, `items.json`, the owner's rule table and clinic rules
+(`knowledge/library.py`). A search-quality run records itself with
+`--record` (`quality/results.py`, kind "search_quality"), and the quality
+page's audit trail lists it.
+
 ---
 
 ## 5. Structure
@@ -574,7 +593,7 @@ content (`quality/measures.py`).
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 603 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 612 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -620,7 +639,11 @@ knowledge/
   items.py                 one KnowledgeItem per guide statement, rules applied; export to data/knowledge/
   evidence_rules.py        loads the owner's rule table, a condition per rule, applies the rules
   clinic_rules.py          loads the owner's clinic rules: each rule's status, version, owner, approval date
-  library.py               the library's build (time, passages) as its version
+  library.py               the library's build (time, passages) as its version; every document with its facts
+                           and status; what needs a curator
+  routes.py                GET /knowledge, /knowledge/evidence, /knowledge/graph (read-only)
+  nav.py                   what the header shows for the shared part "Knowledge layer"
+  templates/knowledge/     sources.html, evidence.html, graph.html
   tests/
 reasoning/
   pathway.py               analyse_case(): search → AI summaries (quote-checked) → gaps, components, fitting
@@ -826,7 +849,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **603 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **612 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -927,6 +950,11 @@ uses a missing key.
   the golden-case runs are recorded; the population check is not built and
   the advice check is a measurement, not shown on the pages; no held-out run
   and no sign-off yet.
+- Knowledge layer (§4.12, 2026-10-25): read-only; a curator cannot set an
+  item's evidence fields from the page (the owner's answer); the design
+  knowledge graph, a glossary with statuses, the case library and structured
+  data are not built; "pages with almost no text" counts figures and
+  dividers as well as scans; no search-quality run recorded yet.
 
 ---
 

@@ -4,9 +4,9 @@ Run locally with:
     python app.py
 
 Wires together each part's pages (Flask blueprints): each domain's intake
-and modules, and the review page. knowledge/ and reasoning/ have no routes of
-their own: an intake calls reasoning/pathway.py as part of handling a
-submitted case. The pages every part shares (header, style, base page) are
+and modules, the review and quality pages, and the knowledge pages.
+reasoning/ has no routes of its own: an intake calls reasoning/pathway.py as
+part of handling a submitted case. The pages every part shares (header, style, base page) are
 in shared/templates/; each part's own are in <part>/templates/<part>/.
 
 The pages are in English or Arabic (shared/i18n.py). GET /language/<code>
@@ -18,6 +18,7 @@ typed stays in the form (prosthetics/intake.py, orthotics/intake.py).
 from flask import Flask, abort, g, redirect, request, url_for
 
 from knowledge.catalog import attributions
+from knowledge.routes import bp as knowledge_bp
 from orthotics.intake import bp as orthotic_intake_bp
 from orthotics.modules import bp as orthotic_modules_bp
 from prosthetics.intake import bp as prosthetic_intake_bp
@@ -52,6 +53,7 @@ def create_app() -> Flask:
     app.register_blueprint(orthotic_intake_bp)  # /intake/orthotics (use case 03, stroke AFO)
     app.register_blueprint(orthotic_modules_bp)  # /orthotics: the map and modules 1-6
     app.register_blueprint(review_bp)  # /review/<id>: what the sources say, and the reviewer's marks
+    app.register_blueprint(knowledge_bp)  # /knowledge: sources, evidence, graph and expertise (plan Part 5)
 
     @app.context_processor
     def interface_language():

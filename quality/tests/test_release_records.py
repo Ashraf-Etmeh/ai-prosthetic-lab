@@ -120,6 +120,15 @@ class MeasureTests(unittest.TestCase):
         self.assertEqual(rows[4]["versions"]["prompt"], "rag-ort-v2")  # an older line: from its generation
         self.assertFalse(any("who" in row for row in rows))
 
+    def test_search_quality_runs_join_the_audit_trail(self):
+        runs = [{"kind": results.SEARCH_QUALITY, "recorded_at": "2026-10-25T09:00:00+00:00", "orthotics": False,
+                 "queries": 34, "hit_at_1": 30, "hit_at_5": 33},
+                {"kind": results.SEARCH_QUALITY, "recorded_at": "2026-10-25T09:05:00+00:00", "orthotics": True,
+                 "searches": 12, "hits": 11}]
+        rows = measures.audit_rows([], runs, None, [], [])
+        self.assertEqual([(row["what"], row["params"]) for row in rows],
+                         [("search_quality_orthotics", {"hits": 11, "n": 12}), ("search_quality", {"hits": 33, "n": 34})])
+
 
 if __name__ == "__main__":
     unittest.main()

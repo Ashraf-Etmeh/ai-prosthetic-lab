@@ -93,7 +93,12 @@ def audit_rows(entries: list[dict], runs: list[dict], library: Optional[dict], r
     for run in runs:
         built = ((run.get("versions") or {}).get("library") or {}).get("built")
         prompts = ", ".join(sorted(set(((run.get("versions") or {}).get("prompts") or {}).values())))
-        if run["kind"] == results.RELEASE_CHECK:
+        if run["kind"] == results.SEARCH_QUALITY:
+            params = ({"hits": run.get("hits"), "n": run.get("searches")} if run.get("orthotics")
+                      else {"hits": run.get("hit_at_5"), "n": run.get("queries")})
+            rows.append({"when": run["recorded_at"], "what": "search_quality_orthotics" if run.get("orthotics")
+                         else "search_quality", "params": params, "versions": {"prompt": None, "library": built}})
+        elif run["kind"] == results.RELEASE_CHECK:
             failed = [name for name, outcome in (run.get("steps") or {}).items() if outcome != "OK"]
             rows.append({"when": run["recorded_at"], "what": "release_check_failed" if failed else "release_check",
                          "params": {"failed": ", ".join(failed)}, "versions": {"prompt": prompts, "library": built}})

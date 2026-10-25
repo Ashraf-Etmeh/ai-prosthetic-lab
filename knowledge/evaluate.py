@@ -1,6 +1,8 @@
 """Retrieval evaluation: does the search find the page that answers a question?
 
 Run:  python -m knowledge.evaluate      (after python -m knowledge.ingest)
+      --orthotics: the orthotic topic searches instead; --record: add the result to
+      data/quality/results/runs.jsonl (quality/results.py) for the source and quality pages
 
 Reads data/knowledge/eval/retrieval_queries.json. Each query names the document and
 pages that answer it. The script searches the documents v1 searches
@@ -173,13 +175,25 @@ def orthotic_report(rows) -> None:
           ", ".join(f"{doc} {n}" for doc, n in documents.most_common()))
 
 
+def _record(data: dict) -> None:
+    """Add the result to data/quality/results/runs.jsonl (quality/results.py), for the source and quality pages."""
+    from quality import results  # here: only a recorded run needs it
+
+    results.record_run(results.SEARCH_QUALITY, data)
+    print(f"Recorded in {results.config.QUALITY_RESULTS_PATH}")
+
+
 def main(
     store: Optional[VectorStore] = None,
     embed: Callable[[list[str]], np.ndarray] = embed_texts,
     orthotics: bool = False,
+    record: bool = False,
 ) -> None:
     if orthotics:
-        orthotic_report(orthotic_topic_ranks(store=store, embed=embed))
+        rows = orthotic_topic_ranks(store=store, embed=embed)
+        orthotic_report(rows)
+        if record:
+            _record({"orthotics": True, "searches": len(rows), "hits": sum(1 for _, _, r, _ in rows if r)})
         return
     queries = load_queries()
     store = store if store is not None else get_store()
@@ -187,12 +201,20 @@ def main(
     not_german = [
         q for q in queries if q["group"] != "German" and q.get("search_languages") != ["de"]
     ]
-    report(run(queries, store, embed), run(not_german, store, embed, frozenset({"de"})))
+    outcomes = run(queries, store, embed)
+    report(outcomes, run(not_german, store, embed, frozenset({"de"})))
+    if record:
+        table = hit_table(outcomes)
+        _record({"orthotics": False, "queries": sum(n for n, _, _ in table.values()),
+                 "hit_at_1": sum(at1 for _, at1, _ in table.values()),
+                 "hit_at_5": sum(at5 for _, _, at5 in table.values()),
+                 "groups": {group: {"queries": n, "hit_at_1": at1, "hit_at_5": at5}
+                            for group, (n, at1, at5) in table.items()}})
 
 
 if __name__ == "__main__":
     import sys
 
-    main(orthotics="--orthotics" in sys.argv[1:])
+    main(orthotics="--orthotics" in sys.argv[1:], record="--record" in sys.argv[1:])
 
 

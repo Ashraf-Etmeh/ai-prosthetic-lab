@@ -181,9 +181,10 @@ class CompletenessTests(unittest.TestCase):
         # The reasoning and review part's pages (plan Part 4, 2026-10-25): its name and tabs, the pathway's steps,
         # the quality page's run modes and audit lines, the review page's decisions and its new mark
         from quality import results
-        from review import nav as review_nav
         expected |= {f"part.{name}" for name in domains.SHARED_PARTS}
-        expected |= {review_nav.LABELS + key for key, _, _ in review_nav.MODULES}
+        for name in domains.SHARED_PARTS:  # each shared part's tabs (review: Part 4, knowledge: Part 5)
+            nav = domains.nav(name)
+            expected |= {nav.LABELS + key for key, _, _ in nav.MODULES}
         steps = ("case_data", "analysis", "reasoning", "output", "review", "outcome")
         expected |= {f"{prefix}.{key}" for prefix in ("path_step", "path_does", "path_guard") for key in steps}
         expected |= {f"path_never.{key}" for key in ("diagnosis", "prescription", "ranking", "readiness", "unquoted")}
@@ -193,6 +194,20 @@ class CompletenessTests(unittest.TestCase):
                                                    "library", "rule_approved", "arabic_checked", "signed_off")}
         expected |= {f"audit.golden_{name}" for name in (results.DEVELOPMENT, results.HELD_OUT)}
         expected |= {f"review.{decision}" for decision in DECISIONS} | {"summary.summary_wrong"}
+        # The knowledge layer's pages (plan Part 5, 2026-10-25): statuses, steps, reasons, curator lines, domains
+        from knowledge import library, routes as knowledge_routes
+        from knowledge.catalog import DOMAINS as CATALOG_DOMAINS
+        from knowledge.models import VALIDATION_STATUSES
+        expected |= {f"kstatus.{status}" for status in library.STATUSES}
+        steps = ("licence", "text", "clean", "passages", "index")
+        expected |= {f"{prefix}.{step}" for prefix in ("kstep", "kstep_does") for step in steps}
+        expected |= {f"kreason.{reason}" for reason in knowledge_routes.REASONS}
+        expected |= {f"kvalidation.{status}" for status in VALIDATION_STATUSES}
+        expected |= {f"kdomain.{domain}" for domain in CATALOG_DOMAINS}
+        expected |= {f"source_type.{kind}" for kind in knowledge_routes.KINDS}
+        expected |= {f"curate.{what}" for what in ("not_extracted", "not_in_index", "link_only", "search_quality_due")}
+        expected |= {f"{prefix}.{key}" for prefix in ("kgr_part", "kgr_does") for key in ("graph", "cases", "data")}
+        expected |= {"kev.other_topic", "functional.heading", "audit.search_quality", "audit.search_quality_orthotics"}
         self.assertEqual(expected - set(TEXT), set())
 
 
