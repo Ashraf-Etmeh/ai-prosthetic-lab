@@ -1,5 +1,6 @@
 {% extends "ui_base.html" %}
-{% from "ui_macros.html" import alert_list, latest_visit_card, loop_back_links, outcome_charts with context %}
+{% from "ui_macros.html" import latest_visit_card, loop_back_links with context %}
+{% from "ui_forms.html" import alerts_card, follow_up_main, visit_steps with context %}
 {# Module 6 (the canvas's screen 6): the visits; the outcome measures the clinician enters at each visit, as bars
    over time, shown as recorded (the clinician judges the change: no score, trend or verdict is computed); the
    alerts, which loop back to tuning, redesign or re-assessment; wearing time and the device's condition. The
@@ -8,98 +9,17 @@
 {% block kicker %}{{ t('map.module', n=6) }}{% endblock %}
 {% block brief %}المتابعة والتقييم · متابعة تطور الحالة{% endblock %}
 {% block content %}
-{% macro sent(f, name, saved_value) %}{{ f.get(name, '') if f else (saved_value or '') }}{% endmacro %}
 {% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
-{% set action = form.get('action') if form else none %}
 {% set follow = plan.follow_up %}
 {% set due = follow.next_due() %}
-
-{% if follow.visits %}
-<ol class="ui-steps" aria-label="{{ t('fu.visits') }}">
-  {% for visit in follow.visits %}
-  <li class="{{ 'done' if visit.status.value == 'done' else ('in_progress' if visit is sameas due else '') }}"{% if visit is sameas due %} aria-current="step"{% endif %}><b><bdi>{{ visit.name }}</bdi></b>{% if visit.date %}<bdi>{{ visit.date }}</bdi> · {% endif %}{{ t('visit_status.' ~ visit.status.value) }}</li>
-  {% endfor %}
-</ol>
-{% endif %}
+{% set post_url = url_for('orthotic_modules.follow_up', case_id=case.case_id) %}
+{{ visit_steps(follow, due) }}
 
 <div class="ui-cols">
-  <div class="ui-col-main">
-    <section class="ui-card">
-      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('fu.measures') }}</h2><span class="ui-note" style="margin: 0">{{ t('fu.measures_note') }}</span></div>
-      {{ outcome_charts(follow) }}
-
-      {% set f = form if action == 'measures' else none %}
-      {% set n_rows = (f.get('measure_rows') | int) if f else (follow.measures | length) + new_rows %}
-      <details{% if f or not follow.measures %} open{% endif %}><summary>{{ t('fu.measures_edit') }}</summary>
-        <form method="post" action="{{ url_for('orthotic_modules.follow_up', case_id=case.case_id) }}">
-          <input type="hidden" name="action" value="measures"><input type="hidden" name="measure_rows" value="{{ n_rows }}">
-          {% for n in range(1, n_rows + 1) %}{% set m = follow.measures[n - 1] if (not f and n <= follow.measures | length) else none %}
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem">
-            {% for col, label in [('name', t('fu.measure_name')), ('unit', t('fu.measure_unit')), ('how', t('fu.measure_how'))] %}<label style="flex: 1 1 150px">{{ label }}<input type="text" name="measure_{{ n }}_{{ col }}" dir="auto" value="{{ sent(f, 'measure_' ~ n ~ '_' ~ col, m[col] if m else '') }}"></label>{% endfor %}
-          </div>
-          {% endfor %}
-          <label style="display: block; margin-top: 0.6rem">{{ t('fu.due_next') }}<input type="text" name="due_next" dir="auto" value="{{ sent(f, 'due_next', follow.due_next) }}"></label>
-          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fu.save_measures') }}</button></div>
-        </form>
-      </details>
-    </section>
-
-    {% set f = form if action == 'visits' else none %}
-    {% set n_rows = (f.get('visit_rows') | int) if f else (follow.visits | length) + new_rows %}
-    <details class="ui-card"{% if f or not follow.visits %} open{% endif %}>
-      <summary style="font-size: 1.05rem; font-weight: 600">{{ t('fu.visits_edit') }}</summary>
-      <form method="post" action="{{ url_for('orthotic_modules.follow_up', case_id=case.case_id) }}">
-        <input type="hidden" name="action" value="visits"><input type="hidden" name="visit_rows" value="{{ n_rows }}">
-        {% for n in range(1, n_rows + 1) %}{% set v = follow.visits[n - 1] if (not f and n <= follow.visits | length) else none %}
-        {% set p = 'visit_' ~ n ~ '_' %}
-        <fieldset style="border: 1px solid var(--ui-line); border-radius: 10px; padding: 0.5rem 0.75rem; margin-top: 0.6rem">
-          <legend style="font-weight: 600; font-size: 0.875rem">{{ t('fu.visit_n', n=n) }}</legend>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
-            <label style="flex: 2 1 180px">{{ t('fu.visit') }}<input type="text" name="{{ p }}name" dir="auto" value="{{ sent(f, p ~ 'name', v.name if v else '') }}"></label>
-            <label style="flex: 1 1 140px">{{ t('fu.date') }}<input type="date" name="{{ p }}date" value="{{ sent(f, p ~ 'date', v.date if v else '') }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
-            {% set st = f.get(p ~ 'status', '') if f else (v.status.value if v else '') %}
-            <label style="flex: 1 1 140px">{{ t('fu.status') }}<select name="{{ p }}status">{% for s in statuses %}<option value="{{ s.value }}"{{ " selected" if s.value == st }}>{{ t('visit_status.' ~ s.value) }}</option>{% endfor %}</select></label>
-          </div>
-          {% if follow.measures %}
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem">
-            {% for m in follow.measures %}<label style="flex: 1 1 140px"><bdi>{{ m.name }}</bdi>{% if m.unit %} (<bdi>{{ m.unit }}</bdi>){% endif %}<input type="text" name="{{ p }}value_{{ loop.index }}" dir="auto" value="{{ sent(f, p ~ 'value_' ~ loop.index, v.values.get(m.name) if v else '') }}"></label>{% endfor %}
-          </div>
-          {% endif %}
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem">
-            {% for col in ['wearing', 'puts_on_alone', 'device_condition', 'notes'] %}<label style="flex: 1 1 150px">{{ t('fu.' ~ col) }}<input type="text" name="{{ p }}{{ col }}" dir="auto" value="{{ sent(f, p ~ col, v[col] if v else '') }}"></label>{% endfor %}
-          </div>
-        </fieldset>
-        {% endfor %}
-        <p class="ui-note">{{ t('fu.visits_note') }}</p>
-        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fu.save_visits') }}</button></div>
-      </form>
-    </details>
-  </div>
+  {{ follow_up_main(follow, form, post_url, new_rows, statuses) }}
 
   <aside class="ui-col-side">
-    <section class="ui-card">
-      <h2>{{ t('fu.alerts') }}</h2>
-      {{ alert_list(follow, due, 'orthotic_modules.') }}
-      {% set f = form if action == 'alerts' else none %}
-      {% set n_rows = (f.get('alert_rows') | int) if f else (follow.alerts | length) + 1 %}
-      <details{% if f %} open{% endif %}><summary>{{ t('fu.alerts_edit') }}</summary>
-        <form method="post" action="{{ url_for('orthotic_modules.follow_up', case_id=case.case_id) }}">
-          <input type="hidden" name="action" value="alerts"><input type="hidden" name="alert_rows" value="{{ n_rows }}">
-          {% for n in range(1, n_rows + 1) %}{% set a = follow.alerts[n - 1] if (not f and n <= follow.alerts | length) else none %}
-          <div style="margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px dashed var(--ui-line)">
-            <label>{{ t('fu.alert_text') }}<input type="text" name="alert_{{ n }}_text" dir="auto" value="{{ sent(f, 'alert_' ~ n ~ '_text', a.text if a else '') }}"></label>
-            {% set back = f.get('alert_' ~ n ~ '_back_to', '') if f else (a.back_to if a and a.back_to else '') %}
-            <div style="display: flex; gap: 0.5rem; align-items: flex-end">
-              <label style="flex: 1">{{ t('fu.alert_back_to') }}<select name="alert_{{ n }}_back_to"><option value="">{{ t('options.none') }}</option>
-                {% for b in back_to %}<option value="{{ b }}"{{ " selected" if b == back }}>{{ t('fu.back_to.' ~ b) }}</option>{% endfor %}</select></label>
-              <label style="display: flex; gap: 0.4rem; align-items: center; min-height: 44px"><input type="checkbox" name="alert_{{ n }}_resolved" value="1"{{ " checked" if (f.get('alert_' ~ n ~ '_resolved') if f else (a.resolved if a else false)) }}>{{ t('fu.resolved') }}</label>
-            </div>
-          </div>
-          {% endfor %}
-          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fu.save_alerts') }}</button></div>
-        </form>
-      </details>
-    </section>
+    {{ alerts_card(follow, due, form, post_url, back_to, 'orthotic_modules.') }}
 
     {{ latest_visit_card(follow) }}
 

@@ -19,6 +19,11 @@
   {%- else %}{{ value_name(finding.path) }}: {{ recorded(finding.path, finding.value) }}{% endif -%}
 {%- endmacro %}
 
+{# A finding ticked for a requirement, over its row: a gait deviation under its phase, else as finding_label. #}
+{% macro finding_shown(f) -%}
+  {%- if f.group == 'gait' %}<span class="ui-kicker" style="font-size: 0.7rem">{{ t('phase.' ~ f.value.phase) }}</span><br>{{ value_label(f.value) }}{% else %}{{ finding_label(f) }}{% endif -%}
+{%- endmacro %}
+
 {# An option card's drawing of its device type (the design's side views; FES: an electrode). #}
 {% macro device_icon(device) -%}
 <svg width="64" height="64" viewBox="0 0 120 120" fill="none" stroke="#0B5C60" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

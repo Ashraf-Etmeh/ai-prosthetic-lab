@@ -1,0 +1,220 @@
+{# The forms every part's module pages share (docs/design/SYSTEM_DESIGN.md §5: build them once and reuse them): the
+   requirements table and its conflicts, and the follow-up's outcome measures, visits and alerts. Built for the
+   orthotic modules (2026-10-23), shared since 2026-10-24 (plan Part 3). The values are read back by shared/forms.py.
+   Import with context: {% from "ui_forms.html" import requirements_form with context %}.
+   Every value on them is the specialist's: the forms show what was saved, or what was sent if it was refused. #}
+
+{% from "ui_macros.html" import alert_list, outcome_charts with context %}
+
+{# ---- Requirements before devices (§5) ---------------------------------------------------------------- #}
+
+{# The requirements table: each requirement in the specialist's words, the findings of the case it comes from
+   (shared/requirements.py Finding; a value not recorded yet makes it provisional) and its priority.
+   findings + missing: what a requirement can come from, in the domain's `groups` ("req_group.<group>");
+   label(f): a finding in the tick list; shown(f): a ticked finding over its row; waiting: requirement id -> the
+   values it waits on. #}
+{% macro requirements_form(plan, findings, missing, waiting, priorities, new_rows, form, post_url, groups, label, shown) %}
+{% set req_form = form if (form and form.get('action') != 'conflicts') else none %}
+{% set refilled = req_form and req_form.get('rows') %}
+{% set rows = (req_form.get('rows') | int) if refilled else (plan.requirements | length) + new_rows %}
+{% set everything = findings + missing %}
+  <form class="ui-col-main" method="post" action="{{ post_url }}">
+    <input type="hidden" name="action" value="requirements">
+    <section class="ui-card" style="padding-top: 0.5rem">
+      <input type="hidden" name="rows" value="{{ rows }}">
+      <div class="ui-row" style="padding-block: 0.85rem; font-size: 0.8rem; font-weight: 600; color: var(--ui-muted); border-bottom-color: var(--ui-line)">
+        <span style="flex: 1 1 260px">{{ t('req.col_from') }}</span>
+        <span style="flex: 2 1 320px">{{ t('req.col_requirement') }}</span>
+        <span style="flex: 0 0 150px">{{ t('req.col_priority') }}</span>
+      </div>
+      {% for n in range(1, rows + 1) %}
+      {% set req = plan.requirements[n - 1] if (not refilled and n <= plan.requirements | length) else none %}
+      {% set prefix = 'req_' ~ n ~ '_' %}
+      {% set rid = req_form.get(prefix ~ 'id', '') if refilled else (req.id if req else '') %}
+      {% set text = req_form.get(prefix ~ 'text', '') if refilled else (req.text if req else '') %}
+      {% set priority = req_form.get(prefix ~ 'priority', '') if refilled else (req.priority.value if req and req.priority else '') %}
+      {% set ticked = req_form.getlist(prefix ~ 'finding') if refilled else (req.findings if req else []) %}
+      {% set waits = waiting.get(rid, []) if req else [] %}
+      <div class="ui-row" style="align-items: center">
+        <input type="hidden" name="{{ prefix }}id" value="{{ rid }}">
+        <div style="flex: 1 1 260px; font-size: 0.875rem; line-height: 1.25rem">
+          {% for f in everything if f.key in ticked %}
+          <div{% if f.value is none %} class="ui-critical"{% endif %}>{{ shown(f) }}</div>
+          {% endfor %}
+          <details>
+            <summary>{{ t('req.findings', n=ticked | length) }}</summary>
+            {% for group in groups %}
+            {% set in_group = everything | selectattr('group', 'equalto', group) | list %}
+            {% if in_group %}
+            <h3 style="margin: 0.6rem 0 0.2rem; font-size: 0.8rem; color: var(--ui-muted)">{{ t('req_group.' ~ group) }}</h3>
+            <div class="ui-checks">
+              {% for f in in_group %}
+              <label><input type="checkbox" name="{{ prefix }}finding" value="{{ f.key }}"{{ " checked" if f.key in ticked }}><span>{{ label(f) }}</span></label>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% endfor %}
+          </details>
+        </div>
+        <div style="flex: 2 1 320px">
+          <label><span class="ui-rid">{{ rid or t('req.new') }}</span><span class="ui-note" style="display: inline">{{ t('req.requirement') }}</span>
+            <input type="text" name="{{ prefix }}text" value="{{ text }}" dir="auto" style="font-weight: 600"></label>
+          {% if waits %}<div class="ui-tags"><span class="ui-tag ui-tag-warn">{{ t('req.provisional') }}</span></div>{% endif %}
+        </div>
+        <label style="flex: 0 0 150px">{{ t('req.col_priority') }}
+          <select name="{{ prefix }}priority">
+            <option value="">{{ t('req.priority_unset') }}</option>
+            {% for p in priorities %}<option value="{{ p.value }}"{{ " selected" if p.value == priority }}>{{ t('priority.' ~ p.value) }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      {% endfor %}
+      <p class="ui-note">{{ t('req.empty_removes') }}</p>
+      <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('req.save') }}</button></div>
+    </section>
+  </form>
+{% endmacro %}
+
+{# The conflicts between requirements, as the specialist notes them: shown, never hidden. note_label: the note's
+   label in the domain's words ("Note (the orthotist's words)"). #}
+{% macro conflicts_card(plan, form, post_url, note_label) %}
+    <section class="ui-warm">
+      <h2>{{ t('req.conflicts') }}</h2>
+      {% if plan.conflicts %}
+      <div style="margin-top: 0.75rem; font-size: 0.875rem; line-height: 1.3rem">
+        {% for c in plan.conflicts %}
+        <p style="margin: 0 0 0.6rem"><b>{{ t('req.against', first=c.first, second=c.second) }}</b> <bdi>{{ c.note }}</bdi></p>
+        {% endfor %}
+      </div>
+      {% else %}<p class="ui-note" style="color: #3A1A0B">{{ t('req.no_conflicts') }}</p>{% endif %}
+      {% set conflict_form = form if (form and form.get('action') == 'conflicts') else none %}
+      {% set conflict_rows = (conflict_form.get('conflict_rows') | int) if conflict_form else (plan.conflicts | length) + 1 %}
+      <details{% if conflict_form %} open{% endif %}>
+        <summary style="color: #8F3510">{{ t('req.note_conflict') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="conflicts">
+          <input type="hidden" name="conflict_rows" value="{{ conflict_rows }}">
+          {% for n in range(1, conflict_rows + 1) %}
+          {% set c = plan.conflicts[n - 1] if (not conflict_form and n <= plan.conflicts | length) else none %}
+          {% set first = conflict_form.get('conflict_' ~ n ~ '_first', '') if conflict_form else (c.first if c else '') %}
+          {% set second = conflict_form.get('conflict_' ~ n ~ '_second', '') if conflict_form else (c.second if c else '') %}
+          <div style="margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--ui-draft-line)">
+            <div style="display: flex; gap: 0.5rem">
+              {% for name, chosen, label in [('first', first, t('req.conflict_first')), ('second', second, t('req.conflict_second'))] %}
+              <label style="flex: 1">{{ label }}
+                <select name="conflict_{{ n }}_{{ name }}"><option value=""></option>
+                  {% for r in plan.requirements %}<option value="{{ r.id }}"{{ " selected" if r.id == chosen }}>{{ r.id }}</option>{% endfor %}
+                </select></label>
+              {% endfor %}
+            </div>
+            <label>{{ note_label }}<textarea name="conflict_{{ n }}_note" rows="2" dir="auto">{{ conflict_form.get('conflict_' ~ n ~ '_note', '') if conflict_form else (c.note if c else '') }}</textarea></label>
+          </div>
+          {% endfor %}
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('req.save_conflicts') }}</button></div>
+        </form>
+      </details>
+    </section>
+{% endmacro %}
+
+{# ---- Follow-up (§5): outcome measures, visits and alerts (shared/followup.py) ------------------------- #}
+
+{# A value as sent (a refused form) or as saved. #}
+{% macro sent(f, name, saved_value) %}{{ f.get(name, '') if f else (saved_value or '') }}{% endmacro %}
+
+{# The visits as steps, the next one due marked. #}
+{% macro visit_steps(follow, due) %}
+{% if follow.visits %}
+<ol class="ui-steps" aria-label="{{ t('fu.visits') }}">
+  {% for visit in follow.visits %}
+  <li class="{{ 'done' if visit.status.value == 'done' else ('in_progress' if visit is sameas due else '') }}"{% if visit is sameas due %} aria-current="step"{% endif %}><b><bdi>{{ visit.name }}</bdi></b>{% if visit.date %}<bdi>{{ visit.date }}</bdi> · {% endif %}{{ t('visit_status.' ~ visit.status.value) }}</li>
+  {% endfor %}
+</ol>
+{% endif %}
+{% endmacro %}
+
+{# The outcome measures (as recorded at each visit, with the form that sets them up) and the visits' form. #}
+{% macro follow_up_main(follow, form, post_url, new_rows, statuses) %}
+{% set action = form.get('action') if form else none %}
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('fu.measures') }}</h2><span class="ui-note" style="margin: 0">{{ t('fu.measures_note') }}</span></div>
+      {{ outcome_charts(follow) }}
+
+      {% set f = form if action == 'measures' else none %}
+      {% set n_rows = (f.get('measure_rows') | int) if f else (follow.measures | length) + new_rows %}
+      <details{% if f or not follow.measures %} open{% endif %}><summary>{{ t('fu.measures_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="measures"><input type="hidden" name="measure_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set m = follow.measures[n - 1] if (not f and n <= follow.measures | length) else none %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem">
+            {% for col, label in [('name', t('fu.measure_name')), ('unit', t('fu.measure_unit')), ('how', t('fu.measure_how'))] %}<label style="flex: 1 1 150px">{{ label }}<input type="text" name="measure_{{ n }}_{{ col }}" dir="auto" value="{{ sent(f, 'measure_' ~ n ~ '_' ~ col, m[col] if m else '') }}"></label>{% endfor %}
+          </div>
+          {% endfor %}
+          <label style="display: block; margin-top: 0.6rem">{{ t('fu.due_next') }}<input type="text" name="due_next" dir="auto" value="{{ sent(f, 'due_next', follow.due_next) }}"></label>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fu.save_measures') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    {% set f = form if action == 'visits' else none %}
+    {% set n_rows = (f.get('visit_rows') | int) if f else (follow.visits | length) + new_rows %}
+    <details class="ui-card"{% if f or not follow.visits %} open{% endif %}>
+      <summary style="font-size: 1.05rem; font-weight: 600">{{ t('fu.visits_edit') }}</summary>
+      <form method="post" action="{{ post_url }}">
+        <input type="hidden" name="action" value="visits"><input type="hidden" name="visit_rows" value="{{ n_rows }}">
+        {% for n in range(1, n_rows + 1) %}{% set v = follow.visits[n - 1] if (not f and n <= follow.visits | length) else none %}
+        {% set p = 'visit_' ~ n ~ '_' %}
+        <fieldset style="border: 1px solid var(--ui-line); border-radius: 10px; padding: 0.5rem 0.75rem; margin-top: 0.6rem">
+          <legend style="font-weight: 600; font-size: 0.875rem">{{ t('fu.visit_n', n=n) }}</legend>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+            <label style="flex: 2 1 180px">{{ t('fu.visit') }}<input type="text" name="{{ p }}name" dir="auto" value="{{ sent(f, p ~ 'name', v.name if v else '') }}"></label>
+            <label style="flex: 1 1 140px">{{ t('fu.date') }}<input type="date" name="{{ p }}date" value="{{ sent(f, p ~ 'date', v.date if v else '') }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+            {% set st = f.get(p ~ 'status', '') if f else (v.status.value if v else '') %}
+            <label style="flex: 1 1 140px">{{ t('fu.status') }}<select name="{{ p }}status">{% for s in statuses %}<option value="{{ s.value }}"{{ " selected" if s.value == st }}>{{ t('visit_status.' ~ s.value) }}</option>{% endfor %}</select></label>
+          </div>
+          {% if follow.measures %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem">
+            {% for m in follow.measures %}<label style="flex: 1 1 140px"><bdi>{{ m.name }}</bdi>{% if m.unit %} (<bdi>{{ m.unit }}</bdi>){% endif %}<input type="text" name="{{ p }}value_{{ loop.index }}" dir="auto" value="{{ sent(f, p ~ 'value_' ~ loop.index, v.values.get(m.name) if v else '') }}"></label>{% endfor %}
+          </div>
+          {% endif %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem">
+            {% for col in ['wearing', 'puts_on_alone', 'device_condition', 'notes'] %}<label style="flex: 1 1 150px">{{ t('fu.' ~ col) }}<input type="text" name="{{ p }}{{ col }}" dir="auto" value="{{ sent(f, p ~ col, v[col] if v else '') }}"></label>{% endfor %}
+          </div>
+        </fieldset>
+        {% endfor %}
+        <p class="ui-note">{{ t('fu.visits_note') }}</p>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fu.save_visits') }}</button></div>
+      </form>
+    </details>
+  </div>
+{% endmacro %}
+
+{# The alerts: the review due and the open alerts (each looping back to the domain's page `endpoint_prefix ~
+   back_to`, labelled "fu.back_to.<module>"), and the form that adds or changes them. #}
+{% macro alerts_card(follow, due, form, post_url, back_to, endpoint_prefix) %}
+{% set action = form.get('action') if form else none %}
+    <section class="ui-card">
+      <h2>{{ t('fu.alerts') }}</h2>
+      {{ alert_list(follow, due, endpoint_prefix) }}
+      {% set f = form if action == 'alerts' else none %}
+      {% set n_rows = (f.get('alert_rows') | int) if f else (follow.alerts | length) + 1 %}
+      <details{% if f %} open{% endif %}><summary>{{ t('fu.alerts_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="alerts"><input type="hidden" name="alert_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set a = follow.alerts[n - 1] if (not f and n <= follow.alerts | length) else none %}
+          <div style="margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px dashed var(--ui-line)">
+            <label>{{ t('fu.alert_text') }}<input type="text" name="alert_{{ n }}_text" dir="auto" value="{{ sent(f, 'alert_' ~ n ~ '_text', a.text if a else '') }}"></label>
+            {% set back = f.get('alert_' ~ n ~ '_back_to', '') if f else (a.back_to if a and a.back_to else '') %}
+            <div style="display: flex; gap: 0.5rem; align-items: flex-end">
+              <label style="flex: 1">{{ t('fu.alert_back_to') }}<select name="alert_{{ n }}_back_to"><option value="">{{ t('options.none') }}</option>
+                {% for b in back_to %}<option value="{{ b }}"{{ " selected" if b == back }}>{{ t('fu.back_to.' ~ b) }}</option>{% endfor %}</select></label>
+              <label style="display: flex; gap: 0.4rem; align-items: center; min-height: 44px"><input type="checkbox" name="alert_{{ n }}_resolved" value="1"{{ " checked" if (f.get('alert_' ~ n ~ '_resolved') if f else (a.resolved if a else false)) }}>{{ t('fu.resolved') }}</label>
+            </div>
+          </div>
+          {% endfor %}
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('fu.save_alerts') }}</button></div>
+        </form>
+      </details>
+    </section>
+{% endmacro %}
+

@@ -1755,6 +1755,61 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   branches on orthotics; it is rebuilt with the prosthetic module pages
   (Part 3). Tests: 555, all passing.
 
+## Prosthetic module pages (plan Part 3, 2026-10-24)
+
+- **Asked (owner, 2026-10-24):** "start with Part 3". Owner's answers: add
+  the design's three prosthetic hard stops as **drafts** in
+  `data/knowledge/clinic_rules.csv` (open wound or infection; changing
+  volume; neuropathic other foot); component options are **typed by the
+  prosthetist** as free text, per the component categories already in the
+  answer key, **no new vocabulary**.
+- **Built** (SYSTEM_DESIGN.md §6.1; docs/SYSTEM_DESCRIPTION.md §4.10):
+  1. *What both domains' module pages share, moved out of orthotics first*
+     (every orthotic page renders the same HTML as before, 102 pages
+     compared): the forms' parsers (`shared/forms.py`: typed values, tables,
+     requirements, conflicts, follow-up), the pages' server side
+     (`shared/module_pages.py`), the hard-stop check
+     (`shared/hard_stops.py`), step statuses and gait phases
+     (`shared/fitting.py`), a case finding and the requirement checks
+     (`shared/requirements.py`), and the requirement, conflict and follow-up
+     forms (`shared/templates/ui_forms.html`). Each domain's `nav.py` names
+     its own words for the shared pieces (`WORDS`: who judges, whose marks,
+     the stop banner, the draft note) and the review page's links
+     (`REVIEW_BACK`, `REVIEW_NEXT`), so the review page no longer names
+     orthotics for them.
+  2. *`prosthetics/plan.py`* (`ProstheticPlan`): the intake's `Case` stays as
+     it is (the golden cases are copies of `Case.to_dict()`), so module 1's
+     extra values (how each was measured, joint range, strength, signs of
+     infection, the other foot and the diabetic foot team, mobility
+     measures, goals by ICF level, home and work setting) are in the plan,
+     with the requirements, the component options per category, the
+     configuration and reason, the fitting steps, observations, check-socket
+     and alignment versions, and follow-up.
+  3. *`prosthetics/hard_stops.py`*: the three rules as drafts, each shown
+     with its status from the owner's file (approved by the owner's prompt
+     on 2026-10-24); the other-foot rule only for a lower-limb case.
+  4. *`prosthetics/modules.py`* and its templates: 1 Assess, 2–3
+     Requirements & components (with `/configuration`), 4 Design & fitting
+     (with the fabrication sheet), 5 Follow-up; the header's tabs, the map
+     and the review page lead to them. What the sources say is the review
+     page's AI summaries with their checked quotes, shown read-only.
+  5. *Review log version 10*: a prosthetic case's `plan` and its
+     configuration logged as a `design_choice`; older lines still read.
+- **Left as it was, on purpose:** after the intake form a new prosthetic case
+  still opens on the review page, the page the trial measures (orthotics
+  opens module 1). The owner may want module 1 instead; the tests and the
+  trial's flow rely on the review page today.
+- **Waiting for the owner** (SYSTEM_DESIGN.md §11.2-11.3): approve, change or
+  drop the three draft hard stops; the clinic's checklist before a
+  definitive prosthesis (module 4 says it isn't set); alert thresholds,
+  follow-up intervals, outcome measures with their "smallest real change"
+  and questionnaires validated in Arabic (module 5 records the clinician's
+  own). Module 1's extra values and the six fitting steps follow the design;
+  a prosthetist should check them, and an Arabic-reading prosthetist the new
+  Arabic texts (the term sheet was exported again, 1,082 texts).
+- Tests: 580, all passing; `verify_all.py`: golden cases OK, checks 0-2 fail
+  only on 0.3 (uncommitted changes).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

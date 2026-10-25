@@ -10,3 +10,9 @@ LABELS = "mod."
 DECIDES = "mod.orthotist_decides"  # the case bar's "Decision support: the orthotist decides"
 APPROVES = {"design": "mod.orthotist_approves"}  # module 4: the orthotist approves each step
 CASE_BAR = "orthotics/case_bar.html"  # the case bar's one-line summary of the case
+# The shared pieces' text slots in this domain's words (shared/templates/ui_macros.html word()).
+WORDS = {"judge": "hard_status.judge", "stop_banner": "hard.stop_banner", "draft_rules": "hard.draft_rules",
+         "addresses": "options.addresses", "unaddressed": "options.unaddressed", "needs_case": "mod.needs_case"}
+# The review page's links (review/templates/review/review.html): back to module 1, and on: (endpoint, text key).
+REVIEW_BACK = ("orthotic_modules.analysis", "review.to_analysis")
+REVIEW_NEXT = ("orthotic_modules.requirements", "review.to_requirements")

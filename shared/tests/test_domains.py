@@ -17,7 +17,12 @@ PARTS = {
     "topics": ("topics_for_case", "PARTS", "SEARCH_DOMAINS", "PASSAGES_PER_DOCUMENT"),
     "rag": ("PROFILE", "components_from", "fitting_from"),
     "intake": ("bp",),
-    "nav": ("MAP", "INTAKE", "MODULES", "LABELS", "DECIDES", "APPROVES", "CASE_BAR"),
+    "nav": ("MAP", "INTAKE", "MODULES", "LABELS", "DECIDES", "APPROVES", "CASE_BAR", "WORDS", "REVIEW_BACK",
+            "REVIEW_NEXT"),
+    # The specialist's work after the intake (since plan Part 3, 2026-10-24, every domain has them).
+    "plan": ("PLAN", "BACK_TO"),
+    "hard_stops": ("RULES", "DETAILS", "case_checks", "clinic_rules"),
+    "modules": ("bp", "MODULES"),
 }
 
 
@@ -42,11 +47,24 @@ class SameShapeTests(unittest.TestCase):
                 case_bar = domains.part(domain, "nav").CASE_BAR
                 self.assertTrue((PROJECT_ROOT / domain / "templates" / case_bar).is_file())
 
-    def test_a_plan_is_optional_and_has_its_class(self):
+    def test_a_plan_reads_back_what_it_saves(self):
         for domain in domains.DOMAINS:
-            if domains.has_part(domain, "plan"):
-                self.assertTrue(hasattr(domains.part(domain, "plan"), "PLAN"))
-        self.assertFalse(domains.has_part("prosthetics", "plan"))  # not yet: plan Part 3
+            with self.subTest(domain):
+                plan = domains.part(domain, "plan").PLAN()
+                self.assertEqual(type(plan).from_dict(plan.to_dict()).to_dict(), plan.to_dict())
+                self.assertEqual(type(plan).from_dict({}).to_dict(), plan.to_dict())  # a key missing: its default
+
+    def test_every_module_tab_and_alert_target_is_a_page(self):
+        from app import create_app
+
+        endpoints = set(create_app().view_functions)
+        for domain in domains.DOMAINS:
+            nav = domains.part(domain, "nav")
+            with self.subTest(domain):
+                self.assertLessEqual({endpoint for _, endpoint, _ in nav.MODULES}, endpoints)
+                self.assertLessEqual({nav.MAP, nav.INTAKE, nav.REVIEW_BACK[0], nav.REVIEW_NEXT[0]}, endpoints)
+                blueprint = nav.MODULES[0][1].split(".")[0]  # alert_list: the domain's pages' blueprint ~ back_to
+                self.assertLessEqual({f"{blueprint}.{b}" for b in domains.part(domain, "plan").BACK_TO}, endpoints)
 
     def test_an_unknown_domain_is_refused(self):
         with self.assertRaisesRegex(ValueError, "domain must be one of"):

@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any, ClassVar, Optional
 
 from shared.case_schema import CaseCore, PriorDevice, Side, YesNoUnknown, check_number, register_case, to_enum
+from shared.fitting import GAIT_PHASES  # noqa: F401  (kept here by name)
 
 # PROPOSAL, awaiting the owner's and an orthotist's review (CLAUDE.md: the
 # orthotic intake fields and which are critical come from the owner; the
@@ -86,7 +87,7 @@ _DEVIATION_PHASES = {
     GaitDeviation.CIRCUMDUCTION: "swing",
 }
 # The phases of the gait cycle, in order, for showing deviations phase by phase.
-GAIT_PHASES = ("initial_contact", "loading_response", "mid_stance", "terminal_stance", "pre_swing", "swing")
+# GAIT_PHASES: every domain's (shared/fitting.py), imported above.
 # Ankle angles are signed (dorsiflexion positive, plantarflexion negative): -5 means
 # the ankle stops 5 degrees short of neutral. Anything outside this is a typing error.
 MAX_ANKLE_DEGREES = 90

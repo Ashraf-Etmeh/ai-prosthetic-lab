@@ -3,15 +3,21 @@
    Import with context: {% from "ui_macros.html" import status_icon, need_item with context %}.
    Each shows what was recorded or quoted, as recorded; none writes a clinical sentence. #}
 
+{# A shared text slot in the page's domain's own words (its nav.py WORDS, e.g. who judges: the orthotist or the
+   prosthetist); `default`: the key when the domain names none. #}
+{% macro word(slot, default) -%}
+  {{- t(((domain_nav(domain).WORDS if domain is defined and domain else {}) or {}).get(slot, default), **kwargs) -}}
+{%- endmacro %}
+
 {# A check's status, as the design draws it: a tick, a warning, a "specialist to judge" mark, a dashed
-   "not checked" ring, or a stop (orthotics/hard_stops.py STATUSES). #}
+   "not checked" ring, or a stop (shared/hard_stops.py STATUSES). #}
 {% macro status_icon(status) -%}
   {%- if status == 'clear' -%}
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B5C60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.clear') }}"><path d="M5 12l4 4 10-10"></path></svg>
   {%- elif status == 'warn' -%}
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4430E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.warn') }}"><path d="M12 3l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg>
   {%- elif status == 'judge' -%}
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A4B00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.judge') }}"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A4B00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ word('judge', 'hard_status.judge') }}"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
   {%- elif status == 'stop' -%}
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8F3510" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{ t('hard_status.stop') }}"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"></path><path d="M9 9l6 6"></path><path d="M15 9l-6 6"></path></svg>
   {%- else -%}
@@ -58,16 +64,16 @@
 
 {# The note under the rules: drafts awaiting the owner's approval while any rule is one, else the clinic's rules. #}
 {% macro rules_note(rules) -%}
-  {{ t('hard.draft_rules') if (rules | rejectattr('approved') | list) else t('hard.clinic_rules') }}
+  {{ word('draft_rules', 'hard.draft_rules') if (rules | rejectattr('approved') | list) else t('hard.clinic_rules') }}
 {%- endmacro %}
 
 {# The banner over a page when a rule's recorded facts match it. #}
 {% macro stop_banner(checks) -%}
 {% set stops = checks | selectattr('status', 'equalto', 'stop') | list %}
-{% if stops %}<div class="ui-stopflag" role="alert" style="margin-top: 1rem">{{ status_icon('stop') }}<span><b>{{ t('hard.stop_banner') }}</b> {% for c in stops %}{{ t('hard.' ~ c.rule) }} {{ rule_status(c.clinic_rule) }}{{ '; ' if not loop.last }}{% endfor %}</span></div>{% endif %}
+{% if stops %}<div class="ui-stopflag" role="alert" style="margin-top: 1rem">{{ status_icon('stop') }}<span><b>{{ word('stop_banner', 'hard.stop_banner') }}</b> {% for c in stops %}{{ t('hard.' ~ c.rule) }} {{ rule_status(c.clinic_rule) }}{{ '; ' if not loop.last }}{% endfor %}</span></div>{% endif %}
 {%- endmacro %}
 
-{# Each rule's check: its name and status, and what was found for it (orthotics/hard_stops.py Check). #}
+{# Each rule's check: its name and status, and what was found for it (shared/hard_stops.py Check). #}
 {% macro hard_stop_list(checks) %}
       <ul class="ui-checklist">
         {% for check in checks %}
@@ -89,7 +95,7 @@
 
 {# What an option addresses: the specialist's mark (yes, partly, no) against each requirement, or its note. #}
 {% macro option_marks(requirements, option) %}
-      <div><h3>{{ t('options.addresses') }}</h3>
+      <div><h3>{{ word('addresses', 'options.addresses') }}</h3>
         <div style="display: flex; flex-wrap: wrap; gap: 0.4rem">
           {% for r in requirements %}{% set mark = option.marks.get(r.id) %}
           <span class="ui-mark ui-mark-{{ mark.value if mark else 'none' }}">{{ r.id }} {{ option.mark_notes.get(r.id) or (t('mark.' ~ mark.value) if mark else t('options.mark_unset')) }}</span>
@@ -99,7 +105,7 @@
 
 {# The Must requirements the specialist marked an option as not addressing. #}
 {% macro unmet_flag(unmet) -%}
-<div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('options.unaddressed', ids='') | trim }} {% for r in unmet %}<b>{{ r.id }} <bdi>{{ r.text }}</bdi></b>{{ ', ' if not loop.last }}{% endfor %}</span></div>
+<div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ word('unaddressed', 'options.unaddressed', ids='') | trim }} {% for r in unmet %}<b>{{ r.id }} <bdi>{{ r.text }}</bdi></b>{{ ', ' if not loop.last }}{% endfor %}</span></div>
 {%- endmacro %}
 
 {# A typed list under its heading (what an option costs the person, what to check at fitting), as written. #}
@@ -140,6 +146,29 @@
     {% else %}
     <p class="ui-note">{{ t('mod.no_passage') }}</p>
     {% endif %}
+  </details>
+{% endmacro %}
+
+{# What the sources say for this case, read-only: the review page's statements, each with its grade as printed, its
+   kind of source, the AI's checked summary (labelled as AI) and the source's own words with their citation
+   (reasoning/models.py CitedStatement). The specialist marks them on the review page (review_url ~ anchor). #}
+{% macro source_statements(statements, heading, review_url, anchor='', open=false) %}
+  <details{% if open %} open{% endif %}>
+    <summary>{{ heading }} ({{ statements | length }})</summary>
+    {% if statements %}
+    <ul class="ui-passages">
+      {% for cited in statements %}{% set statement = cited.statement %}
+      <li>
+        <div class="ui-tags"><span class="ui-tag">{{ t('components.grade') }} {{ t('grade.' ~ (statement.grade or 'none')) }}</span> <span class="ui-tag">{{ t('source_type.' ~ cited.source_type) }}</span>{% if cited.source_type == 'professional_knowledge' %} <span class="ui-tag">{{ t('options.no_outcome_evidence') }}</span>{% endif %}</div>
+        {% set summary = cited.summary(lang) %}{% if summary %}<div style="margin-top: 0.3rem"><span class="ui-tag ui-tag-warn">{{ t('analysis.ai_label') }}</span> <span dir="auto">{{ summary }}</span></div>{% endif %}
+        <blockquote dir="auto" lang="{{ cited.language }}">{{ statement.quote.text }}{% if statement.quote.items %}<ul>{% for item in statement.quote.items %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}</blockquote>
+        <div class="ui-note" dir="auto" lang="{{ cited.language }}">{{ cited.citation(statement.quote) }}</div>
+        {% set credit = attribution(statement.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <a href="{{ review_url }}{{ anchor }}" style="font-weight: 600">{{ t('pmod.mark_on_review') }}</a>
+    {% else %}<p class="ui-note">{{ t('pmod.no_statements') }}</p>{% endif %}
   </details>
 {% endmacro %}
 

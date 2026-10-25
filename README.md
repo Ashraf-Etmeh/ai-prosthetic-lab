@@ -42,8 +42,9 @@ record numbers) are collected.
 | 05 Specialist review        | `review/`                           | Working: approve / edit / reject, needed / not needed per gap, relevant / not relevant per component or fitting statement |
 | 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/records/review_log.jsonl` |
 
-The prosthetics domain's three parts (evaluate, choose components, design
-and fit) now each have a first version. Orthotics (use case 03, stroke
+The prosthetics domain has the design's four module pages (since
+2026-10-24, below), with the review page as its specialist review.
+Orthotics (use case 03, stroke
 ankle-foot orthosis) has a first version as drafts awaiting the owner's and
 an orthotist's review (below, "Orthotics"). The rest of the brief (gait
 analysis, rehabilitation, follow-up) is planned but not started — see
@@ -100,6 +101,39 @@ Each case is saved as `data/records/cases/<case id>.json` (not in git), so its
 review page still works after the server is restarted. The files hold the
 case as entered (no patient identifiers), the passages found and the gap
 list.
+
+### Prosthetic module pages (2026-10-24)
+
+A prosthetic case has the four modules of the design (`docs/design/02-prosthetics/`;
+`prosthetics/modules.py`), reached from the header's tabs, the review page and
+the map at http://127.0.0.1:5000/prosthetics. After the intake form a new case
+still opens on the review page (what the sources say, and the specialist's marks).
+
+- **1 Assess**: the residual limb and body as recorded, each value with how it
+  was measured; mobility, measured with named tests; the K-level the
+  prosthetist set, with what the sources say about functional levels; goals by
+  ICF level; the information still needed; three draft hard-stop checks (open
+  wound or infection, changing volume, neuropathic other foot), shown as
+  drafts awaiting the owner (`data/knowledge/clinic_rules.csv`). A form records
+  what the intake form doesn't ask.
+- **2–3 Requirements & components**: what the prosthesis must do, in the
+  prosthetist's words, each tied to where it came from, with a priority and any
+  conflicts; then for each component of the amputation level up to three
+  options typed by the prosthetist, side by side and never ranked: marks
+  against the requirements, costs, the sources linked (grade as printed), the
+  payer's funding rule and the maker's weight limit as printed (next to the
+  recorded weight), stock and checks at fitting. The prosthetist's
+  configuration and reason go to the review log as a "design_choice".
+- **4 Design & fitting**: the six steps, an observation log (seen, gait phase,
+  adjustment, seen after) next to the possible causes in the sources' words,
+  check-socket versions, what bears on a definitive prosthesis (the clinic's
+  checklist waits for the owner), the alignment record with every version
+  kept, and the fabrication sheet to print.
+- **5 Follow-up**: visits, outcome measures as recorded at each, alerts in the
+  clinician's words looping back to module 4, 2–3 or 1.
+
+Every value on these pages is the prosthetist's; nothing typed there is sent to
+the cloud model.
 
 ### Orthotics (drafts, 2026-10-22)
 
@@ -405,15 +439,19 @@ README.md, CLAUDE.md, requirements.txt
 
 shared/             What every part uses: the case core (case_schema.py), the domain registry
                     (domains.py), the case store (store.py: memory + data/records/cases/), the forms'
-                    parsers (forms.py), the field guide's mechanics, the building blocks of every domain's
-                    modules (requirements.py: requirements, priorities, marks, conflicts; followup.py:
-                    visits, outcome measures, alerts; dates.py), the interface text in English and
-                    Arabic (i18n.py), the Arabic term sheet, config (paths, settings, disclaimers)
+                    parsers (forms.py: intake forms and every module page's tables, requirements and
+                    follow-up), the module pages' helpers (module_pages.py), the field guide's mechanics,
+                    the building blocks of every domain's modules (requirements.py: requirements,
+                    priorities, marks, conflicts; followup.py: visits, outcome measures, alerts;
+                    hard_stops.py: how a clinic rule stands for a case; fitting.py: step statuses, gait
+                    phases; dates.py), the interface text in English and Arabic (i18n.py), the Arabic
+                    term sheet, config (paths, settings, disclaimers)
   templates/        Every page's shared look: the header (AI Prosthetic Lab / <part>, the domain switch,
                     the numbered module tabs, EN | العربية, the case bar), the style, the base page, and the
                     screen pieces every domain reuses (ui_macros.html: measured-value status, information
                     needed, hard-stop checks with each rule's status, requirement chips, option marks,
-                    evidence, outcome charts, alerts, loop back)
+                    evidence, the review page's statements read-only, outcome charts, alerts, loop back;
+                    ui_forms.html: the requirements and conflicts forms, the follow-up forms)
   testing.py        What every part's tests share: the AI switched off, a fake writer and embedder,
                     the route-test base
   tests/
@@ -436,11 +474,12 @@ quality/            Quality and audit: the golden cases, retrieval misses, the t
 prosthetics/        Use cases 01-02: the case (case.py), its gap fields (fields.py), topics, the AI's
                     instructions (rag.py), the hand-written statements behind the answer key
                     (component_guide.py, fitting_guide.py) and their support, the intake form (intake.py),
-                    what the header shows for it (nav.py, templates/prosthetics/case_bar.html)
+                    modules 1-5 (plan.py, hard_stops.py, modules.py), what the header shows for it (nav.py,
+                    templates/prosthetics/case_bar.html)
   templates/prosthetics/
   tests/
 orthotics/          Use case 03, stroke ankle-foot orthosis (drafts): the same files as prosthetics, plus
-                    sources.py and modules 1-6 (plan.py, fit.py, followup.py, hard_stops.py, modules.py)
+                    sources.py and fit.py (modules 1-6)
   templates/orthotics/
   tests/
 scripts/            verify_all.py and the checks for prompts 0-2
@@ -462,9 +501,10 @@ data/records/       What the app records on this machine (not in git): cases/ (o
 ```
 
 A new clinical domain adds a package with the same files as the others (case.py,
-fields.py, topics.py, rag.py, intake.py, nav.py, and plan.py if it has modules
-after the analysis) and its name in `shared/domains.py`; shared code reaches it
-there, and its pages reuse the shared header and screen pieces.
+fields.py, topics.py, rag.py, intake.py, nav.py, plan.py, hard_stops.py, modules.py)
+and its name in `shared/domains.py`; shared code reaches it there, and its pages
+reuse the shared header, screen pieces and forms (`shared/tests/test_domains.py`
+checks the shape).
 
 ## Plan and open decisions
 

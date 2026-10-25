@@ -125,14 +125,13 @@ python scripts/verify_all.py   # the 0-2 checks, then the golden cases
 Every page (since 2026-10-23) has the same header, from the orthotics design
 canvas: a domain switch (Prosthetics / Orthotics), the domain's modules and,
 on a case's pages, a case bar (the case, "test case · fake data", "the
-specialist decides"). The prosthetics map (`/prosthetics`) names the brief's
-five prosthetics capabilities and where each is: 01 تقييم حالات البتر (the
-intake and the information gaps), 02 تحليل المتطلبات الوظيفية (functional level
-and goals), 03 دعم اختيار المكونات (components), 04 دعم قرارات التصميم والتركيب
-(design and fitting), all sections of the review page, which the header links
-to (its one decision form marks them together); 05 المتابعة والتقييم
-(follow-up) is not built. The orthotics map (`/orthotics`) does the same for
-its four (§4.9).
+prosthetist decides" or "the orthotist decides"). The prosthetics map
+(`/prosthetics`) lists the design's four prosthetic modules with the brief's
+capabilities they cover: 1 تقييم حالات البتر, 2–3 تحليل المتطلبات الوظيفية ·
+دعم اختيار المكونات, 4 دعم قرارات التصميم والتركيب, 5 المتابعة والتقييم; since
+2026-10-24 each is a page of its own (§4.10), and the review page below is
+the specialist review reached from module 1. The orthotics map (`/orthotics`)
+does the same for its six (§4.9).
 
 1. **Intake form** (`GET /intake`). The user enters a test case: amputation
    level (12 levels, 6 lower and 6 upper limb) and side (left, right,
@@ -493,6 +492,44 @@ pressure map (no scan data reaches the app), the "smallest real change" next
 to each outcome measure and alerts from clinic rules (both wait for the
 owner, SYSTEM_DESIGN.md §11.2-11.3).
 
+### 4.10 Prosthetic module pages (plan Part 3, 2026-10-24)
+
+The design's four prosthetic modules (`docs/design/02-prosthetics/`;
+SYSTEM_DESIGN.md §6.1), built on the pieces every domain shares (§5):
+`prosthetics/plan.py` (`ProstheticPlan`, kept with the case as
+`CaseRecord.plan`), `prosthetics/hard_stops.py` and `prosthetics/modules.py`.
+The intake's `Case` is unchanged (the golden cases are copies of it), so what
+the intake form doesn't ask is kept in the plan. After the intake form a new
+case still opens on the review page; the header's tabs, the review page and
+the map lead to the modules.
+
+| Module (brief capability) | Page | What it holds |
+|---|---|---|
+| 1 Assess (تقييم حالات البتر) | `/prosthetics/<id>/assess` | the residual limb and body as recorded (wound, signs of infection, volume, length and shape, skin, pain, sensation, joint range, strength, the other leg and foot), each with how it was measured and its status; mobility measured with named tests; the K-level the prosthetist set at intake, with what the review page's sources say about functional levels (read-only); goals by ICF level and the home and work setting; the information needed; the draft hard-stop checks; a form for the rest of the assessment |
+| 2–3 Requirements & components (تحليل المتطلبات الوظيفية · دعم اختيار المكونات) | `/prosthetics/<id>/components`, `/configuration` | what the prosthesis must do, in the prosthetist's words, each tied to the findings it comes from (the intake's and module 1's values; provisional while one is missing), with a priority and the conflicts noted; for each component of the level (the answer key's categories, `component_guide.py` COMPONENTS: no new vocabulary) up to three options typed by the prosthetist, side by side in the order entered, never ranked: marks against the requirements (a Must marked "no" is flagged), costs, the review page's statements the prosthetist links (grade as printed, kind of source), the payer's funding rule and the maker's weight limit as printed next to the recorded weight (flagged when the recorded weight is above it), stock and checks at fitting; what the sources say about each component (read-only); the configuration (one option per component) and its required reason, appended to the review log ("design_choice", `LOG_VERSION` 10, with the whole plan) |
+| 4 Design & fitting (دعم قرارات التصميم والتركيب) | `/prosthetics/<id>/fitting`, `/fabrication-sheet` | the six steps (shape capture, check socket, bench, static and dynamic alignment, delivery) with status and notes; the observation log (step, gait phase, what was seen, the adjustment made, what was seen after) next to what the sources say about fitting and alignment; check-socket versions (added, never changed); before a definitive prosthesis: what the case recorded, the volume rule and what the sources say about readiness (the clinic's own checklist waits for the owner, SYSTEM_DESIGN.md §11.3); the alignment record, every save a new version; the fabrication sheet to print |
+| 5 Follow-up (المتابعة والتقييم) | `/prosthetics/<id>/follow-up` | visits, outcome measures entered at each visit (shown as recorded), wearing and device condition, alerts in the clinician's words that loop back to module 4, 2–3 or 1, and the loop-back links |
+
+**Hard stops (drafts).** The design's module 1 lists three: an open wound or
+infection; a changing volume ("a definitive socket waits for stable volume:
+the prosthetist decides when"); a neuropathic other foot ("referral to the
+diabetic foot team, if not under its care"). The owner asked on 2026-10-24
+to add them as drafts: they are in `data/knowledge/clinic_rules.csv` as
+drafts, and every page shows each check with its rule's status. The code
+reads only the intake's wound and volume and module 1's infection, other
+foot and diabetic-foot-team values, never inferring one. A matching rule
+says so; a healing wound is the prosthetist's to judge; a value not
+recorded is "not checked yet". Nothing is blocked.
+
+Every value on these pages is the prosthetist's; nothing typed there is sent
+to the AI. What the sources say comes from the review page's AI summaries
+with their checked quotes, shown read-only and marked on the review page.
+Not built from the design: the clinic's definitive-fitting checklist, alert
+thresholds, follow-up intervals, outcome measures with their "smallest real
+change", questionnaires validated in Arabic (all wait for the owner,
+SYSTEM_DESIGN.md §11.2-11.3); per-observation causes searched from what was
+typed (typed text is never searched).
+
 ---
 
 ## 5. Structure
@@ -500,7 +537,7 @@ owner, SYSTEM_DESIGN.md §11.2-11.3).
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 555 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 580 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -512,9 +549,15 @@ shared/
                            to_dict/case_from_dict (each domain's class registers itself), recorded_value()
   domains.py               the clinical domains and part(domain, module): how shared code reaches a domain
   field_guide.py           FieldInfo, missing_fields(), build_query(), FIELDS_BY_PATH (every domain's fields)
-  forms.py                 the intake forms' parsers (a refusal in the form's own words)
-  requirements.py          what every domain's modules share: Requirement, Priority, Mark, Conflict
+  forms.py                 every form's parsers (a refusal in the form's own words): intake values, and the
+                           module pages' typed values, tables, requirements, conflicts and follow-up
+  module_pages.py          the module pages' server side: find the case, draw a page, save the plan, refuse
+  requirements.py          what every domain's modules share: Requirement, Priority, Mark, Conflict, Finding,
+                           PlanError and the checks on requirements and conflicts
   followup.py              the follow-up records: visits, outcome measures, alerts, the next review due
+  hard_stops.py            how a clinic rule stands for a case (Check, the statuses), with its row in the
+                           owner's file
+  fitting.py               a step's status and the gait phases
   dates.py                 a date as YYYY-MM-DD (check_date)
   config.py                paths, model, chunk and search settings, threshold, disclaimers, CODE_PACKAGES
   i18n.py                  all interface text in English and Arabic
@@ -523,7 +566,8 @@ shared/
   templates/               every page's look (2026-10-23): ui_style.html, ui_header.html (AI Prosthetic Lab /
                            <part>, the domain switch, numbered module tabs, EN | العربية, the case bar: each
                            domain's from its nav.py), ui_base.html (the map and module pages), ui_macros.html
-                           (the screen pieces every domain reuses, SYSTEM_DESIGN.md §5)
+                           (the screen pieces every domain reuses, SYSTEM_DESIGN.md §5), ui_forms.html (the
+                           requirements, conflicts and follow-up forms)
   testing.py               what every part's tests share: the AI switched off, a fake writer and embedder,
                            RouteTestCase
   tests/
@@ -574,8 +618,13 @@ prosthetics/               use cases 01-02
   fitting_guide.py         hand-written design and fitting rules (the answer key)
   fitting_support.py       picks fitting statements; recorded readiness values
   intake.py                GET /prosthetics (map), GET/POST /intake: form → Case → analyse_case() → store
+  plan.py                  ProstheticPlan (modules 1-5, §4.10), the case's findings for requirements
+  hard_stops.py            the three draft rules, each with its status from the clinic rules
+  modules.py               /prosthetics/<id>/assess, components, configuration, fitting, fabrication-sheet,
+                           follow-up
   nav.py                   what the header shows for prosthetics: map, intake, module tabs, who decides
-  templates/prosthetics/   intake_form.html, map.html, case_bar.html
+  templates/prosthetics/   intake_form.html, map.html, case_bar.html, macros.html, assess.html,
+                           components.html, fitting.html, fabrication_sheet.html, follow_up.html
   tests/
 orthotics/                 use case 03 (drafts)
   case.py, fields.py,      OrthoticCase and its 23 gap fields, topics, rag.py (PROFILE),
@@ -643,6 +692,17 @@ OrthoticPlan (orthotics/plan.py; CaseRecord.plan; case file version 3)
   steps {capture|rectify|parameters|fabricate|release: StepRecord(status, method, notes)}
   parameter_versions: [ParameterVersion(number, values {parameter: text}, note, saved_at)]
 
+ProstheticPlan (prosthetics/plan.py; CaseRecord.plan; §4.10)
+  assessment: Assessment(measured_how {value path: how}, joint_range, strength, infection,
+      other_foot_neuropathy, diabetic_foot_team (yes/no/unknown), mobility: [MobilityMeasure(name, value, how)],
+      mobility_note, goal_participation, goal_body_function, home_work_setting)
+  requirements, conflicts (shared/requirements.py)
+  options {component key: [ComponentOption(id A-C, name, marks, mark_notes, costs, checks, sources (statement
+      ids), funding, weight_limit_kg, stock, notes)]}, configuration {component key: option id}, choice_reason
+  steps {FittingStep: StepRecord(status, notes)}, observations: [Observation(step, seen, phase, adjustment,
+      seen_after)], socket_versions, alignment_versions: [AlignmentVersion(number, values, note, saved_at, by)]
+  follow_up: FollowUp (shared/followup.py)
+
 Gap(field, label, status, why_needed, source_protocol_reference, evidence: ProtocolChunk, excerpt,
     summary_en, summary_ar)
 
@@ -681,6 +741,11 @@ POST /intake                            (prosthetics/intake.py; /intake/orthotic
 
 POST /review/<id>/decision
   → record_decision (validate → build entry → append one line) → 302 back with ?saved=1
+
+POST /prosthetics/<id>/<module>, /orthotics/<id>/<module>   (each domain's modules.py)
+  → shared/forms.py reads the form (errors → 400 + the form as sent)
+  → the domain's plan checks and changes → store.save(CaseRecord) → 302 back with ?saved=1
+  → a configuration or option chosen: record_design_choice() appends one line to the review log
 ```
 
 ### 5.3 Key settings (`shared/config.py`)
@@ -716,7 +781,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **555 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **580 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -804,8 +869,13 @@ uses a missing key.
   and none possible while `ORTHOTIC_CLOUD_AI` is off (owner's decision
   2026-10-23: orthotic pages show the passages without summaries).
   Modules 2-4 (2026-10-23) show passages for each device, part and step
-  unsummarised and unchecked; their vocabularies are drafts; modules 5-6 of
-  the canvas are not built.
+  unsummarised and unchecked; their vocabularies are drafts; modules 5-6
+  (fit and follow-up) are drafts too.
+- The prosthetic module pages (§4.10, 2026-10-24) have not been used by a
+  prosthetist yet; their three hard stops are drafts awaiting the owner; the
+  fitting steps and module 1's extra values follow the design and are
+  Claude's reading of it; the clinic's checklist, alert thresholds,
+  follow-up intervals and outcome measures wait for the owner.
 
 ---
 

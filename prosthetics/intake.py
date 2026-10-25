@@ -29,6 +29,7 @@ from prosthetics.case import (
     VolumeStability,
     WoundStatus,
 )
+from prosthetics.modules import latest_case_id
 from reasoning.pathway import analyse_case
 from shared.case_schema import PriorDevice, Side
 from shared.forms import (
@@ -126,8 +127,9 @@ def _render_form(error: str | None = None, form=None):
 
 @bp.route("/prosthetics", methods=["GET"])
 def prosthetics_map():
-    """The brief's five prosthetics capabilities and where each is in the app (since 2026-10-23)."""
-    return render_template("prosthetics/map.html", case=None, domain="prosthetics", module="map", here=request.path)
+    """The four modules and the brief's prosthetics capabilities they cover (since 2026-10-23; pages since 2026-10-24)."""
+    return render_template("prosthetics/map.html", case=None, domain="prosthetics", module="map", here=request.path,
+                           latest=latest_case_id())
 
 
 @bp.route("/intake", methods=["GET"])

@@ -1,0 +1,165 @@
+{% extends "ui_base.html" %}
+{% from "prosthetics/macros.html" import recorded, value_name with context %}
+{% from "ui_forms.html" import sent with context %}
+{% from "ui_macros.html" import hard_stop_list, source_statements, stop_banner with context %}
+{# Module 4, design and fitting decisions (docs/design/02-prosthetics/DesignFit.html): the six steps; the
+   observation log (what was seen, its gait phase, the adjustment the prosthetist made, what was seen after), next
+   to the possible causes in the sources' own words; check-socket versions; before a definitive prosthesis, what
+   the case recorded and what the guideline says (the clinic's own checklist is the owner's to set,
+   SYSTEM_DESIGN.md §11.3); the alignment record, every change kept; the fabrication sheet. The prosthetist decides
+   each step and when. #}
+{% block title %}{{ t('pfit.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=4) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('pfit.intro') }}</p>{% endblock %}
+{% block brief %}دعم قرارات التصميم والتركيب{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% if chosen_logged %}<div class="ui-saved" role="status">{{ t('pcomp.choice_logged') }}</div>{% endif %}
+{{ stop_banner(checks) }}
+{% set post_url = url_for('prosthetic_modules.fitting', case_id=case.case_id) %}
+
+{% if plan.configuration %}
+<p class="ui-note"><b>{{ t('pfit.configuration') }}</b> {% for component in components if plan.chosen_option(component) %}{% set o = plan.chosen_option(component) %}{{ t('component.' ~ component) }}: {{ o.id }} · <bdi>{{ o.name }}</bdi>{{ '; ' if not loop.last }}{% endfor %}</p>
+{% else %}<p class="ui-note">{{ t('pfit.no_configuration') }} <a href="{{ url_for('prosthetic_modules.components', case_id=case.case_id) }}#configuration">{{ t('pfit.to_configuration') }}</a></p>{% endif %}
+
+<ol class="ui-steps" aria-label="{{ t('pfit.steps') }}">
+  {% for step in steps %}{% set r = plan.step(step) %}
+  <li class="{{ r.status.value if r.status.value in ('done', 'in_progress') else '' }}"{% if r.status.value == 'in_progress' %} aria-current="step"{% endif %}><b>{{ loop.index }} {{ t('pstep.' ~ step.value) }}</b>{% if r.notes %}<bdi>{{ r.notes }}</bdi> · {% endif %}{{ t('step_status.' ~ r.status.value) }}</li>
+  {% endfor %}
+</ol>
+{% set f = form if (form and form.get('action') == 'steps') else none %}
+<details class="ui-card" style="margin-top: 1rem"{% if f %} open{% endif %}>
+  <summary style="font-weight: 600">{{ t('pfit.steps_edit') }}</summary>
+  <form method="post" action="{{ post_url }}"><input type="hidden" name="action" value="steps">
+    {% for step in steps %}{% set r = plan.step(step) %}{% set st = f.get('step_' ~ step.value ~ '_status', '') if f else r.status.value %}
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; align-items: flex-end">
+      <label style="flex: 1 1 200px">{{ loop.index }} {{ t('pstep.' ~ step.value) }}<select name="step_{{ step.value }}_status">{% for s in statuses %}<option value="{{ s.value }}"{{ " selected" if s.value == st }}>{{ t('step_status.' ~ s.value) }}</option>{% endfor %}</select></label>
+      <label style="flex: 2 1 260px">{{ t('pfit.step_notes') }}<input type="text" name="step_{{ step.value }}_notes" dir="auto" value="{{ sent(f, 'step_' ~ step.value ~ '_notes', r.notes) }}"></label>
+    </div>
+    {% endfor %}
+    <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('pfit.save_steps') }}</button></div>
+  </form>
+</details>
+
+<div class="ui-cols" style="margin-top: 1.25rem">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('pfit.observations') }}</h2><span class="ui-note" style="margin: 0">{{ t('pfit.observations_note') }}</span></div>
+      {% if plan.observations %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 640px">
+          <thead><tr><th scope="col">{{ t('pfit.step') }}</th><th scope="col">{{ t('pfit.seen') }}</th><th scope="col">{{ t('pfit.adjustment') }}</th><th scope="col">{{ t('pfit.seen_after') }}</th></tr></thead>
+          <tbody>
+            {% for o in plan.observations %}
+            <tr><td>{{ t('pstep.' ~ o.step) }}{% if o.phase %}<br><span class="ui-kicker" style="font-size: 0.7rem">{{ t('phase.' ~ o.phase) }}</span>{% endif %}</td><td style="font-weight: 600"><bdi>{{ o.seen }}</bdi></td><td><bdi>{{ o.adjustment or '—' }}</bdi></td><td><bdi>{{ o.seen_after or '—' }}</bdi></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="ui-note">{{ t('pfit.no_observations') }}</p>{% endif %}
+      <div style="margin-top: 0.75rem">{{ source_statements(observation_sources, t('pfit.causes'), review_url, '#fitting') }}</div>
+
+      {% set f = form if (form and form.get('action') == 'observations') else none %}
+      {% set n_rows = (f.get('obs_rows') | int) if f else (plan.observations | length) + new_rows %}
+      <details{% if f or not plan.observations %} open{% endif %} style="margin-top: 0.75rem">
+        <summary>{{ t('pfit.observations_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="observations"><input type="hidden" name="obs_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set o = plan.observations[n - 1] if (not f and n <= plan.observations | length) else none %}{% set p = 'obs_' ~ n ~ '_' %}
+          <fieldset style="border: 1px solid var(--ui-line); border-radius: 10px; padding: 0.5rem 0.75rem; margin-top: 0.6rem">
+            <legend style="font-weight: 600; font-size: 0.875rem">{{ t('pfit.observation_n', n=n) }}</legend>
+            {% set st = f.get(p ~ 'step', '') if f else (o.step if o else '') %}
+            {% set ph = f.get(p ~ 'phase', '') if f else (o.phase if o and o.phase else '') %}
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+              <label style="flex: 1 1 180px">{{ t('pfit.step') }}<select name="{{ p }}step"><option value=""></option>{% for s in steps %}<option value="{{ s.value }}"{{ " selected" if s.value == st }}>{{ t('pstep.' ~ s.value) }}</option>{% endfor %}</select></label>
+              <label style="flex: 1 1 180px">{{ t('pfit.phase') }}<select name="{{ p }}phase"><option value="">{{ t('pfit.no_phase') }}</option>{% for phase in phases %}<option value="{{ phase }}"{{ " selected" if phase == ph }}>{{ t('phase.' ~ phase) }}</option>{% endfor %}</select></label>
+            </div>
+            {% for col in ['seen', 'adjustment', 'seen_after'] %}<label style="display: block">{{ t('pfit.' ~ col) }}<input type="text" name="{{ p }}{{ col }}" dir="auto" value="{{ sent(f, p ~ col, o[col] if o else '') }}"></label>{% endfor %}
+          </fieldset>
+          {% endfor %}
+          <p class="ui-note">{{ t('pfit.empty_removes') }}</p>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('pfit.save_observations') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('pfit.socket') }}</h2>
+      {% if plan.socket_versions %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table">
+          <thead><tr><th scope="col">{{ t('pfit.version') }}</th><th scope="col">{{ t('pfit.socket_seen') }}</th><th scope="col">{{ t('pfit.socket_changed') }}</th></tr></thead>
+          <tbody>
+            {% for v in plan.socket_versions %}<tr><td>v{{ v.number }}<div class="ui-note" style="margin: 0"><bdi>{{ v.saved_at[:10] }}</bdi></div></td><td><bdi>{{ v.seen }}</bdi></td><td><bdi>{{ v.changed or '—' }}</bdi></td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="ui-note">{{ t('pfit.no_socket') }}</p>{% endif %}
+      {% set f = form if (form and form.get('action') == 'socket') else none %}
+      <details{% if f %} open{% endif %} style="margin-top: 0.75rem">
+        <summary>{{ t('pfit.socket_add', n=(plan.socket_versions | length) + 1) }}</summary>
+        <form method="post" action="{{ post_url }}"><input type="hidden" name="action" value="socket">
+          <label style="display: block">{{ t('pfit.socket_seen') }}<input type="text" name="socket_seen" dir="auto" value="{{ sent(f, 'socket_seen', '') }}"></label>
+          <label style="display: block">{{ t('pfit.socket_changed') }}<input type="text" name="socket_changed" dir="auto" value="{{ sent(f, 'socket_changed', '') }}"></label>
+          <p class="ui-note">{{ t('pfit.versions_kept') }}</p>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('pfit.save_socket') }}</button></div>
+        </form>
+      </details>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('pfit.definitive') }}</h2>
+      <p class="ui-note">{{ t('pfit.definitive_note') }}</p>
+      <div class="ui-draft" style="margin-top: 0.6rem">{{ t('pfit.checklist_not_set') }}</div>
+      <h3 style="margin: 0.9rem 0 0; font-size: 0.875rem; color: var(--ui-muted)">{{ t('pfit.case_recorded') }}</h3>
+      {% if readiness_values %}
+      <ul class="ui-kv">{% for path, value in readiness_values %}<li><span>{{ value_name(path) }}</span><b>{{ recorded(path, value) if value is not none else t('status.not recorded') }}</b></li>{% endfor %}</ul>
+      {% else %}<p class="ui-note">{{ t('review.made_before_ai') }}</p>{% endif %}
+      {% set volume = checks | selectattr('rule', 'equalto', 'volume_changing') | list %}
+      {% if volume %}{{ hard_stop_list(volume) }}{% endif %}
+      <div style="margin-top: 0.75rem">{{ source_statements(readiness, t('pfit.guideline_says'), review_url, '#fitting') }}</div>
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('pfit.alignment') }}</h2>
+      {% set current = plan.alignment %}
+      {% if current %}
+      <ul class="ui-kv">{% for name, value in current['values'].items() %}<li><span><bdi>{{ name }}</bdi></span><b><bdi>{{ value }}</bdi></b></li>{% endfor %}</ul>
+      <p class="ui-note">{{ t('pfit.alignment_version', n=current.number, date=current.saved_at[:10]) }}{% if current.by %} · <bdi>{{ current.by }}</bdi>{% endif %}{% if current.note %} · <bdi>{{ current.note }}</bdi>{% endif %}</p>
+      {% else %}<p class="ui-note">{{ t('pfit.no_alignment') }}</p>{% endif %}
+      <p class="ui-note">{{ t('pfit.alignment_note') }}</p>
+      {% if plan.alignment_versions | length > 1 %}
+      <details><summary>{{ t('pfit.alignment_history', n=plan.alignment_versions | length) }}</summary>
+        {% for v in plan.alignment_versions | reverse %}
+        <div style="margin-top: 0.5rem; font-size: 0.85rem"><b>v{{ v.number }}</b> · <bdi>{{ v.saved_at[:10] }}</bdi>{% if v.by %} · <bdi>{{ v.by }}</bdi>{% endif %}{% if v.note %} · <bdi>{{ v.note }}</bdi>{% endif %}
+          <ul class="ui-plain">{% for name, value in v['values'].items() %}<li><bdi>{{ name }}</bdi>: <bdi>{{ value }}</bdi></li>{% endfor %}</ul></div>
+        {% endfor %}
+      </details>
+      {% endif %}
+      {% set f = form if (form and form.get('action') == 'alignment') else none %}
+      {% set names = (current['values'] | list) if current else [] %}
+      {% set n_rows = (f.get('align_rows') | int) if f else (names | length) + new_rows %}
+      <details{% if f or not current %} open{% endif %} style="margin-top: 0.5rem">
+        <summary>{{ t('pfit.alignment_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="alignment"><input type="hidden" name="align_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set name = names[n - 1] if (not f and n <= names | length) else '' %}
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.3rem">
+            <label style="flex: 1">{{ t('pfit.align_name') }}<input type="text" name="align_{{ n }}_name" dir="auto" value="{{ sent(f, 'align_' ~ n ~ '_name', name) }}"></label>
+            <label style="flex: 1">{{ t('pfit.align_value') }}<input type="text" name="align_{{ n }}_value" dir="auto" value="{{ sent(f, 'align_' ~ n ~ '_value', current['values'][name] if name else '') }}"></label>
+          </div>
+          {% endfor %}
+          <label style="display: block; margin-top: 0.4rem">{{ t('pfit.align_note') }}<input type="text" name="align_note" dir="auto" value="{{ sent(f, 'align_note', '') }}"></label>
+          <label style="display: block">{{ t('pfit.align_by') }}<input type="text" name="align_by" dir="auto" value="{{ sent(f, 'align_by', '') }}"></label>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('pfit.save_alignment') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    <a class="ui-btn ui-btn-quiet" href="{{ url_for('prosthetic_modules.fabrication_sheet', case_id=case.case_id) }}">{{ t('pfit.fabrication_sheet') }}</a>
+    <a class="ui-btn" href="{{ url_for('prosthetic_modules.follow_up', case_id=case.case_id) }}" style="min-height: 52px; font-size: 1rem">{{ t('pfit.to_follow_up') }}</a>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "ui_base.html" %}
+{% from "prosthetics/macros.html" import finding_label, finding_shown with context %}
+{% from "ui_forms.html" import conflicts_card, requirements_form, sent with context %}
+{% from "ui_macros.html" import line_list, option_marks, requirement_chips, source_statements, status_icon, stop_banner, unmet_flag, word with context %}
+{# Modules 2-3, functional requirements and component support (docs/design/02-prosthetics/Components.html): what
+   the prosthesis must do, each requirement traced to the findings it comes from (a value not recorded yet makes it
+   provisional), with the prosthetist's priority and the conflicts noted; then, for each component of the case's
+   level (the answer key's categories), the options the prosthetist typed, side by side in the order entered and
+   never ranked, each with the prosthetist's marks, costs, linked sources (grade as printed), the funding rule and
+   the maker's weight limit as printed (next to the recorded weight), stock and what to check at fitting; and
+   what the sources say about that component (the review page's statements, read-only). Last, the prosthetist's
+   configuration and reason, logged with what was shown. #}
+{% block title %}{{ t('pcomp.title') }}{% endblock %}
+{% block kicker %}{{ t('pmod.modules_2_3') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('pcomp.intro') }}</p>{% endblock %}
+{% block brief %}تحليل المتطلبات الوظيفية · دعم اختيار المكونات{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{{ stop_banner(checks) }}
+{% set post_url = url_for('prosthetic_modules.components', case_id=case.case_id) %}
+
+<h2 class="ui-section-label">{{ t('pcomp.requirements') }}</h2>
+<p class="ui-note" style="margin-top: 0">{{ t('pcomp.requirements_note') }}</p>
+<div class="ui-cols">
+  {{ requirements_form(plan, findings, missing, waiting, priorities, new_rows, form, post_url, ['body', 'goals', 'missing'],
+                       finding_label, finding_shown) }}
+
+  <aside class="ui-col-side">
+    {{ conflicts_card(plan, form, post_url, t('preq.conflict_note')) }}
+    <a class="ui-btn ui-btn-quiet" href="{{ url_for('prosthetic_modules.assess', case_id=case.case_id) }}">{{ t('pcomp.back') }}</a>
+  </aside>
+</div>
+
+<h2 class="ui-section-label">{{ t('pcomp.components') }}</h2>
+<p class="ui-note" style="margin-top: 0">{{ t('pcomp.components_note') }}</p>
+{% if plan.requirements %}{{ requirement_chips(plan.requirements) }}{% endif %}
+{% for component in components %}
+{% set options = plan.options_for(component) %}
+{% set shown = sources[component] %}
+{% set f = form if (form and form.get('action') == 'options' and form.get('component') == component) else none %}
+<section class="ui-card" id="component-{{ component }}" style="margin-top: 1.25rem">
+  <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('component.' ~ component) }}</h2><span class="ui-note" style="margin: 0">{{ t('pcomp.side_by_side') }}</span></div>
+  {% if options %}
+  <div class="ui-options" style="margin-top: 1rem">
+    {% for o in options %}
+    <article class="ui-option">
+      <div class="ui-option-head"><div><div class="ui-kicker">{{ t('options.option', id=o.id) }}{% if plan.configuration.get(component) == o.id %} · {{ t('pcomp.in_configuration') }}{% endif %}</div><h2><bdi>{{ o.name }}</bdi></h2></div></div>
+      {% if plan.requirements %}{{ option_marks(plan.requirements, o) }}{% endif %}
+      {{ line_list(t('pcomp.costs'), o.costs) }}
+      <div><h3>{{ t('pcomp.sources') }}</h3>
+        {% set linked = shown | selectattr('statement.id', 'in', o.sources) | list %}
+        {% for c in linked %}
+        <span class="ui-ev{{ ' ui-ev-guideline' if c.source_type == 'protocol' }}" style="margin-top: 0.3rem"><b>{{ t('source_type.' ~ c.source_type) }}</b> · {{ t('components.grade') }} {{ t('grade.' ~ (c.statement.grade or 'none')) }}{% if c.source_type == 'professional_knowledge' %} · {{ t('options.no_outcome_evidence') }}{% endif %} · <span dir="auto" lang="{{ c.language }}">{{ c.citation(c.statement.quote) }}</span></span>
+        {% else %}<p class="ui-note" style="margin: 0">{{ t('pcomp.no_source_linked') }}</p>{% endfor %}
+      </div>
+      {% if o.funding %}<div><h3>{{ t('pcomp.funding') }}</h3><p style="margin: 0; font-size: 0.875rem"><bdi>{{ o.funding }}</bdi></p></div>{% endif %}
+      {% if o.weight_limit_kg is not none %}
+      <div><h3>{{ t('pcomp.weight_limit') }}</h3>
+        <p style="margin: 0; font-size: 0.875rem">{{ t('pcomp.weight_vs', limit="%g" | format(o.weight_limit_kg), weight=("%g" | format(case.body_weight_kg)) if case.body_weight_kg is not none else '—') }}</p>
+        {% if case.body_weight_kg is none %}<p class="ui-note" style="margin: 0">{{ t('pcomp.weight_not_recorded') }}</p>
+        {% elif case.body_weight_kg > o.weight_limit_kg %}<div class="ui-stopflag">{{ status_icon('warn') }}<span>{{ t('pcomp.above_limit') }}</span></div>{% endif %}
+      </div>
+      {% endif %}
+      {% if o.stock %}<div><h3>{{ t('pcomp.stock') }}</h3><p style="margin: 0; font-size: 0.875rem"><bdi>{{ o.stock }}</bdi></p></div>{% endif %}
+      {{ line_list(t('pcomp.checks'), o.checks) }}
+      {% if o.notes %}<div><h3>{{ t('pcomp.notes') }}</h3><p style="margin: 0; font-size: 0.875rem"><bdi>{{ o.notes }}</bdi></p></div>{% endif %}
+      {% set unmet = o.unaddressed(plan.requirements) %}{% if unmet %}{{ unmet_flag(unmet) }}{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}<p class="ui-note">{{ t('pcomp.no_options') }}</p>{% endif %}
+
+  <div style="margin-top: 1rem">{{ source_statements(shown, t('pcomp.what_sources_say'), review_url, '#components') }}</div>
+
+  <details{% if f or not options %} open{% endif %} style="margin-top: 0.75rem">
+    <summary>{{ t('pcomp.edit') }}</summary>
+    <form method="post" action="{{ post_url }}#component-{{ component }}">
+      <input type="hidden" name="action" value="options"><input type="hidden" name="component" value="{{ component }}">
+      <div class="ui-options" style="margin-top: 0.75rem">
+        {% for oid in option_ids %}
+        {% set o = plan.option(component, oid) if not f else none %}
+        {% set p = 'opt_' ~ oid ~ '_' %}
+        <fieldset class="ui-option" style="margin: 0">
+          <legend style="font-weight: 600">{{ t('options.option', id=oid) }}</legend>
+          <label>{{ t('pcomp.option_name') }}<input type="text" name="{{ p }}name" dir="auto" value="{{ sent(f, p ~ 'name', o.name if o else '') }}"></label>
+          {% if plan.requirements %}
+          <div><h3>{{ word('addresses', 'options.addresses') }}</h3>
+            {% for r in plan.requirements %}
+            {% set mk = f.get(p ~ 'mark_' ~ r.id, '') if f else (o.marks[r.id].value if o and r.id in o.marks else '') %}
+            <div style="display: flex; gap: 0.5rem; align-items: flex-end; margin-top: 0.3rem">
+              <label style="flex: 0 0 auto">{{ r.id }}<select name="{{ p }}mark_{{ r.id }}"><option value="">{{ t('options.mark_unset') }}</option>{% for m in marks %}<option value="{{ m.value }}"{{ " selected" if m.value == mk }}>{{ t('mark.' ~ m.value) }}</option>{% endfor %}</select></label>
+              <label style="flex: 1">{{ t('options.mark_note') }}<input type="text" name="{{ p }}marknote_{{ r.id }}" dir="auto" value="{{ sent(f, p ~ 'marknote_' ~ r.id, o.mark_notes.get(r.id) if o else '') }}"></label>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <label>{{ t('pcomp.costs') }}<textarea name="{{ p }}costs" rows="2" dir="auto">{{ f.get(p ~ 'costs', '') if f else (o.costs | join('\n') if o else '') }}</textarea></label>
+          <label>{{ t('pcomp.checks') }}<textarea name="{{ p }}checks" rows="2" dir="auto">{{ f.get(p ~ 'checks', '') if f else (o.checks | join('\n') if o else '') }}</textarea></label>
+          <label>{{ t('pcomp.funding') }}<input type="text" name="{{ p }}funding" dir="auto" value="{{ sent(f, p ~ 'funding', o.funding if o else '') }}"></label>
+          <label>{{ t('pcomp.weight_limit') }}<input type="text" inputmode="decimal" name="{{ p }}weight_limit_kg" value="{{ sent(f, p ~ 'weight_limit_kg', ('%g' | format(o.weight_limit_kg)) if o and o.weight_limit_kg is not none else '') }}"></label>
+          <label>{{ t('pcomp.stock') }}<input type="text" name="{{ p }}stock" dir="auto" value="{{ sent(f, p ~ 'stock', o.stock if o else '') }}"></label>
+          <label>{{ t('pcomp.notes') }}<input type="text" name="{{ p }}notes" dir="auto" value="{{ sent(f, p ~ 'notes', o.notes if o else '') }}"></label>
+          {% if shown %}
+          {% set ticked = f.getlist(p ~ 'source') if f else (o.sources if o else []) %}
+          <div><h3>{{ t('pcomp.link_sources') }}</h3>
+            <div class="ui-checks">{% for c in shown %}<label><input type="checkbox" name="{{ p }}source" value="{{ c.statement.id }}"{{ " checked" if c.statement.id in ticked }}><span>{{ t('source_type.' ~ c.source_type) }} · <bdi>{{ c.citation(c.statement.quote) }}</bdi></span></label>{% endfor %}</div>
+          </div>
+          {% endif %}
+        </fieldset>
+        {% endfor %}
+      </div>
+      <p class="ui-note">{{ t('pcomp.empty_removes') }}</p>
+      <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('pcomp.save_options', component=t('component.' ~ component)) }}</button></div>
+    </form>
+  </details>
+</section>
+{% endfor %}
+
+{% set cf = form if (form and form.get('action') == 'configuration') else none %}
+<section class="ui-card" id="configuration" style="margin-top: 1.5rem">
+  <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('pcomp.configuration') }}</h2><span class="ui-note" style="margin: 0">{{ t('pcomp.configuration_note') }}</span></div>
+  <form method="post" action="{{ url_for('prosthetic_modules.configuration', case_id=case.case_id) }}">
+    <input type="hidden" name="action" value="configuration">
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem">
+      {% for component in components %}{% set options = plan.options_for(component) %}
+      {% set chosen = cf.get('chosen_' ~ component, '') if cf else plan.configuration.get(component, '') %}
+      <label style="flex: 1 1 240px">{{ t('component.' ~ component) }}
+        <select name="chosen_{{ component }}"{% if not options %} disabled{% endif %}><option value="">{{ t('pcomp.not_chosen') }}</option>{% for o in options %}<option value="{{ o.id }}"{{ " selected" if o.id == chosen }}>{{ o.id }} · {{ o.name }}</option>{% endfor %}</select></label>
+      {% endfor %}
+    </div>
+    <label style="display: block; margin-top: 0.6rem">{{ t('options.reason') }}<textarea name="reason" rows="2" dir="auto">{{ cf.get('reason', '') if cf else (plan.choice_reason or '') }}</textarea></label>
+    <p class="ui-note">{{ t('pcomp.recorded_with') }}</p>
+    <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('pcomp.record') }}</button><a class="ui-btn ui-btn-quiet" href="{{ url_for('prosthetic_modules.assess', case_id=case.case_id) }}">{{ t('pcomp.back') }}</a></div>
+  </form>
+  {% if logged_choices %}<p class="ui-note">{{ t('pcomp.logged', n=logged_choices | length, at=logged_choices[-1].logged_at) }}</p>{% endif %}
+</section>
+{% endblock %}

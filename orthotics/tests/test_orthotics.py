@@ -27,7 +27,7 @@ from orthotics.rag import AI_OFF as ORTHOTIC_AI_OFF
 from reasoning.rag import generate, profile_for
 from reasoning.rag_topics import GAPS
 from reasoning.writer import ClaudeWriter, GeminiWriter, WriterUnavailable
-from review.decision_log import build_entry, record_decision
+from review.decision_log import LOG_VERSION, build_entry, record_decision
 from review.routes import judgement_summary
 from shared.case_schema import PriorDevice, case_from_dict
 from shared.config import PROMPT_VERSION
@@ -322,7 +322,7 @@ class StoreAndLogTests(unittest.TestCase):
         entry = record_decision(self.record, "approve", note="Hinged AFO chosen: knee control needed.",
                                 path=self.folder / "log.jsonl", statement_judgements={afo_id: "relevant"},
                                 gap_judgements={"months_since_onset": "needed"})
-        self.assertEqual((entry["log_version"], entry["domain"]), (9, "orthotics"))
+        self.assertEqual((entry["log_version"], entry["domain"]), (LOG_VERSION, "orthotics"))
         self.assertIsNone(entry["components"]["functional_level"])
         self.assertEqual(entry["settings"]["retrieval_domains"], ["orthotics"])
         self.assertEqual(entry["case"]["domain"], "orthotics")

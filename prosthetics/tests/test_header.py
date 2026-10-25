@@ -1,8 +1,9 @@
 """Tests for every page's shared header and look (shared/templates/ui_*.html, 2026-10-23), on the prosthetic pages.
 
 The prosthetic pages got the orthotic pages' design: the domain switch, the
-domain's modules, the case bar. The prosthetic modules are the review page's
-sections, so the header links to them; the prosthetics map names the brief's
+domain's modules, the case bar. Since plan Part 3 (2026-10-24) the four modules
+are pages of their own (prosthetics/modules.py) and the header's tabs lead to
+them; the review page keeps its sections; the prosthetics map names the brief's
 capabilities.
 """
 
@@ -17,7 +18,6 @@ class ProstheticHeaderTests(ProstheticRouteTestCase):
                      "دعم قرارات التصميم والتركيب", "المتابعة والتقييم"):
             self.assertIn(name, page)
         self.assertIn("Prosthetics: the modules", page)
-        self.assertIn("Not built yet", page)
         self.client.set_cookie("lang", "ar")
         self.assertIn("الأطراف الاصطناعية: الوحدات", visible_text(self.client.get("/prosthetics").get_data(as_text=True)))
 
@@ -36,26 +36,30 @@ class ProstheticHeaderTests(ProstheticRouteTestCase):
     def test_on_the_intake_form_the_language_button_posts_the_form(self):
         page = self.client.get("/intake").get_data(as_text=True)
         self.assertIn('class="ui-page"', page)
-        self.assertIn('href="/intake" aria-current="page">1 Evaluate', page)
+        self.assertIn('href="/intake" aria-current="page">1 Assess', page)
         # The header's switch posts the form, so it comes back filled in (a link would lose what was typed).
         self.assertIn('<button type="submit" form="intake-form" name="switch_language" value="ar" formnovalidate '
                       'lang="ar">العربية</button>', page)
         self.assertNotIn('href="/language/', page)
 
-    def test_the_review_page_links_its_sections(self):
+    def test_the_review_page_keeps_its_sections_and_the_tabs_lead_to_the_modules(self):
         location = self.post_intake(**{"k_level": "K3"}).headers["Location"]
+        case_id = location.rsplit("/", 1)[-1]
         page = self.client.get(location).get_data(as_text=True)
         for anchor in ("gaps", "functional", "components", "fitting"):
             with self.subTest(anchor):
                 self.assertIn(f'id="{anchor}"', page)
-                self.assertIn(f'href="{location}#{anchor}"', page)
+        for tab, label in (("assess", "1 Assess"), ("components", "2–3 Requirements &amp; components"),
+                           ("fitting", "4 Design &amp; fitting"), ("follow-up", "5 Follow-up")):
+            with self.subTest(tab):
+                self.assertIn(f'<a href="/prosthetics/{case_id}/{tab}">{label}</a>', page)  # none current here
         text = visible_text(page)
         self.assertIn("transtibial · left side · recorded K3", text)  # the case bar
-        self.assertIn("Decision support: the specialist decides", text)
+        self.assertIn("Decision support: the prosthetist decides", text)
         self.client.set_cookie("lang", "ar")
         text = visible_text(self.client.get(location).get_data(as_text=True))
         self.assertIn("الجانب: أيسر", text)
-        self.assertIn("دعم القرار: المختص هو من يقرر", text)
+        self.assertIn("دعم القرار: أخصائي الأطراف الاصطناعية هو من يقرر", text)
 
     def test_the_domain_switch_on_both_maps(self):
         for path, current in (("/prosthetics", "Prosthetics"), ("/orthotics", "Orthotics")):

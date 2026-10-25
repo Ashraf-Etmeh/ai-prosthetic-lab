@@ -59,7 +59,9 @@ class ExportTests(unittest.TestCase):
     def test_where_it_appears(self):
         export(self.sheet)
         rows = {row["key"]: row["where it appears"] for row in read_sheet(self.sheet)}
-        self.assertEqual(rows["component.knee"], "review/templates/review/review.html")  # built: 'component.' ~ key
+        # built: 'component.' ~ key, on the review page and the prosthetic module pages
+        self.assertIn("review/templates/review/review.html", rows["component.knee"])
+        self.assertIn("prosthetics/templates/prosthetics/components.html", rows["component.knee"])
         self.assertEqual(rows["error.required.side"], "shared/forms.py")  # built: f"error.required.{name}"
         self.assertEqual(rows["intake.age"], "orthotics/intake.py; orthotics/templates/orthotics/intake_form.html; "
                                              "prosthetics/intake.py; prosthetics/templates/prosthetics/intake_form.html")

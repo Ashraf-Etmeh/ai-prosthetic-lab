@@ -25,7 +25,7 @@
 <body class="ui-page">
   {# The header of every page (shared/templates/ui_header.html). Its language button posts this form, which comes
      back filled in, in the other language; nothing is saved. #}
-  {% with domain = 'prosthetics', module = 'evaluate', lang_form = 'intake-form' %}{% include "ui_header.html" %}{% endwith %}
+  {% with domain = 'prosthetics', module = 'assess', lang_form = 'intake-form' %}{% include "ui_header.html" %}{% endwith %}
   <main class="ui-wrap ui-main ui-intake">
   <h1>{{ t('intake.heading') }}</h1>
   <p class="hint"><a href="{{ url_for('orthotic_intake.show_form') }}">{{ t('intake.orthotic_link') }}</a></p>

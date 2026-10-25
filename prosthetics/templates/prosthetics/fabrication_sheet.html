@@ -1,0 +1,36 @@
+{% extends "ui_base.html" %}
+{# The fabrication sheet (the design's "Export the fabrication sheet"): the configuration the prosthetist chose, the
+   latest alignment record and check-socket version, and the steps, as recorded. Printed from the browser; nothing
+   is sent anywhere. #}
+{% block title %}{{ t('sheet.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=4) }}{% endblock %}
+{% block content %}
+<div class="ui-print">
+  <p class="ui-note ui-noprint">{{ t('print.note') }} <a href="{{ url_for('prosthetic_modules.fitting', case_id=case.case_id) }}">{{ t('print.back') }}</a></p>
+  <section class="ui-card" style="margin-top: 1rem">
+    <h2>{{ t('mod.case', id=case.case_id) }} · {{ value_label(case.amputation_level) }} · {{ t('pmod.side', side=value_label(case.side)) }}{% if case.body_weight_kg is not none %} · {{ t('mod.weight', n="%g" | format(case.body_weight_kg)) }}{% endif %}</h2>
+    <p class="ui-note">{{ t('mod.fake_data') }}</p>
+    <h3>{{ t('pfit.configuration') }}</h3>
+    {% if plan.configuration %}
+    <table class="ui-table">
+      <tbody>{% for component in components if plan.chosen_option(component) %}{% set o = plan.chosen_option(component) %}
+        <tr><td>{{ t('component.' ~ component) }}</td><td style="font-weight: 600">{{ o.id }} · <bdi>{{ o.name }}</bdi></td><td>{% if o.stock %}<bdi>{{ o.stock }}</bdi>{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% if plan.choice_reason %}<p class="ui-note">{{ t('pcomp.reason_was') }} <bdi>{{ plan.choice_reason }}</bdi></p>{% endif %}
+    {% else %}<p class="ui-note">{{ t('pfit.no_configuration') }}</p>{% endif %}
+    <h3>{{ t('pfit.alignment') }}{% if plan.alignment %} · v{{ plan.alignment.number }}{% endif %}</h3>
+    {% if plan.alignment %}
+    <table class="ui-table">
+      <tbody>{% for name, value in plan.alignment['values'].items() %}<tr><td><bdi>{{ name }}</bdi></td><td style="font-weight: 600"><bdi>{{ value }}</bdi></td></tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="ui-note">{{ t('pfit.no_alignment') }}</p>{% endif %}
+    {% if plan.socket_versions %}{% set last = plan.socket_versions[-1] %}
+    <h3>{{ t('pfit.socket') }} · v{{ last.number }}</h3>
+    <p style="margin: 0"><bdi>{{ last.seen }}</bdi>{% if last.changed %} · <bdi>{{ last.changed }}</bdi>{% endif %}</p>
+    {% endif %}
+    <h3>{{ t('pfit.steps') }}</h3>
+    <ul class="ui-plain">{% for step in steps %}{% set r = plan.step(step) %}<li>{{ t('pstep.' ~ step.value) }}: {{ t('step_status.' ~ r.status.value) }}{% if r.notes %} · <bdi>{{ r.notes }}</bdi>{% endif %}</li>{% endfor %}</ul>
+  </section>
+</div>
+{% endblock %}

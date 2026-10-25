@@ -43,16 +43,13 @@
 </head>
 <body class="ui-page">
   {# The header of every page (shared/templates/ui_header.html): the case's domain, its modules and the case bar.
-     Orthotics: this page is the specialist review (the design's pathway step 05), reached from module 1, the
-     analysis page; no module tab is current. Prosthetics: its sections are the modules. #}
+     This page is the specialist review (the design's pathway step 05), reached from each domain's module 1; no
+     module tab is current. The links back and on are the domain's (its nav.py REVIEW_BACK, REVIEW_NEXT). #}
   {% with module = 'review' %}{% include "ui_header.html" %}{% endwith %}
+  {% set nav = domain_nav(case.domain) %}
   <main class="ui-wrap ui-main ui-review">
-  {% if orthotic %}
   <div class="ui-kicker">{{ t('review.ort_kicker') }} · <span lang="ar" dir="rtl">مراجعة المختص</span></div>
-  <p><a href="{{ url_for('orthotic_modules.analysis', case_id=case.case_id) }}">{{ t('review.to_analysis') }}</a></p>
-  {% else %}
-  <div class="ui-kicker">{{ t('pmod.review_kicker') }} · <span lang="ar" dir="rtl">الأطراف الاصطناعية</span></div>
-  {% endif %}
+  <p><a href="{{ url_for(nav.REVIEW_BACK[0], case_id=case.case_id) }}">{{ t(nav.REVIEW_BACK[1]) }}</a></p>
   <h1>{{ t('review.heading', case_id=case.case_id) }}</h1>
   <div class="banner">{{ t('disclaimer.orthotics' if orthotic else 'disclaimer') }}</div>
   {# The AI parts of the case's domain: the orthotic options and design are their own parts. #}
@@ -385,9 +382,7 @@
     {% endfor %}
   </ol>
   {% endif %}
-  {% if orthotic %}
-  <div class="ui-actions"><a class="ui-btn ui-btn-quiet" href="{{ url_for('orthotic_modules.analysis', case_id=case.case_id) }}">{{ t('review.to_analysis') }}</a><a class="ui-btn" href="{{ url_for('orthotic_modules.requirements', case_id=case.case_id) }}">{{ t('review.to_requirements') }}</a></div>
-  {% endif %}
+  <div class="ui-actions"><a class="ui-btn ui-btn-quiet" href="{{ url_for(nav.REVIEW_BACK[0], case_id=case.case_id) }}">{{ t(nav.REVIEW_BACK[1]) }}</a><a class="ui-btn" href="{{ url_for(nav.REVIEW_NEXT[0], case_id=case.case_id) }}">{{ t(nav.REVIEW_NEXT[1]) }}</a></div>
   </main>
 </body>
 </html>

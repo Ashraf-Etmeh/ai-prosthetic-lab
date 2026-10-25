@@ -31,7 +31,7 @@ from shared.requirements import Mark, Priority, Requirement
 from orthotics.tests.helpers import OrthoticPageTestCase
 from orthotics.tests.test_orthotics import full_case
 from prosthetics.case import Case
-from review.decision_log import read_decisions
+from review.decision_log import LOG_VERSION, read_decisions
 from shared.store import CaseRecord, CaseStore, store
 from shared.testing import chunk_record, fake_embed, visible_text
 
@@ -270,7 +270,7 @@ class ModulePageTests(OrthoticPageTestCase):
         resp = self.client.post(self.url("choice"), data={"form": "choice", "chosen": "A", "reason": "knee control"})
         self.assertEqual(resp.status_code, 302)
         [entry] = read_decisions(self.case_id)
-        self.assertEqual((entry["log_version"], entry["decision"], entry["note"]), (9, "design_choice", "knee control"))
+        self.assertEqual((entry["log_version"], entry["decision"], entry["note"]), (LOG_VERSION, "design_choice", "knee control"))
         self.assertEqual((entry["plan"]["chosen"], entry["plan"]["options"][0]["device"]), ("A", "hinged_afo"))
         self.assertIn("design choice", self.page(f"/review/{self.case_id}"))
         self.assertIn("Choices recorded (1)", self.page(self.url("options")))

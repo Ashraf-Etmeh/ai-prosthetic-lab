@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from knowledge.clinic_rules import APPROVED, COLUMNS, DRAFT, ClinicRule, load_rules, rules_for
-from orthotics import hard_stops
+from shared import domains
 
 HEADER = ",".join(COLUMNS)
 
@@ -15,7 +15,10 @@ class ProjectFileTests(unittest.TestCase):
     def test_the_file_reads_and_names_every_hard_stop_the_code_applies(self):
         rules = load_rules()
         self.assertTrue(rules)
-        self.assertEqual(set(rules_for("orthotics", "hard_stop")), set(hard_stops.RULES))
+        for domain in domains.DOMAINS:  # each domain's hard stops (<domain>/hard_stops.py RULES), all in the file
+            with self.subTest(domain):
+                self.assertTrue(domains.has_part(domain, "hard_stops"))
+                self.assertEqual(set(rules_for(domain, "hard_stop")), set(domains.part(domain, "hard_stops").RULES))
         for rule in rules:
             with self.subTest(rule.rule_id):
                 self.assertIn(rule.status, (DRAFT, APPROVED))

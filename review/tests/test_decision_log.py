@@ -124,7 +124,7 @@ class DecisionLogTests(unittest.TestCase):
         entry = record_decision(record, "approve", path=self.path, statement_judgements={knee_id: "relevant"})
         # Version 6 (orthotics, 2026-10-22) keeps every version-5 field and adds "domain";
         # version 7 (2026-10-23) adds "plan", null for a prosthetic case; version 8 the "repeat" removals.
-        self.assertEqual((entry["log_version"], entry["domain"], entry["plan"]), (9, "prosthetics", None))
+        self.assertEqual((entry["log_version"], entry["domain"], entry["plan"]), (LOG_VERSION, "prosthetics", None))
         self.assertEqual(entry["settings"]["retrieval_domains"], ["prosthetics"])
         knee = next(s for section in entry["components"]["sections"] for s in section["statements"]
                     if s["id"] == knee_id)
@@ -149,7 +149,7 @@ class DecisionLogTests(unittest.TestCase):
         del old["generation"], old["domain"]
         with self.path.open("a", encoding="utf-8") as log:
             log.write(json.dumps(old) + "\n")
-        self.assertEqual([e["log_version"] for e in read_decisions("case-rag", path=self.path)], [9, 4])
+        self.assertEqual([e["log_version"] for e in read_decisions("case-rag", path=self.path)], [LOG_VERSION, 4])
 
     def test_invalid_decisions_refused_and_nothing_written(self):
         for kwargs in [

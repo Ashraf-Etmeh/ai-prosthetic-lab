@@ -159,8 +159,25 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"fu.back_to.{key}" for key in BACK_TO}
         # Every page's header (2026-10-23): 'domain.' ~ domain, the prosthetic modules, the prosthetics map
         expected |= {"domain.prosthetics", "domain.orthotics"}
+        from prosthetics import modules as prosthetic_modules
         for prefix in ("pmod", "pmap_name", "pmap_does"):
-            expected |= {f"{prefix}.{key}" for key in ("evaluate", "functional", "components", "fitting")}
+            expected |= {f"{prefix}.{key}" for key in prosthetic_modules.MODULES}
+        # Every domain's hard stops, alert targets and the words it gives the shared pieces (nav.py WORDS)
+        from shared import domains
+        for domain in domains.DOMAINS:
+            rules = domains.part(domain, "hard_stops")
+            expected |= {f"{prefix}.{rule}" for prefix in ("hard", "hard_rule") for rule in rules.RULES}
+            expected |= {f"hard_detail.{detail}" for detail in rules.DETAILS}
+            expected |= {f"fu.back_to.{key}" for key in domains.part(domain, "plan").BACK_TO}
+            nav = domains.part(domain, "nav")
+            expected |= set(nav.WORDS.values()) | {nav.REVIEW_BACK[1], nav.REVIEW_NEXT[1], nav.DECIDES}
+        # The prosthetic module pages (plan Part 3, 2026-10-24): steps, short names, finding groups, form labels
+        from prosthetics import plan as prosthetic_plan
+        expected |= {f"pstep.{step.value}" for step in prosthetic_plan.FittingStep}
+        expected |= {"prow." + path.replace(".", "__") for path in prosthetic_modules.SHORT_NAMES}
+        expected |= {f"req_group.{group}" for group in prosthetic_plan.FINDING_GROUPS}
+        expected |= {f"passess.{name}" for name in prosthetic_modules.TEXT_VALUES}  # form labels (a refusal names them)
+        expected |= {f"pcomp.{key}" for key in ("funding", "stock", "notes", "costs", "checks")}
         self.assertEqual(expected - set(TEXT), set())
 
 

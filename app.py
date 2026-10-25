@@ -21,6 +21,7 @@ from knowledge.catalog import attributions
 from orthotics.intake import bp as orthotic_intake_bp
 from orthotics.modules import bp as orthotic_modules_bp
 from prosthetics.intake import bp as prosthetic_intake_bp
+from prosthetics.modules import bp as prosthetic_modules_bp
 from review.routes import bp as review_bp
 from shared import domains
 from shared.case_schema import DEFAULT_DOMAIN
@@ -47,6 +48,7 @@ def _local_page(target: str) -> bool:
 def create_app() -> Flask:
     app = Flask(__name__, template_folder="shared/templates")
     app.register_blueprint(prosthetic_intake_bp)  # /intake and /prosthetics (use cases 01, 02)
+    app.register_blueprint(prosthetic_modules_bp)  # /prosthetics/<id>/...: modules 1-5 (plan Part 3)
     app.register_blueprint(orthotic_intake_bp)  # /intake/orthotics (use case 03, stroke AFO)
     app.register_blueprint(orthotic_modules_bp)  # /orthotics: the map and modules 1-6
     app.register_blueprint(review_bp)  # /review/<id>: what the sources say, and the reviewer's marks

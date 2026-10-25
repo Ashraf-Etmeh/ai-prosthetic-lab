@@ -14,9 +14,10 @@ are never added together. For that domain it counts:
   may lack a source), with their case ids,
 - per component or fitting statement: Relevant / Not relevant / not marked,
 - decisions (approve / edit / reject), and every edit note as written,
-- orthotic design choices (log version 7): counted as decisions, but their
-  copies of the gaps and statements are not counted as marks (the orthotist
-  chose an option on the options page; nothing was marked there).
+- design choices (orthotic options from log version 7, prosthetic configurations
+  from version 10): counted as decisions, but their
+  copies of the gaps and statements are not counted as marks (the specialist
+  chose on a module page; nothing was marked there).
 
 Each logged decision counts once: a case decided twice counts twice (the
 summary says how many cases were). Counts only: no scores, percentages,
@@ -41,7 +42,7 @@ from shared.config import REVIEW_LOG_PATH, TRIAL_DIR
 
 REPORT_PATH = TRIAL_DIR / "report.csv"
 DECISIONS = ("approve", "edit", "reject")
-DESIGN_CHOICE = "design_choice"  # review/decision_log.py: an orthotic option chosen, with the plan
+DESIGN_CHOICE = "design_choice"  # review/decision_log.py: an option or configuration chosen, with the plan
 MARKS = {"gap": ("needed", "not_needed", None), "statement": ("relevant", "not_relevant", None)}
 GUIDE_ORDER = [s.id for s in (*component_guide.ALL_STATEMENTS, *fitting_guide.ALL_STATEMENTS)]
 # Each domain's gap fields in its field guide's order.
@@ -188,7 +189,7 @@ def print_summary(report: TrialReport, out=sys.stdout) -> None:
     p(f"{report.decisions} decisions on {len(report.cases)} cases ({repeated} cases decided more than once), "
       f"{report.first_logged} to {report.last_logged} UTC")
     p("Decisions: " + ", ".join(f"{d} {report.decision_counts[d]}" for d in DECISIONS)
-      + (f"; orthotic design choices {report.decision_counts[DESIGN_CHOICE]}"
+      + (f"; design choices {report.decision_counts[DESIGN_CHOICE]}"
          if report.decision_counts[DESIGN_CHOICE] else ""))
 
     p("\nGap fields (source = a source passage was shown)")

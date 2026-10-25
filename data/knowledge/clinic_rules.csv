@@ -3,3 +3,6 @@ ulcer,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in (doc
 insensate,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in: a rigid device on insensate skin without pressure relief"
 contracture,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in: fixed contracture beyond what the design can accommodate"
 fes_implant,orthotics,hard_stop,draft,1,,,"Design map, orthotics, Safety built in: FES with an implanted electronic device"
+open_wound,prosthetics,hard_stop,draft,1,,,"Design, prosthetics module 1, Hard-stop checks (docs/design/02-prosthetics/Main.html; SYSTEM_DESIGN.md §6.1): open wound or infection"
+volume_changing,prosthetics,hard_stop,draft,1,,,"Design, prosthetics module 1, Hard-stop checks: changing volume; a definitive socket waits for stable volume, the prosthetist decides when"
+neuropathic_foot,prosthetics,hard_stop,draft,1,,,"Design, prosthetics module 1, Hard-stop checks: neuropathic other foot; referral to the diabetic foot team, if not under its care"

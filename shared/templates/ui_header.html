@@ -29,7 +29,7 @@
         {% elif loop.first %}
       <a href="{{ intake_url }}"{% if module == key %} aria-current="page"{% endif %}>{{ t(nav.LABELS ~ key) }}</a>
         {% else %}
-      <span title="{{ t('mod.needs_case') }}">{{ t(nav.LABELS ~ key) }}</span>
+      <span title="{{ t(nav.WORDS.get('needs_case', 'mod.needs_case')) }}">{{ t(nav.LABELS ~ key) }}</span>
         {% endif %}
       {% endfor %}
     </nav>

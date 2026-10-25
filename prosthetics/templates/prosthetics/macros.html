@@ -1,0 +1,35 @@
+{# The prosthetic module pages' own pieces; what every part shares is in shared/templates/ui_macros.html and
+   ui_forms.html. `short_names`: the values with a short name of their own (prosthetics/modules.py SHORT_NAMES). #}
+
+{# The name of a value of the case or its assessment: its short name on these pages, else the intake's label. #}
+{% macro value_name(path) -%}
+  {%- if path in short_names %}{{ t('prow.' ~ path | replace('.', '__')) }}{% else %}{{ field_label(path) }}{% endif -%}
+{%- endmacro %}
+
+{# A recorded value, as recorded: a choice by its label, a list as listed, a weight in kg, text as typed. #}
+{% macro recorded(path, value) -%}
+  {%- if value is none %}—
+  {%- elif value.value is defined %}{{ value_label(value) }}
+  {%- elif value is string %}<bdi>{{ value }}</bdi>
+  {%- elif path == 'body_weight_kg' %}<bdi>{{ t('mod.weight', n="%g" | format(value)) }}</bdi>
+  {%- elif value is number %}<bdi>{{ "%g" | format(value) }}</bdi>
+  {%- elif value %}<bdi>{% for item in value %}{{ item.device_description if item.device_description is defined else item }}{{ '; ' if not loop.last }}{% endfor %}</bdi>
+  {%- else %}{{ t('pmod.none_reported') }}{% endif -%}
+{%- endmacro %}
+
+{# A finding of the case (shared/requirements.py Finding): what it is, then its value, or that it isn't recorded. #}
+{% macro finding_label(f) -%}
+  {%- if f.value is none %}{{ value_name(f.path) }}: {{ t('status.not recorded') }}
+  {%- else %}{{ value_name(f.path) }}: {{ recorded(f.path, f.value) }}{% endif -%}
+{%- endmacro %}
+
+{# A finding ticked for a requirement, over its row: as in the tick list. #}
+{% macro finding_shown(f) -%}{{ finding_label(f) }}{%- endmacro %}
+
+{# A value's status on module 1: recorded, recorded as unknown, not recorded (an intake value), or not asked yet
+   (a value of the assessment, which the intake form doesn't ask). #}
+{% macro state(path, value) -%}
+  {%- if value is none %}{{ 'not_asked' if path.startswith('assessment.') else 'not_recorded' }}
+  {%- elif value.value is defined and value.value == 'unknown' %}unknown
+  {%- else %}recorded{% endif -%}
+{%- endmacro %}

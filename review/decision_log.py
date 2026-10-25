@@ -30,7 +30,13 @@ object that can be read on its own, holding
   option and its reason, the design steps and every parameter version:
   orthotics/plan.py); and the decision "design_choice", logged when the
   orthotist records the option chosen on the options page, with the reason
-  as its note.
+  as its note,
+- since version 10 (2026-10-24, plan Part 3): the same for a prosthetic
+  case: "plan" holds the prosthetist's work after the intake
+  (prosthetics/plan.py: the rest of the assessment, requirements, component
+  options, the configuration and its reason, fitting and follow-up), and
+  "design_choice" is logged when the prosthetist records the configuration
+  on modules 2-3.
 
 Lines are only ever added. Editing or removing a logged decision is out of
 scope for v1 (FUTURE_WORK.md).
@@ -61,8 +67,9 @@ from shared.i18n import DEFAULT_LANGUAGE, TranslatableError
 from shared.store import CaseRecord
 
 DECISIONS = ("approve", "edit", "reject")
-# Orthotics (version 7): the option the orthotist chose on the options page. Logged
-# only through record_design_choice(), never from the review page's form.
+# The specialist's choice on a module page (version 7, orthotics: the option chosen; version 10,
+# prosthetics: the configuration). Logged only through record_design_choice(), never from the review
+# page's form.
 DESIGN_CHOICE = "design_choice"
 GAP_JUDGEMENTS = ("needed", "not_needed")
 STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
@@ -87,8 +94,12 @@ STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
 # file version 4 (shared/store.py), an orthotic "case" gains goals by ICF level,
 # "measured_how" and exam.ulcer_infection_or_poor_blood_supply, and a design
 # choice's plan.chosen may be "F", the referral to discuss FES. Older lines
-# lack these keys.
-LOG_VERSION = 9
+# lack these keys. 10 (2026-10-24, the prosthetic module pages): a prosthetic
+# case's "plan" is its prosthetics/plan.py ProstheticPlan (null before: none
+# existed), and a prosthetic "design_choice" logs the configuration, its
+# plan.chosen a dict of component -> option id ("configuration"). Older lines
+# have no prosthetic plan.
+LOG_VERSION = 10
 
 # The development server answers requests in threads; one write at a time
 # keeps two decisions from mixing into one line.
@@ -306,7 +317,8 @@ def record_decision(
 
 def record_design_choice(record: CaseRecord, path: Optional[Path] = None,
                          ui_language: str = DEFAULT_LANGUAGE) -> dict:
-    """Log the option the orthotist chose (record.plan.chosen), its reason as the note, and the whole plan."""
+    """Log the specialist's choice (record.plan.chosen: an orthotic option, or a prosthetic configuration), its
+    reason as the note, and the whole plan."""
     return _append(build_entry(record, DESIGN_CHOICE, record.plan.choice_reason if record.plan else None,
                                ui_language=ui_language), path)
 

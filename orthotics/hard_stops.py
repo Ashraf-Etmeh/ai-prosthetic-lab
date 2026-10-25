@@ -19,21 +19,15 @@ orthotist's judgement says that; one whose facts aren't recorded says it isn't
 checked yet. Nothing is blocked: the orthotist and the doctor decide.
 """
 
-from dataclasses import dataclass, field
 from typing import Optional
 
-from knowledge.clinic_rules import ClinicRule, rules_for
+from knowledge.clinic_rules import ClinicRule
 from orthotics.case import OrthoticCase, SensationStatus
 from orthotics.plan import FES_REFERRAL, DesignOption, OrthoticPlan, Part
+from shared import hard_stops as shared
 from shared.case_schema import YesNoUnknown
-
-# How a rule stands for the case, worst first.
-STOP = "stop"  # the recorded facts match the rule, which routes the case to a doctor
-WARN = "warn"  # the rule applies to part of the design: the orthotist checks it there
-JUDGE = "judge"  # only the orthotist can judge it from the recorded value
-CLEAR = "clear"  # the recorded facts don't match the rule
-NOT_CHECKED = "not_checked"  # what the rule needs isn't recorded (or recorded as unknown)
-STATUSES = (STOP, WARN, JUDGE, CLEAR, NOT_CHECKED)
+# The statuses and the check are every domain's (shared/hard_stops.py).
+from shared.hard_stops import CLEAR, JUDGE, NOT_CHECKED, STATUSES, STOP, WARN, Check, stops  # noqa: F401
 
 # The rules, in the map's order.
 ULCER, INSENSATE, CONTRACTURE, FES_IMPLANT = "ulcer", "insensate", "contracture", "fes_implant"
@@ -41,15 +35,6 @@ RULES = (ULCER, INSENSATE, CONTRACTURE, FES_IMPLANT)
 # What a check can say it found (i18n "hard_detail.<detail>").
 DETAILS = ("ulcer_yes", "ulcer_no", "unknown", "not_recorded", "insensate", "insensate_options", "sensation_intact",
            "contracture", "implant_yes", "implant_fes_chosen", "implant_no", "not_asked")
-
-
-@dataclass(frozen=True)
-class Check:
-    rule: str  # one of RULES: its name and the design's wording are i18n "hard.<rule>", "hard_rule.<rule>"
-    status: str  # one of STATUSES
-    detail: str  # i18n key "hard_detail.<detail>": what the code found, never a clinical sentence
-    params: dict = field(default_factory=dict)
-    clinic_rule: Optional[ClinicRule] = None  # the rule's row in the owner's file: its status and version
 
 
 def _ulcer(case: OrthoticCase) -> Check:
@@ -96,23 +81,13 @@ def clinic_rules() -> dict[str, ClinicRule]:
     ValueError if the file and RULES differ: a rule the code applies must be in the owner's file, and the
     file names no orthotic hard stop the code doesn't know.
     """
-    rows = rules_for("orthotics", "hard_stop")
-    if set(rows) != set(RULES):
-        raise ValueError(f"data/knowledge/clinic_rules.csv and orthotics/hard_stops.py RULES differ: "
-                         f"in the file only {sorted(set(rows) - set(RULES)) or 'none'}, "
-                         f"in the code only {sorted(set(RULES) - set(rows)) or 'none'}")
-    return rows
+    return shared.clinic_rules("orthotics", RULES)
 
 
 def case_checks(case: OrthoticCase, plan: Optional[OrthoticPlan] = None) -> list[Check]:
     """The four rules for this case, in the map's order, each with its row in the owner's file."""
-    rows = clinic_rules()
-    checks = [_ulcer(case), _insensate(case, plan), _contracture(case), _fes(case, plan)]
-    return [Check(c.rule, c.status, c.detail, c.params, rows[c.rule]) for c in checks]
-
-
-def stops(checks: list[Check]) -> list[Check]:
-    return [check for check in checks if check.status == STOP]
+    return shared.with_rules("orthotics", RULES,
+                             [_ulcer(case), _insensate(case, plan), _contracture(case), _fes(case, plan)])
 
 
 def lacks_lining(case: OrthoticCase, option: DesignOption) -> bool:

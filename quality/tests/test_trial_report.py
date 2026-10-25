@@ -149,7 +149,7 @@ class TrialReportTests(unittest.TestCase):
         self.assertEqual(dict(orthotic.other_domains), {"prosthetics": 5})
         out = io.StringIO()
         print_summary(orthotic, out)
-        self.assertIn("orthotic design choices 1", out.getvalue())
+        self.assertIn("design choices 1", out.getvalue())
         out = io.StringIO()
         print_summary(after, out)
         self.assertIn("Domain: prosthetics (left out, other domains: orthotics 1)", out.getvalue())

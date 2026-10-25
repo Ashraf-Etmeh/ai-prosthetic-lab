@@ -1,0 +1,37 @@
+{% extends "ui_base.html" %}
+{% from "ui_macros.html" import latest_visit_card, loop_back_links with context %}
+{% from "ui_forms.html" import alerts_card, follow_up_main, visit_steps with context %}
+{# Module 5, follow-up and evaluation (docs/design/02-prosthetics/FollowUp.html): the visits; the outcome measures
+   the clinician enters at each visit, as bars over time, shown as recorded (the prosthetist judges the change: no
+   score, trend or verdict is computed); the alerts in the clinician's words, which loop back to refitting (module
+   4), the components (2-3) or the assessment (1); wearing time and the device's condition. Which measures,
+   questionnaires, intervals and alert thresholds a clinic uses is the owner's to set (SYSTEM_DESIGN.md §11.2-3):
+   none is filled in here. The case's random id is the pseudonymous link between visits. #}
+{% block title %}{{ t('pfu.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=5) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('pfu.intro') }}</p>{% endblock %}
+{% block brief %}المتابعة والتقييم{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set follow = plan.follow_up %}
+{% set due = follow.next_due() %}
+{% set post_url = url_for('prosthetic_modules.follow_up', case_id=case.case_id) %}
+{{ visit_steps(follow, due) }}
+
+<div class="ui-cols">
+  {{ follow_up_main(follow, form, post_url, new_rows, statuses) }}
+
+  <aside class="ui-col-side">
+    {{ alerts_card(follow, due, form, post_url, back_to, 'prosthetic_modules.') }}
+
+    {{ latest_visit_card(follow) }}
+
+    <section class="ui-dark ui-loop">
+      <h2 style="margin: 0; font-size: 1.125rem">{{ t('fu.loop_back') }}</h2>
+      {{ loop_back_links([(t('pfu.refit'), t('map.module', n=4), url_for('prosthetic_modules.fitting', case_id=case.case_id)),
+                          (t('pfu.review_components'), t('pmod.modules_2_3'), url_for('prosthetic_modules.components', case_id=case.case_id)),
+                          (t('fu.reassess'), t('map.module', n=1), url_for('prosthetic_modules.assess', case_id=case.case_id))]) }}
+    </section>
+  </aside>
+</div>
+{% endblock %}

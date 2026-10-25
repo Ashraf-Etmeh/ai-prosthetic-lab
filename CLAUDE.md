@@ -103,8 +103,13 @@ differ it says where the build is heading, and this file still sets the rules).
   code reaches it through `shared/domains.py`, never by naming it
   (`shared/tests/test_domains.py` checks both). What every domain's screens
   share is built once (SYSTEM_DESIGN.md §5): the page pieces in
-  `shared/templates/ui_macros.html`, the header in `ui_header.html`, and the
-  building blocks in `shared/requirements.py` and `shared/followup.py`.
+  `shared/templates/ui_macros.html` and the forms in `ui_forms.html`, the
+  header in `ui_header.html` (each domain's words in its `nav.py`), the
+  building blocks in `shared/requirements.py`, `shared/followup.py`,
+  `shared/hard_stops.py` and `shared/fitting.py`, and the module pages'
+  form reading and saving in `shared/forms.py` and `shared/module_pages.py`.
+  Both domains have module pages after the intake (`<domain>/plan.py`,
+  `hard_stops.py`, `modules.py`; prosthetics since 2026-10-24).
 
 ## Roadmap (in this order, by track)
 

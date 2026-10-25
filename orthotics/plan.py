@@ -40,8 +40,22 @@ from typing import Any, Optional
 
 from orthotics.case import OrthoticCase
 from orthotics.fit import FitRecord
+from shared.fitting import StepStatus  # noqa: F401  (every domain's; kept here by name)
 from shared.followup import FollowUp
-from shared.requirements import Conflict, Mark, Priority, Requirement, next_requirement_id
+from shared.forms import MAX_LIST, MAX_TEXT  # noqa: F401  (MAX_TEXT: the orthotic pages' limit, kept by name)
+from shared.requirements import (  # noqa: F401  (Finding, PlanError, value_at, recorded: kept here by name)
+    Conflict,
+    Finding,
+    Mark,
+    PlanError,
+    Priority,
+    Requirement,
+    check_conflicts,
+    check_requirements,
+    next_requirement_id,
+    recorded,
+    value_at,
+)
 
 
 class DeviceType(str, Enum):
@@ -80,13 +94,6 @@ class Step(str, Enum):
     SIMULATE = "simulate"  # added 2026-10-23 (the design's step 4)
     FABRICATE = "fabricate"  # shown as "Manufacture"
     RELEASE = "release"
-
-
-class StepStatus(str, Enum):
-    NOT_STARTED = "not_started"
-    IN_PROGRESS = "in_progress"
-    DONE = "done"
-    NOT_NEEDED = "not_needed"
 
 
 class Method(str, Enum):
@@ -128,12 +135,6 @@ OPTION_IDS = ("A", "B", "C")
 BACK_TO = ("fit", "options", "analysis")
 FES_REFERRAL = "F"  # the referral to discuss FES: chosen like an option (the design's fourth card)
 MAX_PARTS_PER_OPTION = 6
-MAX_LIST = 8  # lines in a typed list (costs, checks at fitting)
-MAX_TEXT = 500  # characters in one typed value (a requirement, a note, a parameter)
-
-
-class PlanError(ValueError):
-    """A plan that can't be kept as it is (raised before anything is saved)."""
 
 
 def _enum(cls, value):
@@ -291,15 +292,8 @@ class OrthoticPlan:
     # ---- Changing (each checks before it changes anything) ----------------
 
     def set_requirements(self, requirements: list[Requirement], known_findings: set[str]) -> None:
+        check_requirements(requirements, known_findings)
         ids = [r.id for r in requirements]
-        if len(ids) != len(set(ids)):
-            raise PlanError("repeated requirement id")
-        for r in requirements:
-            if not r.text.strip():
-                raise PlanError("a requirement without text")
-            unknown = set(r.findings) - known_findings
-            if unknown:
-                raise PlanError(f"{r.id}: not a finding of this case: {sorted(unknown)}")
         self.requirements = requirements
         # Marks, part links, parameter links and conflicts to a requirement that is gone go with it.
         for option in self.options:
@@ -310,12 +304,7 @@ class OrthoticPlan:
         self.conflicts = [c for c in self.conflicts if c.first in ids and c.second in ids]
 
     def set_conflicts(self, conflicts: list[Conflict]) -> None:
-        known = {r.id for r in self.requirements}
-        for c in conflicts:
-            if {c.first, c.second} - known or c.first == c.second:
-                raise PlanError("a conflict is between two different requirements of this plan")
-            if not c.note.strip():
-                raise PlanError("a conflict without a note")
+        check_conflicts(conflicts, self.requirements)
         self.conflicts = conflicts
 
     def set_options(self, options: list[DesignOption]) -> None:
@@ -463,14 +452,8 @@ class OrthoticPlan:
 
 
 # ---- The case's findings a requirement can come from ------------------------
-
-
-@dataclass(frozen=True)
-class Finding:
-    key: str  # "deviation.toe_drag", "exam.foot_posture", "functional_goals", ...
-    group: str  # "gait", "exam", "other" or "missing": how the requirements page groups them
-    path: Optional[str]  # the field path whose label names it (None: a gait deviation)
-    value: Any  # as recorded: a GaitDeviation, an enum, a number or text; None: not recorded yet
+# Finding (shared/requirements.py): key "deviation.toe_drag", "exam.foot_posture", "functional_goals", ...; group
+# "gait", "exam", "other" or "missing"; path None for a gait deviation.
 
 
 # Recorded values a requirement may come from, by group (the gait deviations come first).
@@ -481,17 +464,6 @@ _EXAM_PATHS = ("exam.dorsiflexion_knee_extended_deg", "exam.dorsiflexion_knee_fl
 _OTHER_PATHS = ("functional_goals", "goal_participation", "goal_body_function", "walking.status",
                 "walking.gait_speed_m_s", "walking.falls_last_6_months", "footwear", "donning", "body_weight_kg")
 FINDING_PATHS = _EXAM_PATHS + _OTHER_PATHS
-
-
-def value_at(case: OrthoticCase, path: str):
-    value = case
-    for name in path.split("."):
-        value = getattr(value, name)
-    return value
-
-
-def recorded(value) -> bool:
-    return value is not None and getattr(value, "value", None) != "unknown"
 
 
 def case_findings(case: OrthoticCase) -> list[Finding]:
