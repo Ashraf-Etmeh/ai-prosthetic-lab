@@ -43,6 +43,11 @@ QUALITY_DIR = DATA_DIR / "quality"
 # Material for the specialist trial: the Arabic term sheet, the prepared
 # cases (trial/cases/), and the report built from the review log.
 TRIAL_DIR = QUALITY_DIR / "trial"
+# The recorded results the quality page reads (plan Part 4, 2026-10-25; quality/results.py): one JSON line
+# per run of `scripts/verify_all.py --record` or `quality.golden_cases --record`, only ever added to (in git).
+QUALITY_RESULTS_PATH = QUALITY_DIR / "results" / "runs.jsonl"
+# The owner's release sign-offs and Arabic checks (quality/releases.py); written by the owner.
+RELEASES_PATH = QUALITY_DIR / "releases.csv"
 
 # Knowledge layer
 # Multilingual (Arabic, English, German and 100+ more), about 2.3 GB, MIT

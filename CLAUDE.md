@@ -88,8 +88,11 @@ differ it says where the build is heading, and this file still sets the rules).
   and its measurements use `data/quality/golden_cases/` only.
 - **The yardstick asks first.** Claude Code asks the owner before Claude
   edits the golden cases, the held-out manifest, the two guides, the rule
-  table, the clinic rules or the review logs (`.claude/hooks/protect_yardstick.py`, in
-  `.claude/settings.json`); such a prompt is intended, not an error.
+  table, the clinic rules, the release sign-offs (`data/quality/releases.csv`),
+  the recorded results (`data/quality/results/`) or the review logs
+  (`.claude/hooks/protect_yardstick.py`, in `.claude/settings.json`); such a
+  prompt is intended, not an error. Results are recorded only by the
+  measuring commands (`--record`), never written by hand.
 - **Ask the owner first** before committing, pushing (the owner decides
   when to push), adding a dependency, deleting data, or starting the next
   roadmap item.
@@ -162,10 +165,13 @@ python -m knowledge.evaluate  # search quality (hit@1 / hit@5)
 python -m knowledge.items     # knowledge items, owner's rules applied -> data/knowledge/
                               # (python -m knowledge.evidence_rules does the same)
 python -m quality.golden_cases # development golden cases vs the app (--no-search: no model needed)
+                              # --record: add the result for the quality page
                               # --rag: live RAG coverage of the hand-written statements
                               # (calls the cloud model: free-tier quota or money, ask first)
                               # --held-out: the frozen held-out cases instead (only when the owner asks)
 python -m quality.retrieval_misses  # why expected statements miss the writer: development cases,
                               # real search, no AI (--json FILE keeps every record)
 python scripts/verify_all.py  # the 0-2 checks and the golden cases (--with-model: real search)
+                              # --record: the unit tests too, every result added to
+                              # data/quality/results/runs.jsonl for the quality page (/quality)
 ```

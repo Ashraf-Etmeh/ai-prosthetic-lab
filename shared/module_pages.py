@@ -61,9 +61,10 @@ def ui_language() -> str:
     return language_from_cookies(request.cookies)
 
 
-def latest_case_id(domain: str, folder) -> Optional[str]:
-    """The case of `domain` saved last (in memory, else in the cases folder), for a map page's links."""
-    in_memory = [r for r in store.all() if r.case.domain == domain]
+def latest_case_id(domain: Optional[str], folder) -> Optional[str]:
+    """The case of `domain` (None: of any domain) saved last (in memory, else in the cases folder), for a map
+    page's links."""
+    in_memory = [r for r in store.all() if domain is None or r.case.domain == domain]
     if in_memory:
         return in_memory[-1].case.case_id
     folder = store.folder or folder
@@ -74,6 +75,6 @@ def latest_case_id(domain: str, folder) -> Optional[str]:
             saved = json.loads(path.read_text(encoding="utf-8"))["case"]
         except (ValueError, KeyError):
             continue
-        if saved.get("domain", DEFAULT_DOMAIN) == domain:  # a case file without "domain" is the default's
+        if domain is None or saved.get("domain", DEFAULT_DOMAIN) == domain:  # no "domain": the default's
             return path.stem
     return None

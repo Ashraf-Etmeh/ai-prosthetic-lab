@@ -39,7 +39,27 @@
     .critical { background: #fbe9df; color: #8f3510; }
   </style>
   {% include "ui_style.html" %}
-  <style>.ui-review { max-width: 960px; } .ui-review h2[id] { scroll-margin-top: 1rem; }</style>
+  <style>
+    /* The design's review page (docs/design/07-reasoning-and-review/Review.html): each item a card, the marks as
+       buttons, the decision in a side panel that stays in view (plan Part 4, 2026-10-25). */
+    .ui-review h2[id] { scroll-margin-top: 1rem; }
+    .ui-review h2 { font-size: 1.125rem; margin-top: 1.75rem; }
+    .ui-review .gap { background: #FFFFFF; border: 1px solid var(--ui-line); border-radius: 14px; padding: 1rem 1.25rem; margin-top: 0.75rem; }
+    .ui-review .banner { background: var(--ui-warn-bg); border-color: #E7C987; border-radius: 12px; color: var(--ui-warn-ink); }
+    .ui-review .ai { background: #F3F0FA; border-radius: 8px; }
+    .ui-review .gap-judgement { gap: 0.4rem; margin-top: 0.7rem; }
+    .ui-review .gap-judgement label { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 36px; padding: 0 0.7rem; border: 1px solid var(--ui-line); border-radius: 8px; background: #FFFFFF; cursor: pointer; font-size: 0.85rem; }
+    .ui-review .gap-judgement label:has(input:checked) { background: var(--ui-accent-soft); border-color: var(--ui-accent); color: var(--ui-accent); font-weight: 600; }
+    .ui-review .gap-judgement label.wrong:has(input:checked) { background: var(--ui-draft-bg); border-color: var(--ui-draft-line); color: var(--ui-alert); }
+    .ui-review .gap-reason { display: block; margin-top: 0.5rem; font-size: 0.8rem; color: var(--ui-muted); }
+    .ui-review .gap-reason input { width: 100%; box-sizing: border-box; min-height: 40px; margin-top: 0.2rem; }
+    .review-decision { position: sticky; top: 1rem; align-self: flex-start; }
+    .review-decision .review-choices { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+    .review-decision .review-choices label { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 0.75rem; border: 1px solid var(--ui-line); border-radius: 10px; cursor: pointer; }
+    .review-decision .review-choices label:has(input:checked) { border: 2px solid var(--ui-accent); font-weight: 600; }
+    .review-decision textarea { width: 100%; box-sizing: border-box; min-height: 5rem; margin-top: 0.3rem; font: inherit; padding: 0.5rem; }
+    .review-decision .ui-btn { width: 100%; justify-content: center; min-height: 52px; font-size: 1rem; margin-top: 0.75rem; }
+  </style>
 </head>
 <body class="ui-page">
   {# The header of every page (shared/templates/ui_header.html): the case's domain, its modules and the case bar.
@@ -59,6 +79,7 @@
   {% if generation and generation.answered_by %}
   <p class="gap-source">{{ t('ai.written_by', models=generation.answered_by | join(", "), version=generation.prompt_version) }}</p>
   {% endif %}
+  {% if library %}<p class="gap-source">{{ t('review.library_version', built=(library.built or '')[:10], n=library.passages) }}</p>{% endif %}
 
   {% if knowledge_warning %}
   {# The warning itself is English (it names a command to run); other languages introduce it. #}
@@ -159,6 +180,8 @@
   {% macro attribution_line(doc_id) %}{% set credit = attribution(doc_id) %}{% if credit %}<div class="gap-source" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}{% endmacro %}
 
   <form method="post" action="{{ url_for('review.submit_decision', case_id=case.case_id) }}">
+  <div class="ui-cols">
+  <div class="ui-col-main">
   <h2 id="gaps">{{ t('review.gaps_heading', n=gaps | length) }}</h2>
   {% if generation and generation.part('gaps').removed_items %}
   <p class="gap-source">{{ t('ai.removed', n=generation.part('gaps').removed_items) }}</p>
@@ -208,6 +231,7 @@
       <label><input type="radio" name="{{ name }}" value="needed" {{ "checked" if chosen == "needed" }}> {{ t('review.needed') }}</label>
       <label><input type="radio" name="{{ name }}" value="not_needed" {{ "checked" if chosen == "not_needed" }}> {{ t('review.not_needed') }}</label>
     </div>
+    <label class="gap-reason">{{ t('review.why') }}<input type="text" name="{{ reason_prefix ~ gap.field }}" dir="auto" maxlength="{{ max_reason }}" value="{{ form.get(reason_prefix ~ gap.field, '') }}"></label>
   </div>
   {% else %}
   <p>{{ t('review.no_gaps') }}</p>
@@ -251,9 +275,10 @@
     {% set name = statement_prefix ~ statement.id %}
     {% set chosen = form.get(name, "") %}
     <div class="gap-judgement">
-      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("relevant", "not_relevant") }}> {{ t('review.not_marked') }}</label>
+      <label><input type="radio" name="{{ name }}" value="" {{ "checked" if chosen not in ("relevant", "not_relevant", "summary_wrong") }}> {{ t('review.not_marked') }}</label>
       <label><input type="radio" name="{{ name }}" value="relevant" {{ "checked" if chosen == "relevant" }}> {{ t('review.relevant') }}</label>
       <label><input type="radio" name="{{ name }}" value="not_relevant" {{ "checked" if chosen == "not_relevant" }}> {{ t('review.not_relevant') }}</label>
+      {% if summary %}<label class="wrong"><input type="radio" name="{{ name }}" value="summary_wrong" {{ "checked" if chosen == "summary_wrong" }}> {{ t('review.summary_wrong') }}</label>{% endif %}
     </div>
   </div>
   {% endmacro %}
@@ -364,12 +389,21 @@
   {% endfor %}
   {% endif %}
 
-  <h2>{{ t('review.decision_heading') }}</h2>
-  <div class="decision-form">
-    <textarea name="note" dir="auto" placeholder="{{ t('review.note_placeholder') }}">{{ form.get("note", "") }}</textarea>
-    <button type="submit" name="decision" value="approve">{{ t('review.approve') }}</button>
-    <button type="submit" name="decision" value="edit">{{ t('review.edit') }}</button>
-    <button type="submit" name="decision" value="reject">{{ t('review.reject') }}</button>
+  </div>
+  <aside class="ui-col-side review-decision">
+    <section class="ui-card">
+      <h2 style="margin-top: 0">{{ t('review.decision_heading') }}</h2>
+      {% set chosen_decision = form.get('decision', '') %}
+      <div class="review-choices" role="radiogroup" aria-label="{{ t('review.decision_heading') }}">
+        {% for value in ('approve', 'edit', 'reject') %}
+        <label><input type="radio" name="decision" value="{{ value }}"{{ " checked" if chosen_decision == value }}> {{ t('review.' ~ value) }}</label>
+        {% endfor %}
+      </div>
+      <label style="display: block; margin-top: 0.75rem">{{ t('review.note') }}<textarea name="note" dir="auto" placeholder="{{ t('review.note_placeholder') }}">{{ form.get("note", "") }}</textarea></label>
+      <button class="ui-btn" type="submit">{{ t('review.sign') }}</button>
+      <p class="ui-note">{{ t('review.recorded_once') }}</p>
+    </section>
+  </aside>
   </div>
   </form>
 

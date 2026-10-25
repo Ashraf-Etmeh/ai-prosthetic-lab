@@ -1,0 +1,59 @@
+{% extends "ui_base.html" %}
+{% from "ui_macros.html" import status_icon with context %}
+{# The reasoning pathway and its guardrails (docs/design/07-reasoning-and-review/Main.html; SYSTEM_DESIGN.md §4 and
+   §7.2): the six steps every domain shares, what each produces and what stops it from overstepping; what the
+   system never outputs; the checks every answer passes, each with whether it is built here; where data goes, read
+   from the settings (the model set, the library build, each domain's cloud switch). Nothing on it is clinical. #}
+{% block title %}{{ t('path.title') }}{% endblock %}
+{% block kicker %}{{ t('path.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('path.intro') }}</p>{% endblock %}
+{% block brief %}المسار المستهدف{% endblock %}
+{% block content %}
+<div class="ui-chain" style="grid-template-columns: repeat(6, minmax(0, 1fr)); margin-top: 1.5rem">
+  {% for key, brief in [('case_data', 'بيانات الحالة'), ('analysis', 'تحليل المعلومات'), ('reasoning', 'الاستدلال المتخصص'),
+                        ('output', 'توصيات مساعدة'), ('review', 'مراجعة المختص'), ('outcome', 'توثيق النتيجة')] %}
+  <div style="align-items: flex-start"><span>
+    <span class="ui-kicker" style="font-size: 0.75rem">0{{ loop.index }}{% if lang != 'ar' %} · <span lang="ar" dir="rtl">{{ brief }}</span>{% endif %}</span>
+    <b style="display: block; margin-top: 0.25rem">{{ t('path_step.' ~ key) }}</b>
+    <small>{{ t('path_does.' ~ key) }}</small>
+    <small style="margin-top: 0.4rem; color: var(--ui-accent); font-weight: 600">{{ t('path_guard.' ~ key) }}</small>
+  </span>{% if not loop.last %}<span class="ui-arrow" aria-hidden="true">{{ '←' if lang == 'ar' else '→' }}</span>{% endif %}</div>
+  {% endfor %}
+</div>
+
+<div class="ui-grid">
+  <section class="ui-card">
+    <h2>{{ t('path.never') }}</h2>
+    <ul class="ui-plain" style="margin-top: 0.75rem">
+      {% for key in ['diagnosis', 'prescription', 'ranking', 'readiness', 'unquoted'] %}<li>{{ t('path_never.' ~ key) }}</li>{% endfor %}
+    </ul>
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('path.checks') }}</h2>
+    <ul class="ui-checklist">
+      <li>{{ status_icon('clear') }}<span><b>{{ t('path_check.quote') }}</b><br><span style="color: var(--ui-muted)">{{ t('path_built.quote') }}</span></span></li>
+      <li>{{ status_icon('not_checked') }}<span><b>{{ t('path_check.advice') }}</b><br><span style="color: var(--ui-muted)">{{ t('path_built.advice') }}</span></span></li>
+      <li>{{ status_icon('not_checked') }}<span><b>{{ t('path_check.population') }}</b><br><span style="color: var(--ui-muted)">{{ t('path_built.population') }}</span></span></li>
+      {% set drafts = rules | rejectattr('approved') | list | length %}
+      <li>{{ status_icon('warn' if drafts else 'clear') }}<span><b>{{ t('path_check.hard_stops') }}</b><br><span style="color: var(--ui-muted)">{{ t('path_built.hard_stops', drafts=drafts, approved=(rules | length) - drafts) }}</span></span></li>
+    </ul>
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('path.data') }}</h2>
+    <ul class="ui-kv">
+      <li><span>{{ t('path_data.search') }}</span><b>{% if library %}{{ t('path_data.library', built=(library.built or '')[:10], n=library.passages) }}{% else %}{{ t('path_data.no_library') }}{% endif %}</b></li>
+      <li><span>{{ t('path_data.model') }}</span><b><bdi>{{ model.provider }} · {{ model.model }}</bdi>{% if model.switched_off %} · {{ t('path_data.switched_off') }}{% endif %}</b></li>
+      {% for domain, on in clouds %}
+      <li><span>{{ t('domain.' ~ domain) }}</span><b>{{ t('path_data.cloud_on') if on else t('path_data.cloud_off') }}</b></li>
+      {% endfor %}
+    </ul>
+    <ul class="ui-plain" style="margin-top: 0.75rem">
+      {% for domain, on in clouds %}<li>{{ t('path_sends.' ~ domain) }}</li>{% endfor %}
+      <li>{{ t('path_data.never_typed') }}</li>
+    </ul>
+  </section>
+</div>
+<p class="ui-note">{{ t('path.owner') }}</p>
+{% endblock %}

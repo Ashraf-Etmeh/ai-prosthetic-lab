@@ -178,6 +178,21 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"req_group.{group}" for group in prosthetic_plan.FINDING_GROUPS}
         expected |= {f"passess.{name}" for name in prosthetic_modules.TEXT_VALUES}  # form labels (a refusal names them)
         expected |= {f"pcomp.{key}" for key in ("funding", "stock", "notes", "costs", "checks")}
+        # The reasoning and review part's pages (plan Part 4, 2026-10-25): its name and tabs, the pathway's steps,
+        # the quality page's run modes and audit lines, the review page's decisions and its new mark
+        from quality import results
+        from review import nav as review_nav
+        expected |= {f"part.{name}" for name in domains.SHARED_PARTS}
+        expected |= {review_nav.LABELS + key for key, _, _ in review_nav.MODULES}
+        steps = ("case_data", "analysis", "reasoning", "output", "review", "outcome")
+        expected |= {f"{prefix}.{key}" for prefix in ("path_step", "path_does", "path_guard") for key in steps}
+        expected |= {f"path_never.{key}" for key in ("diagnosis", "prescription", "ranking", "readiness", "unquoted")}
+        expected |= {f"path_sends.{domain}" for domain in domains.DOMAINS}
+        expected |= {f"run_mode.{mode}" for mode in (results.NO_SEARCH, results.SEARCH, results.RAG)}
+        expected |= {f"audit.{what}" for what in ("decision", "design_choice", "release_check", "release_check_failed",
+                                                   "library", "rule_approved", "arabic_checked", "signed_off")}
+        expected |= {f"audit.golden_{name}" for name in (results.DEVELOPMENT, results.HELD_OUT)}
+        expected |= {f"review.{decision}" for decision in DECISIONS} | {"summary.summary_wrong"}
         self.assertEqual(expected - set(TEXT), set())
 
 

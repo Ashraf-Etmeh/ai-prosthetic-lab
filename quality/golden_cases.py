@@ -818,6 +818,9 @@ def main(argv=None) -> int:
     parser.add_argument("--held-out", action="store_true",
                         help=f"run the frozen held-out cases ({_shown(GOLDEN_HELD_OUT_DIR)}/) instead: "
                              "only when the owner asks, never to tune on")
+    parser.add_argument("--record", action="store_true",
+                        help="add the result to data/quality/results/runs.jsonl, for the quality page "
+                             "(quality/results.py)")
     args = parser.parse_args(argv)
     paths = case_paths(args.files, args.held_out)
     if not paths:
@@ -838,9 +841,12 @@ def main(argv=None) -> int:
         print(f"RAG run: {writer.name}, three calls per case, about a minute per case ...")
     totals = dict.fromkeys((PASS, WARN, FAIL, SKIP, ERROR, INFO), 0)
     numbers: dict[str, float] = {}
+    failed_cases = []
     for path in paths:
         golden, findings = run_case(path, gaps_skipped, writer=writer, rag=args.rag)
         print(f"\n{describe(golden) if golden else path.name}")
+        if any(finding.status in (FAIL, ERROR) for finding in findings):
+            failed_cases.append(golden.id if golden else path.stem)
         for finding in findings:
             totals[finding.status] += 1
             for key, value in finding.numbers.items():
@@ -860,6 +866,17 @@ def main(argv=None) -> int:
               f"{n.get('kept', 0)}, removed {n.get('removed', 0)}; {n.get('input_tokens', 0)} input + "
               f"{n.get('output_tokens', 0)} output tokens, about ${numbers.get('cost', 0):.2f}; "
               f"{n.get('flagged', 0)} kept items flagged by the sentence checks")
+    if args.record:
+        from quality import results  # here: only a recorded run needs it
+
+        mode = results.RAG if args.rag else (results.NO_SEARCH if gaps_skipped else results.SEARCH)
+        results.record_run(results.GOLDEN_CASES, {
+            "set": results.HELD_OUT if args.held_out else results.DEVELOPMENT, "mode": mode,
+            "cases": len(paths), "passed": len(paths) - len(failed_cases), "failed_cases": failed_cases,
+            "totals": totals, "gaps_skipped": gaps_skipped,
+            "rag": {key: int(value) if key != "cost" else round(value, 4) for key, value in numbers.items()}
+            if args.rag else None})
+        print(f"Recorded in {_shown(results.config.QUALITY_RESULTS_PATH)}")
     return 1 if totals[FAIL] or totals[ERROR] else 0
 
 

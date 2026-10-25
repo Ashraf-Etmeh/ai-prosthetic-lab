@@ -222,12 +222,12 @@ TEXT: dict[str, dict[str, str]] = {
     },
     "review.decision_heading": {"en": "Reviewer decision", "ar": "قرار المختص"},
     "review.note_placeholder": {
-        "en": "Note (required for Edit: what should change)",
-        "ar": "ملاحظة (مطلوبة عند التعديل: ما الذي يجب تغييره)",
+        "en": "Required when approving with edits: what should change",
+        "ar": "مطلوبة عند الاعتماد مع تعديلات: ما الذي يجب تغييره",
     },
-    "review.approve": {"en": "Approve", "ar": "اعتماد"},
-    "review.edit": {"en": "Edit", "ar": "تعديل"},
-    "review.reject": {"en": "Reject", "ar": "رفض"},
+    "review.approve": {"en": "Approve as reviewed", "ar": "اعتماد كما رُوجع"},
+    "review.edit": {"en": "Approve with edits", "ar": "اعتماد مع تعديلات"},
+    "review.reject": {"en": "Reject the analysis", "ar": "رفض التحليل"},
     "review.logged_heading": {
         "en": "Logged decisions for this case ({n})",
         "ar": "القرارات المسجلة لهذه الحالة ({n})",
@@ -365,9 +365,9 @@ TEXT: dict[str, dict[str, str]] = {
     "review.relevant": {"en": "Relevant", "ar": "ذو صلة"},
     "review.not_relevant": {"en": "Not relevant for this case", "ar": "غير ذي صلة بهذه الحالة"},
     # A logged decision, as the log stores it
-    "decision.approve": {"en": "approve", "ar": "اعتماد"},
-    "decision.edit": {"en": "edit", "ar": "تعديل"},
-    "decision.reject": {"en": "reject", "ar": "رفض"},
+    "decision.approve": {"en": "approve as reviewed", "ar": "اعتماد كما رُوجع"},
+    "decision.edit": {"en": "approve with edits", "ar": "اعتماد مع تعديلات"},
+    "decision.reject": {"en": "reject the analysis", "ar": "رفض التحليل"},
     # Per-gap judgements of one logged decision, e.g. "2 needed, 1 not needed"
     "summary.needed": {"en": "{n} needed", "ar": "مطلوب: {n}"},
     "summary.not_needed": {"en": "{n} not needed", "ar": "غير مطلوب: {n}"},
@@ -447,8 +447,8 @@ TEXT: dict[str, dict[str, str]] = {
         "ar": "قرار غير معروف «{decision}»: المتوقع اعتماد أو تعديل أو رفض.",
     },
     "error.edit_needs_note": {
-        "en": "An edit needs a note saying what should change.",
-        "ar": "التعديل يحتاج إلى ملاحظة توضح ما الذي يجب تغييره.",
+        "en": "Approving with edits needs a note saying what should change.",
+        "ar": "الاعتماد مع تعديلات يحتاج إلى ملاحظة توضح ما الذي يجب تغييره.",
     },
     "error.not_a_gap": {
         "en": "{field!r} is not one of this case's gaps.",
@@ -1427,7 +1427,7 @@ TEXT: dict[str, dict[str, str]] = {
     # ---- Every page's header and the prosthetics map (2026-10-23; shared/templates/ui_header.html) ----
     "domain.prosthetics": {"en": "Prosthetics", "ar": "الأطراف الاصطناعية"},
     "domain.orthotics": {"en": "Orthotics", "ar": "تقويم العظام"},
-    "domain.switch": {"en": "Domains", "ar": "المجالات"},
+    "domain.switch": {"en": "Parts of the system", "ar": "أجزاء النظام"},
     "domain.modules": {"en": "{domain} modules", "ar": "وحدات {domain}"},
     # ---- The prosthetic module pages (plan Part 3, 2026-10-24; prosthetics/modules.py, hard_stops.py) ----
     "pmod.side": {"en": "{side} side", "ar": "الجانب: {side}"},
@@ -1821,6 +1821,251 @@ TEXT: dict[str, dict[str, str]] = {
         "en": "A check-socket version needs what was seen.",
         "ar": "يحتاج إصدار التجويف التجريبي إلى ما شوهد.",
     },
+    # ---- The reasoning and review pages (plan Part 4, 2026-10-25; review/routes.py, quality/measures.py) ----
+    "part.review": {"en": "Reasoning and review", "ar": "الاستدلال والمراجعة"},
+    "rmod.pathway": {"en": "1 Pathway", "ar": "1 المسار"},
+    "rmod.review": {"en": "2 Review", "ar": "2 المراجعة"},
+    "rmod.quality": {"en": "3 Quality and audit", "ar": "3 الجودة والتدقيق"},
+    "review.note": {"en": "Note", "ar": "ملاحظة"},
+    "review.sign": {"en": "Sign and record", "ar": "وقّع وسجّل"},
+    "review.recorded_once": {
+        "en": "Recorded once, never edited: the case, every item as shown with its quote and passage, the marks, and the model, prompt and library versions.",
+        "ar": "يُسجَّل مرة واحدة ولا يُعدَّل: الحالة، وكل بند كما عُرض مع اقتباسه ومقطعه، والتقديرات، وإصدارات النموذج والتعليمات والمكتبة.",
+    },
+    "review.summary_wrong": {"en": "Summary is wrong", "ar": "الملخص خاطئ"},
+    "review.why": {"en": "Why (kept with the case)", "ar": "السبب (يُحفظ مع الحالة)"},
+    "review.library_version": {
+        "en": "Source library built {built}, {n} passages",
+        "ar": "مكتبة المصادر المبنية في {built}، المقاطع: {n}",
+    },
+    "summary.summary_wrong": {"en": "{n} summary wrong", "ar": "الملخص خاطئ: {n}"},
+    "error.choose_decision": {
+        "en": "Choose approve as reviewed, approve with edits or reject the analysis.",
+        "ar": "اختر الاعتماد كما رُوجع أو الاعتماد مع تعديلات أو رفض التحليل.",
+    },
+    "error.reason_too_long": {"en": "A reason: at most {n} characters.", "ar": "السبب: {n} حرفاً على الأكثر."},
+    "path.title": {"en": "The reasoning pathway and its guardrails", "ar": "مسار الاستدلال وضوابطه"},
+    "path.kicker": {"en": "Shared by every domain", "ar": "مشترك بين كل المجالات"},
+    "path.intro": {
+        "en": "Six steps from the case to the documented outcome. Each step says what it produces and what stops it from overstepping.",
+        "ar": "ست خطوات من الحالة إلى النتيجة الموثَّقة. تذكر كل خطوة ما تنتجه وما يمنعها من تجاوز حدّها.",
+    },
+    "path_step.case_data": {"en": "Case data", "ar": "بيانات الحالة"},
+    "path_step.analysis": {"en": "Information analysis", "ar": "تحليل المعلومات"},
+    "path_step.reasoning": {"en": "Specialised reasoning", "ar": "الاستدلال المتخصص"},
+    "path_step.output": {"en": "Assistive output", "ar": "توصيات مساعدة"},
+    "path_step.review": {"en": "Specialist review", "ar": "مراجعة المختص"},
+    "path_step.outcome": {"en": "Documented outcome", "ar": "توثيق النتيجة"},
+    "path_does.case_data": {
+        "en": "Coded fields with how each was measured; typed text stays on this machine.",
+        "ar": "حقول مرمَّزة مع طريقة قياس كل منها؛ ويبقى النص المكتوب على هذا الجهاز.",
+    },
+    "path_does.analysis": {
+        "en": "What is missing, and the passages each topic finds in the library.",
+        "ar": "ما ينقص، والمقاطع التي يجدها كل موضوع في المكتبة.",
+    },
+    "path_does.reasoning": {
+        "en": "The clinic's rules, then a language model summarising the passages.",
+        "ar": "قواعد العيادة، ثم نموذج لغوي يلخّص المقاطع.",
+    },
+    "path_does.output": {
+        "en": "Gaps, options side by side and checks, each with its source.",
+        "ar": "المعلومات الناقصة والخيارات جنباً إلى جنب والفحوص، كلٌّ مع مصدره.",
+    },
+    "path_does.review": {
+        "en": "The specialist marks each item and decides, with a note.",
+        "ar": "يقدّر المختص كل بند ويقرر، مع ملاحظة.",
+    },
+    "path_does.outcome": {
+        "en": "The decision, signed, with everything that was shown.",
+        "ar": "القرار موقَّعاً، مع كل ما عُرض.",
+    },
+    "path_guard.case_data": {"en": "Guard: no identifiers", "ar": "الضابط: لا معرِّفات شخصية"},
+    "path_guard.analysis": {"en": "Guard: local search only", "ar": "الضابط: بحث محلي فقط"},
+    "path_guard.reasoning": {
+        "en": "Guard: every quote checked word for word",
+        "ar": "الضابط: كل اقتباس يُتحقق منه كلمةً كلمة",
+    },
+    "path_guard.output": {"en": "Guard: never ranked, never prescribed", "ar": "الضابط: لا ترتيب ولا وصف"},
+    "path_guard.review": {"en": "Guard: nothing acts without it", "ar": "الضابط: لا شيء ينفَّذ دونها"},
+    "path_guard.outcome": {"en": "Guard: append-only record", "ar": "الضابط: سجل يُضاف إليه فقط"},
+    "path.never": {"en": "What the system never outputs", "ar": "ما لا يُخرجه النظام أبداً"},
+    "path_never.diagnosis": {"en": "A diagnosis", "ar": "تشخيصاً"},
+    "path_never.prescription": {
+        "en": "A prescription, a dose or a device setting",
+        "ar": "وصفة أو جرعة أو ضبطاً للجهاز",
+    },
+    "path_never.ranking": {"en": "A ranking of components or options", "ar": "ترتيباً للمكونات أو الخيارات"},
+    "path_never.readiness": {
+        "en": "Whether a person is ready for fitting or discharge",
+        "ar": "حكماً بجاهزية الشخص للتركيب أو للخروج",
+    },
+    "path_never.unquoted": {"en": "A sentence without a quote behind it", "ar": "جملة لا يسندها اقتباس"},
+    "path.checks": {"en": "Checks every answer passes", "ar": "الفحوص التي تمر بها كل إجابة"},
+    "path_check.quote": {
+        "en": "Quote check: the quote is in its passage, word for word",
+        "ar": "فحص الاقتباس: الاقتباس موجود في مقطعه كلمةً كلمة",
+    },
+    "path_check.advice": {
+        "en": "Advice check: no instruction, dose or setting",
+        "ar": "فحص النصيحة: لا تعليمات ولا جرعة ولا ضبط",
+    },
+    "path_check.population": {
+        "en": "Population check: the source's own population named",
+        "ar": "فحص الفئة: تُذكر الفئة التي يتناولها المصدر نفسه",
+    },
+    "path_check.hard_stops": {
+        "en": "Hard stops: the clinic's rules, versioned",
+        "ar": "التوقفات الإلزامية: قواعد العيادة بإصداراتها",
+    },
+    "path_built.quote": {
+        "en": "Built: a sentence whose quote fails is removed before it is shown.",
+        "ar": "مبني: تُحذف الجملة التي يفشل اقتباسها قبل عرضها.",
+    },
+    "path_built.advice": {
+        "en": "Measured only: directive wording in the AI's kept sentences is counted (python -m reasoning.sentence_checks); nothing is flagged on the page until the owner approves the patterns.",
+        "ar": "يُقاس فقط: تُعدّ صيغ التوجيه في جمل الذكاء الاصطناعي المحتفَظ بها (python -m reasoning.sentence_checks)؛ ولا يُعلَّم شيء في الصفحة حتى يعتمد المالك الأنماط.",
+    },
+    "path_built.population": {
+        "en": "Not built: a source's population is set only from the owner's values; none is shown yet.",
+        "ar": "غير مبني: لا تُحدَّد فئة المصدر إلا من قيم المالك؛ ولا يُعرض منها شيء بعد.",
+    },
+    "path_built.hard_stops": {
+        "en": "Applied to what was recorded, each with its status from the owner's file: {drafts} draft, {approved} approved. A rule that matches routes the case to a person.",
+        "ar": "تُطبَّق على ما سُجِّل، وكلٌّ مع حالته من ملف المالك: مسوّدة {drafts}، معتمدة {approved}. والقاعدة التي تنطبق تحيل الحالة إلى شخص.",
+    },
+    "path.data": {"en": "Where data goes", "ar": "أين تذهب البيانات"},
+    "path_data.search": {"en": "Search", "ar": "البحث"},
+    "path_data.library": {
+        "en": "on this machine · library built {built}, {n} passages",
+        "ar": "على هذا الجهاز · مكتبة مبنية في {built}، المقاطع: {n}",
+    },
+    "path_data.no_library": {
+        "en": "on this machine · the library is not built yet",
+        "ar": "على هذا الجهاز · لم تُبنَ المكتبة بعد",
+    },
+    "path_data.model": {"en": "Language model, behind one swap point", "ar": "النموذج اللغوي، خلف نقطة تبديل واحدة"},
+    "path_data.switched_off": {"en": "switched off on this machine", "ar": "متوقف على هذا الجهاز"},
+    "path_data.cloud_on": {"en": "sent to the cloud model", "ar": "يُرسل إلى النموذج السحابي"},
+    "path_data.cloud_off": {"en": "not sent: switched off by the owner", "ar": "لا يُرسل: أوقفه المالك"},
+    "path_data.never_typed": {
+        "en": "Nothing typed is ever sent: no notes, no free text.",
+        "ar": "لا يُرسل أي نص مكتوب أبداً: لا ملاحظات ولا نص حر.",
+    },
+    "path_sends.prosthetics": {
+        "en": "Prosthetics sends the amputation level, side and recorded K-level, with the passages.",
+        "ar": "يرسل مجال الأطراف الاصطناعية مستوى البتر والجانب والمستوى الوظيفي المسجَّل، مع المقاطع.",
+    },
+    "path_sends.orthotics": {
+        "en": "Orthotics, once switched on, sends the condition, side and months since onset, with the passages.",
+        "ar": "يرسل مجال تقويم العظام، بعد تشغيله، الحالة المرضية والجانب والأشهر منذ البداية، مع المقاطع.",
+    },
+    "path.owner": {
+        "en": "The owner switches each domain on for the cloud, and sets the clinic's rules and their versions.",
+        "ar": "يشغّل المالك كل مجال للنموذج السحابي، ويحدّد قواعد العيادة وإصداراتها.",
+    },
+    "qual.title": {"en": "Quality and audit", "ar": "الجودة والتدقيق"},
+    "qual.kicker": {"en": "Measured before every release", "ar": "يُقاس قبل كل إصدار"},
+    "qual.intro": {
+        "en": "A change to the model, the prompt, the search or the library ships only after the same measures pass on cases it was never tuned on. Everything here is read from what was recorded; this page runs nothing.",
+        "ar": "لا يُطلق أي تغيير في النموذج أو التعليمات أو البحث أو المكتبة إلا بعد أن تنجح المقاييس نفسها على حالات لم يُضبط عليها. كل ما هنا مقروء مما سُجِّل؛ ولا تشغّل هذه الصفحة شيئاً.",
+    },
+    "qual.now": {"en": "Now:", "ar": "الآن:"},
+    "qual.prompts": {"en": "prompts", "ar": "التعليمات"},
+    "qual.owner_view": {"en": "owner and quality lead view", "ar": "عرض المالك ومسؤول الجودة"},
+    "qual.development": {"en": "Development cases passing", "ar": "الحالات التطويرية الناجحة"},
+    "qual.not_recorded": {
+        "en": "Not recorded yet: python scripts/verify_all.py --record",
+        "ar": "لم يُسجَّل بعد: python scripts/verify_all.py --record",
+    },
+    "qual.held_out": {"en": "Held-out cases passing", "ar": "الحالات المحجوبة الناجحة"},
+    "qual.held_out_not_run": {
+        "en": "Not run yet: only when the owner asks, never tuned on",
+        "ar": "لم تُشغَّل بعد: فقط عندما يطلب المالك، ولا يُضبط عليها",
+    },
+    "qual.covered": {"en": "Answer-key statements covered", "ar": "عبارات مفتاح الإجابة المغطاة"},
+    "qual.covered_of": {"en": "{covered} of {expected}", "ar": "{covered} من {expected}"},
+    "qual.not_measured": {
+        "en": "Not measured yet: a recorded run with the AI (golden_cases --rag --record)",
+        "ar": "لم يُقَس بعد: تشغيل مسجَّل مع الذكاء الاصطناعي (golden_cases --rag --record)",
+    },
+    "qual.removed": {"en": "Sentences removed by the quote check", "ar": "الجمل التي حذفها فحص الاقتباس"},
+    "qual.removed_of": {
+        "en": "{removed} of {all} AI items, in {cases} cases on this machine",
+        "ar": "{removed} من {all} بنداً من الذكاء الاصطناعي، في {cases} حالة على هذا الجهاز",
+    },
+    "qual.wrong": {"en": "Specialists' marks: summary is wrong", "ar": "تقديرات المختصين: الملخص خاطئ"},
+    "qual.wrong_of": {
+        "en": "{wrong} of {marked} marked statements, in {decisions} decisions",
+        "ar": "{wrong} من {marked} عبارة مقدَّرة، في {decisions} قراراً",
+    },
+    "qual.audit": {"en": "Audit log", "ar": "سجل التدقيق"},
+    "qual.append_only": {"en": "Append-only", "ar": "يُضاف إليه فقط"},
+    "qual.when": {"en": "When (UTC)", "ar": "متى (UTC)"},
+    "qual.who": {"en": "Who", "ar": "مَن"},
+    "qual.what": {"en": "What", "ar": "ماذا"},
+    "qual.versions": {"en": "Versions", "ar": "الإصدارات"},
+    "qual.who_not_recorded": {"en": "not recorded (no login yet)", "ar": "غير مسجَّل (لا تسجيل دخول بعد)"},
+    "qual.prompt_v": {"en": "prompt", "ar": "التعليمات"},
+    "qual.library_v": {"en": "library", "ar": "المكتبة"},
+    "qual.no_events": {"en": "Nothing recorded yet.", "ar": "لم يُسجَّل شيء بعد."},
+    "qual.gate": {"en": "Release gate", "ar": "بوابة الإصدار"},
+    "qual.gate_note": {
+        "en": "The owner records the sign-off and the Arabic check in data/quality/releases.csv; the results come from python scripts/verify_all.py --record.",
+        "ar": "يسجّل المالك الموافقة ومراجعة العربية في data/quality/releases.csv؛ وتأتي النتائج من python scripts/verify_all.py --record.",
+    },
+    "audit.decision": {
+        "en": "Decision: {decision}, case {case} ({domain})",
+        "ar": "قرار: {decision}، الحالة {case} ({domain})",
+    },
+    "audit.design_choice": {
+        "en": "Choice on a module page, case {case} ({domain})",
+        "ar": "اختيار في صفحة وحدة، الحالة {case} ({domain})",
+    },
+    "audit.release_check": {"en": "Release check: every step passed", "ar": "فحص الإصدار: نجحت كل الخطوات"},
+    "audit.release_check_failed": {"en": "Release check failed: {failed}", "ar": "فشل فحص الإصدار: {failed}"},
+    "audit.golden_development": {
+        "en": "Development cases: {passed} of {cases} passed ({mode})",
+        "ar": "الحالات التطويرية: نجح {passed} من {cases} ({mode})",
+    },
+    "audit.golden_held_out": {
+        "en": "Held-out cases: {passed} of {cases} passed ({mode})",
+        "ar": "الحالات المحجوبة: نجح {passed} من {cases} ({mode})",
+    },
+    "audit.library": {"en": "Source library built: {n} passages", "ar": "بُنيت مكتبة المصادر: {n} مقطعاً"},
+    "audit.rule_approved": {
+        "en": "Clinic rule {rule} approved, version {version}",
+        "ar": "اعتُمدت قاعدة العيادة {rule}، الإصدار {version}",
+    },
+    "audit.arabic_checked": {
+        "en": "Arabic texts checked for release {release}",
+        "ar": "رُوجعت النصوص العربية للإصدار {release}",
+    },
+    "audit.signed_off": {"en": "Release {release} signed off", "ar": "وُوفق على الإصدار {release}"},
+    "run_mode.no_search": {"en": "without search", "ar": "دون بحث"},
+    "run_mode.search": {"en": "with search", "ar": "مع البحث"},
+    "run_mode.rag": {"en": "with search and the AI", "ar": "مع البحث والذكاء الاصطناعي"},
+    "gate.tests": {"en": "All tests", "ar": "كل الاختبارات"},
+    "gate.tests_pass": {"en": "{n} passed, {at}", "ar": "نجح {n}، {at}"},
+    "gate.tests_fail": {"en": "Failed, {at}", "ar": "فشلت، {at}"},
+    "gate.not_recorded": {
+        "en": "Not recorded yet: python scripts/verify_all.py --record",
+        "ar": "لم يُسجَّل بعد: python scripts/verify_all.py --record",
+    },
+    "gate.held_out": {"en": "Held-out cases", "ar": "الحالات المحجوبة"},
+    "gate.held_out_result": {"en": "{passed} of {cases} passed, {at}", "ar": "نجح {passed} من {cases}، {at}"},
+    "gate.arabic": {"en": "Arabic texts checked", "ar": "مراجعة النصوص العربية"},
+    "gate.arabic_checked": {"en": "Checked by {by} on {on}", "ar": "راجعها {by} في {on}"},
+    "gate.arabic_pending": {
+        "en": "{n} texts awaiting an Arabic-reading specialist's check",
+        "ar": "{n} نصاً بانتظار مراجعة مختص يقرأ العربية",
+    },
+    "gate.sign_off": {"en": "Owner's sign-off", "ar": "موافقة المالك"},
+    "gate.signed_off": {
+        "en": "Release {release} signed off by {by} on {on}",
+        "ar": "وافق {by} على الإصدار {release} في {on}",
+    },
+    "gate.awaiting": {"en": "Awaiting the owner", "ar": "بانتظار المالك"},
 }
 
 # The Arabic names of the intake fields that can be gaps (English:

@@ -1,27 +1,43 @@
 {# Every page's header (since 2026-10-23; SYSTEM_DESIGN.md §5 and §9): the brand and the part's name, the
-   domain switch, the domain's modules as numbered tabs, an EN | العربية switch and, on a case's pages, the
-   case bar.
-   Uses: domain (a case's own domain wins; none: the default domain), case (or none), module (the current
-   one's key), here (this page's path); lang_form: the id of the page's form on an intake form, whose
-   language button posts the form so it comes back filled in (nothing typed is lost).
-   What each domain shows (its map, intake, module tabs, who decides, its case-bar summary) is in its own
-   <domain>/nav.py, found through shared/domains.py: this header names no domain. #}
+   switch between the parts, the part's modules as numbered tabs, an EN | العربية switch and, on a case's pages,
+   the case bar.
+   Uses: domain (a case's own domain wins; none: the default domain), or part (a shared part with pages of its
+   own, e.g. 'review': shared/domains.py SHARED_PARTS); case (or none), module (the current one's key), here (this
+   page's path); lang_form: the id of the page's form on an intake form, whose language button posts the form so
+   it comes back filled in (nothing typed is lost).
+   What each domain or shared part shows (its map, intake, module tabs, who decides, its case-bar summary) is in
+   its own nav.py, found through shared/domains.py: this header names none of them. #}
+{% set part = part if part is defined else none %}
+{% if part %}
+{% set nav = domain_nav(part) %}
+{% set part_name = t('part.' ~ part) %}
+{% else %}
 {% set domain = case.domain if case else (domain or default_domain) %}
 {% set nav = domain_nav(domain) %}
-{% set map_url = url_for(nav.MAP) %}
 {% set intake_url = url_for(nav.INTAKE) %}
+{% set part_name = t('domain.' ~ domain) %}
+{% endif %}
+{% set map_url = url_for(nav.MAP) %}
 <header class="ui-top">
   <div class="ui-wrap ui-top-row">
     <a class="ui-brand" href="{{ map_url }}">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7FC4BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v8l-3 7h9"></path><path d="M9 11h4"></path><circle cx="17" cy="18" r="2"></circle></svg>
-      <span lang="en" dir="ltr">AI Prosthetic Lab</span><span class="ui-part">/ {{ t('domain.' ~ domain) }}</span>
+      <span lang="en" dir="ltr">AI Prosthetic Lab</span><span class="ui-part">/ {{ part_name }}</span>
     </a>
     <nav class="ui-domains" aria-label="{{ t('domain.switch') }}">
       {% for other in all_domains %}
-      <a href="{{ url_for(domain_nav(other).MAP) }}"{% if domain == other %} aria-current="true"{% endif %}>{{ t('domain.' ~ other) }}</a>
+      <a href="{{ url_for(domain_nav(other).MAP) }}"{% if not part and domain == other %} aria-current="true"{% endif %}>{{ t('domain.' ~ other) }}</a>
+      {% endfor %}
+      {% for other in shared_parts %}
+      <a href="{{ url_for(domain_nav(other).MAP) }}"{% if part == other %} aria-current="true"{% endif %}>{{ t('part.' ~ other) }}</a>
       {% endfor %}
     </nav>
-    <nav class="ui-nav" aria-label="{{ t('domain.modules', domain=t('domain.' ~ domain)) }}">
+    <nav class="ui-nav" aria-label="{{ t('domain.modules', domain=part_name) }}">
+      {% if part %}
+      {% for key, endpoint, anchor in nav.MODULES %}
+      <a href="{{ url_for(endpoint) }}{{ anchor }}"{% if module == key %} aria-current="page"{% endif %}>{{ t(nav.LABELS ~ key) }}</a>
+      {% endfor %}
+      {% else %}
       <a href="{{ map_url }}"{% if module == 'map' %} aria-current="page"{% endif %}>{{ t('mod.map') }}</a>
       {% for key, endpoint, anchor in nav.MODULES %}
         {% if case %}
@@ -32,6 +48,7 @@
       <span title="{{ t(nav.WORDS.get('needs_case', 'mod.needs_case')) }}">{{ t(nav.LABELS ~ key) }}</span>
         {% endif %}
       {% endfor %}
+      {% endif %}
     </nav>
     <div class="ui-langs" role="group" aria-label="{{ t('nav.language') }}">
       {% if lang_form %}
@@ -47,7 +64,7 @@
     </div>
   </div>
 </header>
-{% if case %}
+{% if case and not part %}
 <div class="ui-casebar">
   <div class="ui-wrap">
     <strong>{{ t('mod.case', id=case.case_id) }}</strong>

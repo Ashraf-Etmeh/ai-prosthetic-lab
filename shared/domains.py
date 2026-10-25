@@ -10,11 +10,18 @@ quality/):
                            searched) and PASSAGES_PER_DOCUMENT (None: no limit)
     <domain>/rag.py        its RAG: PROFILE (with its cloud switch), components_from(), fitting_from()
     <domain>/intake.py     its intake form (a Flask blueprint)
-    <domain>/plan.py       optional: the specialist's work after the analysis (PLAN)
+    <domain>/plan.py       the specialist's work after the intake (PLAN, BACK_TO)
+    <domain>/hard_stops.py its clinic rules applied to the case (RULES, case_checks())
+    <domain>/modules.py    its module pages (a Flask blueprint)
+    <domain>/nav.py        what the shared header shows for it
     <domain>/templates/<domain>/   its pages
     <domain>/tests/        its tests
 
 A new domain adds its package and its name to DOMAINS.
+
+A shared part with pages of its own (since plan Part 4, 2026-10-25: review/, the
+reasoning and review pages) is in SHARED_PARTS with a <part>/nav.py of the same
+kind: the header lists it next to the domains.
 """
 
 import importlib
@@ -22,6 +29,7 @@ import importlib.util
 from types import ModuleType
 
 DOMAINS = ("prosthetics", "orthotics")
+SHARED_PARTS = ("review",)  # the reasoning and review pages (SYSTEM_DESIGN.md §7.2)
 
 
 def part(domain: str, name: str) -> ModuleType:
@@ -34,6 +42,13 @@ def part(domain: str, name: str) -> ModuleType:
 def has_part(domain: str, name: str) -> bool:
     """Whether the domain has that module (e.g. a plan.py)."""
     return domain in DOMAINS and importlib.util.find_spec(f"{domain}.{name}") is not None
+
+
+def nav(name: str) -> ModuleType:
+    """What the header shows for a domain or a shared part: its nav.py."""
+    if name not in DOMAINS + SHARED_PARTS:
+        raise ValueError(f"must be one of {sorted(DOMAINS + SHARED_PARTS)}, got {name!r}")
+    return importlib.import_module(f"{name}.nav")
 
 
 def load_cases() -> None:

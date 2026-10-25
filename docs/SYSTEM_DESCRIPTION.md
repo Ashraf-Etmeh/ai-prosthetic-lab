@@ -179,7 +179,12 @@ does the same for its six (§4.9).
      reported nothing, or the checks removed what it gave), never what the
      sources do or don't say, and lists the passages the search found;
    - **design and fitting** (§4.5), marked the same way;
-   - **decision**: note + Approve / Edit (note required) / Reject;
+   - each gap's mark takes a reason kept with the case; each AI summary can
+     also be marked "Summary is wrong" (since 2026-10-25, log version 11);
+   - **decision**, in a side panel: Approve as reviewed / Approve with edits
+     (note required) / Reject the analysis, a note, and "Sign and record",
+     which keeps the case, every item as shown, the marks, and the model,
+     prompt and library versions;
    - the decisions already logged for this case, with mark counts.
 4. **Decision** (`POST /review/<case_id>/decision`). Validated, appended as
    one JSON line to `data/records/review_log.jsonl`, and the page shows a
@@ -352,6 +357,13 @@ statement:    id, doc_id, citation, quote, items[] (if a list), component,
 knowledge_warning, settings {model, revision, threshold, languages,
               domains, top_k}, case (the full case as entered)
 ```
+
+Since version 11 (2026-10-25, plan Part 4) a statement's
+`reviewer_judgement` may be `summary_wrong`, each gap has `reviewer_reason`
+(as typed, or null), and the entry has `versions` {prompt, models, library
+build}; versions 6-10 added the domain, an orthotic plan and design choices,
+repeats in what the quote check removed, the design canvas's keys and a
+prosthetic plan (each listed in `review/decision_log.py`).
 
 Labels and explanations are logged in English whichever language was
 shown. Lines are never edited or removed. The 26 lines written while
@@ -530,6 +542,31 @@ change", questionnaires validated in Arabic (all wait for the owner,
 SYSTEM_DESIGN.md §11.2-11.3); per-observation causes searched from what was
 typed (typed text is never searched).
 
+### 4.11 Reasoning and review pages (plan Part 4, 2026-10-25)
+
+The shared part "Reasoning and review" (SYSTEM_DESIGN.md §7.2;
+`docs/design/07-reasoning-and-review/`) has its own entry in the header next
+to the domains (`shared/domains.py` SHARED_PARTS, `review/nav.py`) and three
+tabs:
+
+| Tab | Page | What it holds |
+|---|---|---|
+| 1 Pathway | `/reasoning` | the six steps with what each produces and its guard; what the system never outputs; the four checks, each saying whether it is built here (quote check: built; advice check: measured only, `reasoning/sentence_checks.py`; population check: not built, the owner's values; hard stops: the owner's file, counted as draft and approved); where data goes, read from the settings: the model behind the one swap point (and whether it is switched off), the library build, each domain's cloud switch and what it sends |
+| 2 Review | `/review` | the review page of the case saved last (any domain; none: the intake form) |
+| 3 Quality and audit | `/quality` | the versions now (model, each domain's prompt, library build); development and held-out golden cases passing and the answer key covered, from the recorded results; the share of the AI's items the quote check removed, from the case files on this machine; the share of "summary is wrong" marks, from the review log since version 11; the audit trail, newest first (decisions, recorded runs, the library build, approved clinic rules, sign-offs; who: "not recorded (no login yet)"); the release gate: all tests, the held-out result, the Arabic texts checked, the owner's sign-off |
+
+The quality page runs nothing. `python scripts/verify_all.py --record` (the
+unit tests, the checks for prompts 0-2, the golden cases) and
+`python -m quality.golden_cases ... --record` append one line each to
+`data/quality/results/runs.jsonl` with the versions they ran with
+(`quality/results.py`; in git, only ever added to; the yardstick hook asks
+before Claude edits it). The owner adds a row to `data/quality/releases.csv`
+to sign a release off and to record who checked the Arabic texts
+(`quality/releases.py`; the owner's, protected the same way). The source
+library's version is its build time (`knowledge/library.py`, from
+`data/knowledge/vector_store/info.json`). Counts only, never a record's
+content (`quality/measures.py`).
+
 ---
 
 ## 5. Structure
@@ -537,7 +574,7 @@ typed (typed text is never searched).
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 580 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 603 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -583,6 +620,7 @@ knowledge/
   items.py                 one KnowledgeItem per guide statement, rules applied; export to data/knowledge/
   evidence_rules.py        loads the owner's rule table, a condition per rule, applies the rules
   clinic_rules.py          loads the owner's clinic rules: each rule's status, version, owner, approval date
+  library.py               the library's build (time, passages) as its version
   tests/
 reasoning/
   pathway.py               analyse_case(): search → AI summaries (quote-checked) → gaps, components, fitting
@@ -598,15 +636,20 @@ reasoning/
   gap_analysis.py          use case 01 without the AI (the fallback), and the gap explanations
   tests/
 review/
-  routes.py                GET /review/<id>, POST /review/<id>/decision
-  decision_log.py          validation, log entry building, append/read
-  templates/review/review.html
+  routes.py                GET /review/<id>, POST /review/<id>/decision; GET /reasoning, /review (the latest
+                           case), /quality
+  decision_log.py          validation, log entry building (version 11: versions signed), append/read
+  nav.py                   what the header shows for the shared part "Reasoning and review"
+  templates/review/        review.html, pathway.html, quality.html
   tests/
 quality/
   golden_cases.py          runs the golden cases through analyse_case(), reports differences
   retrieval_misses.py      why expected statements miss the writer
   trial_report.py          counts of the reviewers' marks in the log, one domain at a time → data/quality/trial/report.csv
   load_trial_cases.py      loads the prepared trial cases (data/quality/trial/cases/) via analyse_case()
+  results.py               the recorded results: record_run(), read_runs(), latest(), current_versions()
+  releases.py              loads the owner's release sign-offs and Arabic checks (releases.csv)
+  measures.py              the quality page's counts, release gate and audit trail
   tests/
 prosthetics/               use cases 01-02
   case.py                  Case (amputation level, side, residual limb, activity, prior devices), its enums
@@ -649,6 +692,8 @@ data/
     golden_cases_held_out/ golden-NN.json (held out, frozen by golden_cases_held_out.json)
     baseline/              measurement records, by date
     trial/                 arabic_terms.csv, cases/trial-NN.json (in git); report.csv (local only)
+    results/runs.jsonl     the recorded results (in git; only ever added to)
+    releases.csv           the owner's release sign-offs and Arabic checks
   records/
     cases/                 one JSON file per case (local only)
     review_log.jsonl       decisions (local only); review_log.test.jsonl: earlier test lines
@@ -781,7 +826,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **580 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **603 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -876,6 +921,12 @@ uses a missing key.
   fitting steps and module 1's extra values follow the design and are
   Claude's reading of it; the clinic's checklist, alert thresholds,
   follow-up intervals and outcome measures wait for the owner.
+- Reasoning and review (§4.11, 2026-10-25): who did what is not recorded (no
+  login yet; roles come with the patient record); the quality page shows
+  only what was recorded, so it is empty until `verify_all.py --record` and
+  the golden-case runs are recorded; the population check is not built and
+  the advice check is a measurement, not shown on the pages; no held-out run
+  and no sign-off yet.
 
 ---
 

@@ -1808,7 +1808,49 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   a prosthetist should check them, and an Arabic-reading prosthetist the new
   Arabic texts (the term sheet was exported again, 1,082 texts).
 - Tests: 580, all passing; `verify_all.py`: golden cases OK, checks 0-2 fail
-  only on 0.3 (uncommitted changes).
+  only on 0.3 (uncommitted changes). Committed `91d2f3b`, pushed (2026-10-25).
+
+## Reasoning and review pages (plan Part 4, 2026-10-25)
+
+- **Asked (owner, 2026-10-25):** "continue on to part 4". Owner's answers:
+  commit and push Part 3 first (done, `91d2f3b`); add **both** "Summary is
+  wrong" and a reason per gap mark (review log version 11); the release gate
+  reads **recorded files**, with the owner's sign-off in
+  `data/quality/releases.csv`, protected by the yardstick hook; the audit's
+  "who" shows **"not recorded"** until there is a login (plan Part 8).
+- **Built** (SYSTEM_DESIGN.md §7.2; docs/SYSTEM_DESCRIPTION.md §4.11):
+  1. *A shared part in the header:* "Reasoning and review" next to the
+     domains (`shared/domains.py` SHARED_PARTS, `review/nav.py`), with the
+     tabs 1 Pathway, 2 Review (the latest case), 3 Quality and audit.
+  2. *Pathway page* (`/reasoning`): the six steps and their guards, the
+     "never outputs" list, the four checks each saying whether it is built
+     here, and where data goes, read from the settings.
+  3. *Review page, steps 05-06:* "Summary is wrong" for each AI summary, a
+     reason with each gap mark, the decision in a side panel (approve as
+     reviewed, approve with edits, reject the analysis) and one "Sign and
+     record"; a decision without a choice is refused, the marks kept. Log
+     version 11 adds `reviewer_reason`, `summary_wrong` and `versions`
+     (prompt, models, library build: `knowledge/library.py`); older lines
+     still read. The trial report counts the new mark and lists the gap
+     reasons as written.
+  4. *Quality page* (`/quality`): the measures, the audit trail and the
+     release gate, read from `data/quality/results/runs.jsonl` (written by
+     `scripts/verify_all.py --record`, which now also runs the unit tests,
+     and `quality.golden_cases --record`), the review log, the case files
+     and the owner's files; it runs nothing (`quality/results.py`,
+     `releases.py`, `measures.py`).
+  5. *Protected:* `data/quality/releases.csv` (created with its header only)
+     and `data/quality/results/` were added to the yardstick hook.
+- **Not built from the design:** the population check (a source's population
+  comes only from the owner's values); showing the advice check's flags
+  (measurement until the owner approves patterns); "who" in the audit trail
+  (no login); a release candidate's name other than what the owner writes in
+  releases.csv.
+- **Next, when the owner wants:** run `python scripts/verify_all.py --record`
+  on a committed tree so the quality page has its first recorded results; a
+  held-out run only when the owner asks; the owner's first sign-off row.
+- Tests: 603, all passing; checks 0-2 fail only on 0.3 (uncommitted changes);
+  golden cases OK; the Arabic term sheet exported again (1,197 texts).
 
 ## Open decisions
 

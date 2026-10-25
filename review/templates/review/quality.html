@@ -1,0 +1,90 @@
+{% extends "ui_base.html" %}
+{% from "ui_macros.html" import status_icon with context %}
+{# Quality and audit (docs/design/07-reasoning-and-review/Quality.html; SYSTEM_DESIGN.md §7.2): the measures before a
+   release, the audit trail and the release gate. Everything is read from what was recorded (quality/results.py,
+   the review log, the case files on this machine, the owner's files): this page runs nothing. "Who" is not
+   recorded until there is a login (plan Part 8). Counts only, never a record's content. #}
+{% block title %}{{ t('qual.title') }}{% endblock %}
+{% block kicker %}{{ t('qual.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('qual.intro') }}</p>{% endblock %}
+{% block brief %}الجودة والتدقيق{% endblock %}
+{% block content %}
+{% macro when(stamp) %}<bdi>{{ (stamp or '')[:16] | replace('T', ' ') }}</bdi>{% endmacro %}
+{% macro plain(stamp) %}{{ (stamp or '')[:16] | replace('T', ' ') }}{% endmacro %}
+{% set library = versions.library %}
+<p class="ui-note" style="margin-top: 0">
+  <b>{{ t('qual.now') }}</b>
+  <bdi>{{ versions.model.provider }} · {{ versions.model.model }}</bdi>{% if versions.model.switched_off %} ({{ t('path_data.switched_off') }}){% endif %}
+  · {{ t('qual.prompts') }} {% for domain, version in versions.prompts.items() %}{{ t('domain.' ~ domain) }} <bdi>{{ version }}</bdi>{{ ', ' if not loop.last }}{% endfor %}
+  · {% if library %}{{ t('path_data.library', built=(library.built or '')[:10], n=library.passages) }}{% else %}{{ t('path_data.no_library') }}{% endif %}
+  · {{ t('qual.owner_view') }}
+</p>
+
+<div class="ui-tiles">
+  <div><div class="ui-note" style="margin: 0">{{ t('qual.development') }}</div>
+    {% if development %}<div class="ui-big"><bdi>{{ development.passed }} / {{ development.cases }}</bdi></div>
+    <div class="ui-note" style="margin: 0">{{ when(development.recorded_at) }} · {{ t('run_mode.' ~ development.mode) }}</div>
+    {% else %}<div class="ui-big">—</div><div class="ui-note" style="margin: 0">{{ t('qual.not_recorded') }}</div>{% endif %}</div>
+  <div><div class="ui-note" style="margin: 0">{{ t('qual.held_out') }}</div>
+    {% if held_out %}<div class="ui-big"><bdi>{{ held_out.passed }} / {{ held_out.cases }}</bdi></div>
+    <div class="ui-note" style="margin: 0">{{ when(held_out.recorded_at) }} · {{ t('run_mode.' ~ held_out.mode) }}</div>
+    {% else %}<div class="ui-big">—</div><div class="ui-note" style="margin: 0">{{ t('qual.held_out_not_run') }}</div>{% endif %}</div>
+  <div><div class="ui-note" style="margin: 0">{{ t('qual.covered') }}</div>
+    {% if rag and rag.rag and rag.rag.expected %}<div class="ui-big"><bdi>{{ (100 * rag.rag.covered / rag.rag.expected) | round | int }}%</bdi></div>
+    <div class="ui-note" style="margin: 0">{{ t('qual.covered_of', covered=rag.rag.covered, expected=rag.rag.expected) }} · {{ when(rag.recorded_at) }}</div>
+    {% else %}<div class="ui-big">—</div><div class="ui-note" style="margin: 0">{{ t('qual.not_measured') }}</div>{% endif %}</div>
+  <div><div class="ui-note" style="margin: 0">{{ t('qual.removed') }}</div>
+    {% if removed_share is not none %}<div class="ui-big"><bdi>{{ removed_share }}%</bdi></div>{% else %}<div class="ui-big">—</div>{% endif %}
+    <div class="ui-note" style="margin: 0">{{ t('qual.removed_of', removed=quoted.removed, all=quoted.kept + quoted.removed, cases=quoted.cases) }}</div></div>
+  <div><div class="ui-note" style="margin: 0">{{ t('qual.wrong') }}</div>
+    {% if wrong_share is not none %}<div class="ui-big"><bdi>{{ wrong_share }}%</bdi></div>{% else %}<div class="ui-big">—</div>{% endif %}
+    <div class="ui-note" style="margin: 0">{{ t('qual.wrong_of', wrong=marks.wrong, marked=marks.marked, decisions=marks.decisions) }}</div></div>
+</div>
+
+<div class="ui-cols" style="margin-top: 1.5rem">
+  <section class="ui-card ui-col-main">
+    <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('qual.audit') }}</h2><span class="ui-note" style="margin: 0">{{ t('qual.append_only') }}</span></div>
+    {% if audit %}
+    <div class="ui-scroll" style="margin-top: 0.75rem">
+      <table class="ui-table" style="min-width: 640px">
+        <thead><tr><th scope="col">{{ t('qual.when') }}</th><th scope="col">{{ t('qual.who') }}</th><th scope="col">{{ t('qual.what') }}</th><th scope="col">{{ t('qual.versions') }}</th></tr></thead>
+        <tbody>
+          {% for row in audit %}
+          {% set p = row.params %}
+          <tr>
+            <td>{{ when(row.when) }}</td>
+            <td style="color: var(--ui-muted)">{{ t('qual.who_not_recorded') }}</td>
+            <td>{% if row.what in ('decision', 'design_choice') %}{{ t('audit.' ~ row.what, decision=t('decision.' ~ p.decision), case=p.case, domain=t('domain.' ~ p.domain) if p.domain else '') }}
+              {% elif row.what.startswith('golden_') %}{{ t('audit.' ~ row.what, passed=p.passed, cases=p.cases, mode=t('run_mode.' ~ p.mode)) }}
+              {% else %}{{ t('audit.' ~ row.what, **p) }}{% endif %}</td>
+            <td style="color: var(--ui-muted)">{% if row.versions.prompt %}{{ t('qual.prompt_v') }} <bdi>{{ row.versions.prompt }}</bdi>{% endif %}{% if row.versions.prompt and row.versions.library %} · {% endif %}{% if row.versions.library %}{{ t('qual.library_v') }} <bdi>{{ row.versions.library[:10] }}</bdi>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="ui-note">{{ t('qual.no_events') }}</p>{% endif %}
+  </section>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('qual.gate') }}</h2>
+      <ul class="ui-checklist">
+        {% set g = gate.tests %}
+        <li>{{ status_icon('clear' if g.state == 'pass' else ('stop' if g.state == 'fail' else 'not_checked')) }}<span><b>{{ t('gate.tests') }}</b><br><span style="color: var(--ui-muted)">
+          {% if g.state == 'pass' %}{{ t('gate.tests_pass', n=g.ran, at=plain(g.at) | string) }}{% elif g.state == 'fail' %}{{ t('gate.tests_fail', at=plain(g.at) | string) }}{% else %}{{ t('gate.not_recorded') }}{% endif %}</span></span></li>
+        {% set g = gate.held_out %}
+        <li>{{ status_icon('clear' if g.state == 'pass' else ('stop' if g.state == 'fail' else 'not_checked')) }}<span><b>{{ t('gate.held_out') }}</b><br><span style="color: var(--ui-muted)">
+          {% if g.state == 'not_recorded' %}{{ t('qual.held_out_not_run') }}{% else %}{{ t('gate.held_out_result', passed=g.passed, cases=g.cases, at=plain(g.at) | string) }}{% endif %}</span></span></li>
+        {% set g = gate.arabic %}
+        <li>{{ status_icon('clear' if g.state == 'pass' else 'not_checked') }}<span><b>{{ t('gate.arabic') }}</b><br><span style="color: var(--ui-muted)">
+          {% if g.state == 'pass' %}{{ t('gate.arabic_checked', by=g.by, on=g.on) }}{% else %}{{ t('gate.arabic_pending', n=texts) }}{% endif %}</span></span></li>
+        {% set g = gate.sign_off %}
+        <li>{{ status_icon('clear' if g.state == 'pass' else 'judge') }}<span><b>{{ t('gate.sign_off') }}</b><br><span style="color: var(--ui-muted)">
+          {% if g.state == 'pass' %}{{ t('gate.signed_off', release=g.release, by=g.by, on=g.on) }}{% else %}{{ t('gate.awaiting') }}{% endif %}</span></span></li>
+      </ul>
+      <p class="ui-note">{{ t('qual.gate_note') }}</p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

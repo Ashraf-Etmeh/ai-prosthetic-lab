@@ -12,8 +12,10 @@ are never added together. For that domain it counts:
   gaps shown with a source passage and gaps shown without one,
 - gaps shown without a source that were marked Needed (where the library
   may lack a source), with their case ids,
-- per component or fitting statement: Relevant / Not relevant / not marked,
+- per component or fitting statement: Relevant / Not relevant / Summary is
+  wrong (log version 11 on) / not marked,
 - decisions (approve / edit / reject), and every edit note as written,
+- every reason a reviewer gave with a gap's mark (log version 11 on), as written,
 - design choices (orthotic options from log version 7, prosthetic configurations
   from version 10): counted as decisions, but their
   copies of the gaps and statements are not counted as marks (the specialist
@@ -43,7 +45,7 @@ from shared.config import REVIEW_LOG_PATH, TRIAL_DIR
 REPORT_PATH = TRIAL_DIR / "report.csv"
 DECISIONS = ("approve", "edit", "reject")
 DESIGN_CHOICE = "design_choice"  # review/decision_log.py: an option or configuration chosen, with the plan
-MARKS = {"gap": ("needed", "not_needed", None), "statement": ("relevant", "not_relevant", None)}
+MARKS = {"gap": ("needed", "not_needed", None), "statement": ("relevant", "not_relevant", "summary_wrong", None)}
 GUIDE_ORDER = [s.id for s in (*component_guide.ALL_STATEMENTS, *fitting_guide.ALL_STATEMENTS)]
 # Each domain's gap fields in its field guide's order.
 FIELD_ORDERS = {"prosthetics": [info.path for info in FIELDS], "orthotics": [info.path for info in ORTHOTIC_FIELDS]}
@@ -73,6 +75,7 @@ class TrialReport:
     statement_info: dict = field(default_factory=dict)
     decision_counts: Counter = field(default_factory=Counter)
     edit_notes: list = field(default_factory=list)  # (logged at, case id, page language, note)
+    gap_reasons: list = field(default_factory=list)  # (logged at, case id, gap field, mark, reason), version 11 on
 
     @property
     def field_order(self) -> list[str]:
@@ -131,6 +134,8 @@ def build_report(entries: list[dict], log_path: Path = REVIEW_LOG_PATH,
         for gap in entry["gaps"]:
             sourced = gap.get("source") is not None
             mark = gap.get("reviewer_judgement")
+            if gap.get("reviewer_reason"):  # none before log version 11
+                report.gap_reasons.append((logged, entry["case_id"], gap["field"], mark or "", gap["reviewer_reason"]))
             report.gap_marks[(gap["field"], sourced)][mark] += 1
             report.gap_labels[gap["field"]] = gap.get("label", "")
             if mark == "needed" and not sourced:
@@ -171,11 +176,12 @@ def write_csv(report: TrialReport, path: Path) -> None:
         section("Gaps shown without a source and marked Needed",
                 ["field", "label", "times", "case ids"], report.unsourced_rows())
         section("Statements", ["statement id", "part", "section", "source document", "relevant",
-                               "not relevant", "not marked"], report.statement_rows())
+                               "not relevant", "summary is wrong", "not marked"], report.statement_rows())
         section("Decisions", ["decision", "count"],
                 [(d, report.decision_counts[d]) for d in DECISIONS]
                 + [(d, n) for d, n in sorted(report.decision_counts.items()) if d not in DECISIONS])
         section("Edit notes", ["logged at (UTC)", "case id", "page language", "note"], report.edit_notes)
+        section("Gap reasons", ["logged at (UTC)", "case id", "gap field", "mark", "reason"], report.gap_reasons)
 
 
 def print_summary(report: TrialReport, out=sys.stdout) -> None:
@@ -202,15 +208,19 @@ def print_summary(report: TrialReport, out=sys.stdout) -> None:
         p(f"  {f:34} {times!s:>3}  {ids}")
 
     rows = report.statement_rows()
-    marked = [row for row in rows if row[4] or row[5]]
+    marked = [row for row in rows if row[4] or row[5] or row[6]]
     p(f"\nStatements: {len(rows)} shown, {len(marked)} marked at least once")
-    p(f"  {'statement id':46} {'part':10} {'relevant':>8} {'not relevant':>12} {'not marked':>10}")
-    for statement_id, part, _, _, relevant, not_relevant, unmarked in marked:
-        p(f"  {statement_id:46} {part:10} {relevant:8} {not_relevant:12} {unmarked:10}")
+    p(f"  {'statement id':46} {'part':10} {'relevant':>8} {'not relevant':>12} {'summary wrong':>13} {'not marked':>10}")
+    for statement_id, part, _, _, relevant, not_relevant, wrong, unmarked in marked:
+        p(f"  {statement_id:46} {part:10} {relevant:8} {not_relevant:12} {wrong:13} {unmarked:10}")
 
     p(f"\nEdit notes ({len(report.edit_notes)})")
     for logged, case_id, lang, note in report.edit_notes:
         p(f"  {logged}  {case_id}  [{lang}]  {note}")
+
+    p(f"\nGap reasons ({len(report.gap_reasons)})")
+    for logged, case_id, gap_field, mark, reason in report.gap_reasons:
+        p(f"  {logged}  {case_id}  {gap_field} ({mark or 'not marked'})  {reason}")
 
 
 def main(argv=None) -> None:

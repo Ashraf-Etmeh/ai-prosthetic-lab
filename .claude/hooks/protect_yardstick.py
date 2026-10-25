@@ -30,6 +30,8 @@ PROTECTED = (
     "prosthetics/fitting_guide.py",  # the answer key's fitting statements
     "data/knowledge/evidence_rules.csv",  # the owner's rule table
     "data/knowledge/clinic_rules.csv",  # the owner's clinic rules: each rule's status, version and approval
+    "data/quality/releases.csv",  # the owner's release sign-offs and Arabic checks (the release gate)
+    "data/quality/results/",  # recorded results: the measuring runs add lines, nobody edits them
     "data/records/review_log.jsonl",  # append-only: the app adds lines, nobody edits them
     "data/records/review_log.test.jsonl",
     "data/records/review_log.test-2026-10-23.jsonl",  # the 2 test lines moved out before the trial

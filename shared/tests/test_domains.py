@@ -65,6 +65,13 @@ class SameShapeTests(unittest.TestCase):
                 self.assertLessEqual({nav.MAP, nav.INTAKE, nav.REVIEW_BACK[0], nav.REVIEW_NEXT[0]}, endpoints)
                 blueprint = nav.MODULES[0][1].split(".")[0]  # alert_list: the domain's pages' blueprint ~ back_to
                 self.assertLessEqual({f"{blueprint}.{b}" for b in domains.part(domain, "plan").BACK_TO}, endpoints)
+        for shared in domains.SHARED_PARTS:  # a shared part's tabs: pages without a case (plan Part 4)
+            nav = domains.nav(shared)
+            with self.subTest(shared):
+                self.assertLessEqual({nav.MAP} | {endpoint for _, endpoint, _ in nav.MODULES}, endpoints)
+                self.assertNotIn(shared, domains.DOMAINS)
+        with self.assertRaises(ValueError):
+            domains.nav("gait")
 
     def test_an_unknown_domain_is_refused(self):
         with self.assertRaisesRegex(ValueError, "domain must be one of"):

@@ -19,16 +19,26 @@ rather than opening an editable form for the gap list itself — see
 FUTURE_WORK.md.
 """
 
+import json
 from typing import Optional
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 
-from orthotics.case import GAIT_PHASES
+from knowledge.clinic_rules import load_rules
+from knowledge.library import library_version
 from orthotics.fields import FIELDS as ORTHOTIC_FIELDS
+from quality import measures, results
+from quality.releases import load_releases
 from reasoning.gap_analysis import explain_gap
+from reasoning.writer import configured_model
 from review import decision_log
 from review.decision_log import InvalidDecision, read_decisions, record_decision
-from shared.i18n import DEFAULT_LANGUAGE, error_message, language_from_cookies, t
+from shared import domains
+from shared.case_schema import DEFAULT_DOMAIN
+from shared.config import CASES_DIR
+from shared.fitting import GAIT_PHASES
+from shared.i18n import DEFAULT_LANGUAGE, TEXT, error_message, language_from_cookies, t
+from shared.module_pages import latest_case_id
 from shared.store import CaseRecord, store
 
 bp = Blueprint("review", __name__, template_folder="templates")
@@ -37,6 +47,8 @@ bp = Blueprint("review", __name__, template_folder="templates")
 GAP_FIELD_PREFIX = "gap:"
 # ... and for a component or fitting statement's, e.g. "opt:va_dod_ll_17_microprocessor_knee"
 STATEMENT_FIELD_PREFIX = "opt:"
+# ... and for the reason the reviewer gives with a gap's mark (log version 11), e.g. "why:residual_limb.pain"
+GAP_REASON_PREFIX = "why:"
 
 
 def _get_record(case_id: str) -> CaseRecord:
@@ -68,7 +80,7 @@ def judgement_summary(entry: dict, lang: str = DEFAULT_LANGUAGE) -> str:
         if statements:
             summary += t(heading, lang) + counts(
                 statements, [("relevant", "summary.relevant"), ("not_relevant", "summary.not_relevant"),
-                             (None, "summary.not_marked")])
+                             ("summary_wrong", "summary.summary_wrong"), (None, "summary.not_marked")])
     return summary
 
 
@@ -101,6 +113,9 @@ def _render_review(record: CaseRecord, error: Optional[str] = None, form=None):
         form=form or {},  # what was submitted, so a refused form keeps its choices
         gap_prefix=GAP_FIELD_PREFIX,
         statement_prefix=STATEMENT_FIELD_PREFIX,
+        reason_prefix=GAP_REASON_PREFIX,
+        max_reason=decision_log.MAX_REASON,
+        library=library_version(),  # the source library's build, signed with the decision
         here=url_for("review.show_case", case_id=record.case.case_id),
     )
 
@@ -119,6 +134,9 @@ def submit_decision(case_id: str):
         for gap in record.gaps
         if request.form.get(GAP_FIELD_PREFIX + gap.field)
     }
+    # A reason typed with a gap's mark, as typed (an empty one is left out).
+    reasons = {gap.field: request.form[GAP_REASON_PREFIX + gap.field] for gap in record.gaps
+               if (request.form.get(GAP_REASON_PREFIX + gap.field) or "").strip()}
     # Every marked statement is passed on, so one that isn't on the page is refused.
     statement_judgements = {
         name[len(STATEMENT_FIELD_PREFIX):]: value
@@ -134,7 +152,64 @@ def submit_decision(case_id: str):
             gap_judgements=judgements,
             ui_language=lang,
             statement_judgements=statement_judgements,
+            gap_reasons=reasons,
         )
     except InvalidDecision as e:
         return _render_review(record, error=error_message(e, lang), form=request.form), 400
     return redirect(url_for("review.show_case", case_id=case_id, saved=1))
+
+
+# ---- The reasoning and review part's own pages (plan Part 4, 2026-10-25; docs/design/07-reasoning-and-review/) ----
+
+
+@bp.route("/reasoning", methods=["GET"])
+def pathway():
+    """The six-step pathway every domain shares, its guards, what the system never outputs, the checks every
+    answer passes (each with whether it is built), and where data goes, read from the settings."""
+    return render_template(
+        "review/pathway.html", part="review", module="pathway", here=request.path, case=None,
+        model=configured_model(), library=library_version(), rules=load_rules(),
+        clouds=[(domain, domains.part(domain, "rag").PROFILE.cloud_ai()) for domain in domains.DOMAINS])
+
+
+@bp.route("/review", methods=["GET"])
+def latest():
+    """The review page of the case saved last, of any domain; the default domain's intake if there is none."""
+    case_id = latest_case_id(None, CASES_DIR)
+    if case_id is None:
+        return redirect(url_for(domains.nav(DEFAULT_DOMAIN).INTAKE))
+    return redirect(url_for("review.show_case", case_id=case_id))
+
+
+def _case_files() -> list[dict]:
+    """The case files on this machine (counts are taken from them, never their content)."""
+    folder = store.folder or CASES_DIR
+    files = []
+    for path in sorted(folder.glob("*.json")) if folder and folder.is_dir() else []:
+        try:
+            files.append(json.loads(path.read_text(encoding="utf-8")))
+        except ValueError:
+            continue
+    return files
+
+
+@bp.route("/quality", methods=["GET"])
+def quality():
+    """Quality and audit: the measures before a release, the audit trail and the release gate, all read from what
+    was recorded (quality/results.py, the review log, the case files, the owner's files): nothing is run here."""
+    runs = results.read_runs()
+    entries = read_decisions()
+    owner_releases = load_releases()
+    quoted = measures.quote_check_counts(_case_files())
+    marks = measures.summary_wrong_counts(entries)
+    return render_template(
+        "review/quality.html", part="review", module="quality", here=request.path, case=None,
+        versions=results.current_versions(),
+        development=results.latest(runs, results.GOLDEN_CASES, set=results.DEVELOPMENT),
+        held_out=results.latest(runs, results.GOLDEN_CASES, set=results.HELD_OUT),
+        rag=results.latest(runs, results.GOLDEN_CASES, mode=results.RAG),
+        quoted=quoted, removed_share=measures.share(quoted["removed"], quoted["kept"] + quoted["removed"]),
+        marks=marks, wrong_share=measures.share(marks["wrong"], marks["marked"]),
+        gate=measures.release_gate(runs, owner_releases[-1] if owner_releases else None),
+        audit=measures.audit_rows(entries, runs, library_version(), load_rules(), owner_releases),
+        texts=len(TEXT))

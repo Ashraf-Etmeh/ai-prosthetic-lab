@@ -279,6 +279,13 @@ def provider_writer() -> Writer:
     return WRITERS[LLM_PROVIDER]()
 
 
+def configured_model() -> dict:
+    """The language model the app is set to use, without creating a writer (the pathway and quality pages):
+    {"provider", "model", "switched_off"} (switched off: OFFLINE_ENV is set, so the AI is never called)."""
+    model = GEMINI_MODEL if LLM_PROVIDER == "gemini" else LLM_MODEL
+    return {"provider": LLM_PROVIDER, "model": model, "switched_off": bool(os.environ.get(OFFLINE_ENV))}
+
+
 def default_writer() -> Writer:
     """The writer the app uses: LLM_PROVIDER's, unless switched off (OFFLINE_ENV)."""
     if os.environ.get(OFFLINE_ENV):

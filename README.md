@@ -39,7 +39,7 @@ record numbers) are collected.
 | 02 Information analysis     | `knowledge/`                        | Working: extraction, chunking, multilingual search (en/ar; German ingested, not searched), one search per missing field and per RAG topic |
 | 03 Specialised reasoning    | `reasoning/rag.py`, `reasoning/writer.py`, `reasoning/quote_check.py` | Working (RAG, since 2026-10-11): a cloud language model (Gemini free tier or Claude API) summarises the passages found; every quote checked word for word; without the API, the gaps fall back to `reasoning/gap_analysis.py` and the passages are listed. The hand-written statements are the answer key |
 | 04 Assistive output         | `reasoning/models.py`               | Working: gap list, functional level, statements per component, and design and fitting statements: an AI sentence each, labelled, over the source's quote |
-| 05 Specialist review        | `review/`                           | Working: approve / edit / reject, needed / not needed per gap, relevant / not relevant per component or fitting statement |
+| 05 Specialist review        | `review/`                           | Working: approve as reviewed / approve with edits / reject, needed / not needed per gap with a reason, relevant / not relevant / summary is wrong per component or fitting statement; "Sign and record" |
 | 06 Documentation            | `review/decision_log.py`            | Working: each decision appended to `data/records/review_log.jsonl` |
 
 The prosthetics domain has the design's four module pages (since
@@ -196,13 +196,31 @@ http://127.0.0.1:5000/orthotics.
 
 ## The pages
 
-Every page has the same header (since 2026-10-23): Prosthetics / Orthotics,
-the domain's modules, and on a case's pages a bar with the case. The
-prosthetics map, http://127.0.0.1:5000/prosthetics, lists the brief's five
-prosthetics capabilities and where each is. The first four are the review
-page's sections: information gaps, functional level, components, design and
-fitting. The header links to each, and one decision marks them together.
-Follow-up is not built. The orthotics map is at /orthotics.
+Every page has the same header (since 2026-10-23): Prosthetics / Orthotics /
+Reasoning and review, the part's modules, and on a case's pages a bar with
+the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
+four prosthetic modules; the orthotics map is at /orthotics.
+
+**Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
+has three pages:
+- **1 Pathway** (`/reasoning`): the six steps every domain shares, each with
+  what it produces and its guard; what the system never outputs; the checks
+  every answer passes, each saying whether it is built here; where data goes,
+  read from the settings (the model, the library build, each domain's cloud
+  switch).
+- **2 Review** (`/review`): the latest case's review page. Each AI statement
+  takes Relevant / Not relevant / Summary is wrong, each gap Needed / Not
+  needed with a reason kept with the case; the decision (approve as reviewed,
+  approve with edits, reject the analysis) is signed and recorded once, with
+  the model, prompt and library versions.
+- **3 Quality and audit** (`/quality`): the development and held-out golden
+  cases passing, the answer key covered, the share of AI sentences the quote
+  check removed, the share of "summary is wrong" marks, the audit trail (who:
+  not recorded until there is a login) and the release gate (all tests, the
+  held-out result, the Arabic check, the owner's sign-off). It runs nothing:
+  it reads what was recorded (`python scripts/verify_all.py --record`,
+  `python -m quality.golden_cases ... --record`) and the owner's
+  `data/quality/releases.csv`.
 
 ## Languages
 
@@ -332,10 +350,12 @@ hand, a review, a filled-in cell of the sheet).
 
 ## Review log
 
-The specialist marks each gap "Needed" or "Not needed for this case", and
-each component or fitting statement "Relevant" or "Not relevant for this
-case" (or leaves them unmarked), and approves, edits (with a note saying
-what should change) or rejects the list. Each decision is added as one line
+The specialist marks each gap "Needed" or "Not needed for this case" (with
+a reason, if they give one), and each component or fitting statement
+"Relevant", "Not relevant for this case" or, for an AI summary, "Summary is
+wrong" (or leaves them unmarked), then approves as reviewed, approves with
+edits (with a note saying what should change) or rejects the analysis, and
+signs and records it. Each decision is added as one line
 of JSON to `data/records/review_log.jsonl`, and the review page lists the decisions
 logged for the case. A line holds the decision, note, time (UTC), the case
 as entered, every gap with its quote, citation and full passage, the
@@ -346,7 +366,8 @@ is re-ingested. Since log version 5 (the RAG) it also holds each AI
 sentence (English and Arabic), the passage behind each quote, and what the
 AI was asked and gave: prompt version, model, tokens, time and what the
 quote check removed. Labels and explanations are logged in English whichever
-language the reviewer used; `ui_language` records which one it was. Lines are never changed or removed. The file stays on this
+language the reviewer used; `ui_language` records which one it was. Since log version 11 (2026-10-25)
+each decision also records the versions it was signed with (prompt, models, source library build). Lines are never changed or removed. The file stays on this
 machine (it is in `.gitignore`). The 26 lines written while building and
 checking the prototype were moved, unchanged, to
 `data/records/review_log.test.jsonl` (2026-10-09), so `data/records/review_log.jsonl` holds
@@ -384,7 +405,8 @@ English. It removes nothing and the page doesn't show the flags; `--rag`
 reports them too, so the owner can choose patterns from real output.
 
 The golden cases, the two guides behind the answer key, the owner's rule
-table and the review logs are protected in Claude Code: a project hook
+table, clinic rules and release sign-offs, the recorded results and the review
+logs are protected in Claude Code: a project hook
 (`.claude/hooks/protect_yardstick.py`) makes Claude ask before editing them.
 
 `quality.retrieval_misses` measures the search's ceiling for `--rag`: for
@@ -420,8 +442,16 @@ The three orthotic cases (`golden-ort-01..03`, unreviewed drafts) are
 checked on their gaps only: there is no orthotic answer key yet.
 
 ```
-python scripts/verify_all.py      # the checks for prompts 0-2, then the golden cases
+python scripts/verify_all.py            # the checks for prompts 0-2, then the golden cases
+python scripts/verify_all.py --record   # first the unit tests too; every result added to
+                                        # data/quality/results/runs.jsonl for the quality page
 ```
+
+A recorded run appends one line to `data/quality/results/runs.jsonl` (in git,
+only ever added to) with the versions it ran with; `quality.golden_cases`
+takes `--record` too (a held-out run only when the owner asks). The owner
+signs a release off, and records who checked the Arabic texts, in
+`data/quality/releases.csv` (`quality/releases.py`).
 
 ## Folder layout
 
@@ -457,19 +487,22 @@ shared/             What every part uses: the case core (case_schema.py), the do
   tests/
 knowledge/          Knowledge layer: source catalog, text extraction, ingestion, search, search-quality
                     evaluation, knowledge items with the owner's evidence rules, the clinic rules
-                    (clinic_rules.py: each rule's status, version, owner, approval date)
+                    (clinic_rules.py: each rule's status, version, owner, approval date), the library's
+                    build as its version (library.py)
   tests/
 reasoning/          The reasoning pathway every domain shares: pathway.py (search, AI summaries, gaps,
                     components, fitting), the RAG pipeline (rag.py, rag_topics.py), the AI writer
                     (Gemini or Claude API), the quote check, sentence checks, gap analysis without the AI,
                     the page's shapes (models.py), citations
   tests/
-review/             Specialist review: the review page and the append-only decision log
-                    (data/records/review_log.jsonl)
+review/             Reasoning and review: the review page and the append-only decision log
+                    (data/records/review_log.jsonl), the pathway and quality pages (nav.py: what the
+                    header shows for this shared part)
   templates/review/
   tests/
 quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
-                    trial-case loader
+                    trial-case loader, the recorded results (results.py), the owner's release sign-offs
+                    (releases.py) and the quality page's measures (measures.py)
   tests/
 prosthetics/        Use cases 01-02: the case (case.py), its gap fields (fields.py), topics, the AI's
                     instructions (rag.py), the hand-written statements behind the answer key
@@ -482,7 +515,8 @@ orthotics/          Use case 03, stroke ankle-foot orthosis (drafts): the same f
                     sources.py and fit.py (modules 1-6)
   templates/orthotics/
   tests/
-scripts/            verify_all.py and the checks for prompts 0-2
+scripts/            verify_all.py (with --record: also the unit tests, results recorded) and the checks
+                    for prompts 0-2
 
 docs/               SYSTEM_DESCRIPTION.md (what is built), FUTURE_WORK.md (decisions, measurements, open
                     items), the independent blueprint, older hand-offs and manual checks
@@ -495,7 +529,8 @@ data/knowledge/     The owner's evidence rules and clinic rules, the knowledge i
   vector_store/     Chunks and their vectors (generated, not in git)
   eval/             The search-quality queries and the orthotic topic searches (in git)
 data/quality/       golden_cases/ and the frozen golden_cases_held_out/ with their manifest, measurement
-                    baselines, and trial/ (Arabic term sheet, prepared trial cases; the report not in git)
+                    baselines, trial/ (Arabic term sheet, prepared trial cases; the report not in git),
+                    results/runs.jsonl (the recorded results) and releases.csv (the owner's sign-offs)
 data/records/       What the app records on this machine (not in git): cases/ (one JSON file per case)
                     and the review logs
 ```

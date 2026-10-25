@@ -16,7 +16,7 @@ from shared.field_guide import FIELDS_BY_PATH
 # Corrections used in the round trip: a one-line text, the disclaimer (several
 # string pieces in the source), a text with a {placeholder}, a field name, a choice.
 CORRECTIONS = {
-    "review.approve": "موافقة",
+    "review.needed": "لازم",
     "disclaimer": "نص تجريبي بديل لإخلاء المسؤولية.",
     "intake.device": "الطرف السابق {n}",
     FIELD_PREFIX + "residual_limb.pain": "ألم الجذع والألم الشبحي",
@@ -46,8 +46,8 @@ class ExportTests(unittest.TestCase):
         expected |= {f"{CHOICE_PREFIX}{enum}.{value}"
                      for enum, choices in i18n.VALUE_LABELS["ar"].items() for value in choices}
         self.assertEqual(set(rows), expected)
-        self.assertEqual(rows["review.approve"]["English"], "Approve")
-        self.assertEqual(rows["review.approve"]["Arabic"], "اعتماد")
+        self.assertEqual(rows["review.needed"]["English"], "Needed")
+        self.assertEqual(rows["review.needed"]["Arabic"], "مطلوب")
         self.assertEqual(rows[FIELD_PREFIX + "residual_limb.pain"]["English"],
                          FIELDS_BY_PATH["residual_limb.pain"].label)
         self.assertEqual(rows[CHOICE_PREFIX + "Side.bilateral"]["English"], "bilateral")
@@ -139,18 +139,18 @@ class ApplyTests(unittest.TestCase):
         self.assertTrue(all(re.search("[؀-ۿ]", line) for line in removed), removed)  # Arabic lines only
         self.assertLessEqual(len(removed), 13)  # the disclaimer spans 8 lines, the others 1 each
         self.assertIn("# The Arabic names of the intake fields that can be gaps", new)
-        self.assertIn('+    "review.approve": {"en": "Approve", "ar": "موافقة"},', output)  # the diff
+        self.assertIn('+    "review.needed": {"en": "Needed", "ar": "لازم"},', output)  # the diff
 
     def test_nothing_written_without_a_yes(self):
-        self.fill({"review.approve": "موافقة"})
+        self.fill({"review.needed": "لازم"})
         changed, output = self.apply(answer=False)
         self.assertIsNone(changed)
-        self.assertIn('-    "review.approve": {"en": "Approve", "ar": "اعتماد"},', output)
+        self.assertIn('-    "review.needed": {"en": "Needed", "ar": "مطلوب"},', output)
         self.assertIn("Nothing written.", output)
         self.assertEqual(self.i18n_copy.read_text(encoding="utf-8"), self.original)
 
     def test_unsafe_rows_stop_the_whole_sheet(self):
-        self.fill({"review.approve": "موافقة",  # fine on its own
+        self.fill({"review.needed": "لازم",  # fine on its own
                    "review.edit": "تحرير {x}",  # a placeholder the English doesn't have
                    "review.reject": "رفض {",  # a broken brace
                    "review.not_marked": "دون تحديد"},
@@ -183,7 +183,7 @@ class ApplyTests(unittest.TestCase):
         self.assertEqual(self.i18n_copy.read_text(encoding="utf-8"), self.original)
 
     def test_correction_equal_to_the_current_text_is_no_change(self):
-        self.fill({"review.approve": "اعتماد"})
+        self.fill({"review.needed": "مطلوب"})
         changed, output = self.apply()
         self.assertIsNone(changed)
         self.assertIn("nothing to change", output)

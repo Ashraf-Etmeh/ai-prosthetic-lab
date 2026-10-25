@@ -1142,7 +1142,8 @@ def report_on_known_log():
         # The report object.
         r = trial_report.build_report(trial_report.read_log(log), log)
         gap_rows = {(f, src): (n, nn, u) for f, _, src, n, nn, u in r.gap_rows()}
-        statement_rows = {s: (rv, nr, u) for s, _, _, _, rv, nr, u in r.statement_rows()}
+        # (the "summary is wrong" column, log version 11 on, is never marked in these older-style decisions)
+        statement_rows = {s: (rv, nr, u) for s, _, _, _, rv, nr, _wrong, u in r.statement_rows()}
         same("decisions", r.decisions, EXPECTED["decisions logged"])
         same("cases", len(r.cases), EXPECTED["cases"])
         same("cases decided more than once", sum(1 for n in r.cases.values() if n > 1),
@@ -1171,7 +1172,8 @@ def report_on_known_log():
         same("CSV decisions", sections["Decisions"][1:], [[d, str(EXPECTED[d])] for d in ("approve", "edit", "reject")])
         same("CSV gap rows", {(row[0], row[2]): tuple(map(int, row[3:6])) for row in sections["Gap fields"][1:]},
              want_gaps)
-        same("CSV statement rows", {row[0]: tuple(map(int, row[4:7])) for row in sections["Statements"][1:]},
+        # relevant, not relevant, not marked (column 6, "summary is wrong", is log version 11's, never marked here)
+        same("CSV statement rows", {row[0]: tuple(map(int, (row[4], row[5], row[7]))) for row in sections["Statements"][1:]},
              want_statements)
         same("CSV no-source list", sections["Gaps shown without a source and marked Needed"][1:],
              [[f, label, str(n), ids] for f, label, n, ids in EXPECTED_UNSOURCED])

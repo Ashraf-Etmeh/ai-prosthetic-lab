@@ -333,7 +333,7 @@ class ReviewRouteTests(ProstheticRouteTestCase):
         )
         self.assertEqual(resp.status_code, 200)
         page = resp.get_data(as_text=True)
-        self.assertIn("Decision saved to the review log: <strong>approve</strong>", page)
+        self.assertIn("Decision saved to the review log: <strong>approve as reviewed</strong>", page)
         self.assertIn("Logged decisions for this case (1)", page)
         self.assertIn("looks complete", page)
 
@@ -371,7 +371,7 @@ class ReviewRouteTests(ProstheticRouteTestCase):
         )
         self.assertEqual(resp.status_code, 400)
         page = resp.get_data(as_text=True)
-        self.assertIn("An edit needs a note", page)
+        self.assertIn("Approving with edits needs a note", page)
         self.assertIn('value="not_needed" checked', page)
         self.assertEqual(read_decisions(path=self.log_path), [])
 
@@ -745,7 +745,7 @@ class ArabicPageTests(ProstheticRouteTestCase):
                   "gap:residual_limb.volume_stability": "needed"},
         )
         page = visible_text(resp.get_data(as_text=True)).replace("\u2068", "").replace("\u2069", "")
-        self.assertIn(f"حُفظ القرار في سجل المراجعة: تعديل (مطلوب: 1، بلا تحديد: 16؛ المكوّنات: بلا تحديد: "
+        self.assertIn(f"حُفظ القرار في سجل المراجعة: اعتماد مع تعديلات (مطلوب: 1، بلا تحديد: 16؛ المكوّنات: بلا تحديد: "
                       f"{len(record.components.statements)}؛ التصميم والتركيب: بلا تحديد: "
                       f"{len(record.fitting.statements)})", page)
         self.assertIn("القرارات المسجلة لهذه الحالة (1)", page)
@@ -760,7 +760,7 @@ class ArabicPageTests(ProstheticRouteTestCase):
         case_id = store.all()[-1].case.case_id
         resp = self.client.post(f"/review/{case_id}/decision", data={"decision": "edit"})
         self.assertEqual(resp.status_code, 400)
-        self.assertIn("لم يُحفظ القرار: التعديل يحتاج إلى ملاحظة توضح ما الذي يجب تغييره.",
+        self.assertIn("لم يُحفظ القرار: الاعتماد مع تعديلات يحتاج إلى ملاحظة توضح ما الذي يجب تغييره.",
                       visible_text(resp.get_data(as_text=True)))
         self.assertEqual(read_decisions(path=self.log_path), [])
 

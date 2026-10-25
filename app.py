@@ -68,8 +68,9 @@ def create_app() -> Flask:
             "attribution": lambda doc_id: attributions().get(doc_id),
             # The header's domains and what each shows (<domain>/nav.py), without naming a domain.
             "all_domains": domains.DOMAINS,
+            "shared_parts": domains.SHARED_PARTS,  # the shared parts with pages (review/: reasoning and review)
             "default_domain": DEFAULT_DOMAIN,
-            "domain_nav": lambda name: domains.part(name, "nav"),
+            "domain_nav": domains.nav,
         }
 
     @app.route("/")

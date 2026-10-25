@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{% endblock %} — {{ t('domain.' ~ (case.domain if case else domain)) }}</title>
+  <title>{% block title %}{% endblock %} — {{ t('part.' ~ part) if part is defined and part else t('domain.' ~ (case.domain if case else domain)) }}</title>
   {% include "ui_style.html" %}
 </head>
 <body class="ui-page">

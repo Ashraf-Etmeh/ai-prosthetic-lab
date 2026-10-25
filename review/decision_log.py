@@ -36,7 +36,13 @@ object that can be read on its own, holding
   (prosthetics/plan.py: the rest of the assessment, requirements, component
   options, the configuration and its reason, fitting and follow-up), and
   "design_choice" is logged when the prosthetist records the configuration
-  on modules 2-3.
+  on modules 2-3,
+- since version 11 (2026-10-25, plan Part 4, the design's "sign and record"):
+  a statement may also be marked "summary_wrong" (the AI's sentence is wrong,
+  whatever the source says); each gap keeps the reviewer's reason as typed
+  ("reviewer_reason"); and "versions" names what made the page: the prompt
+  version, the models that answered, and the source library's build
+  (knowledge/library.py).
 
 Lines are only ever added. Editing or removing a logged decision is out of
 scope for v1 (FUTURE_WORK.md).
@@ -49,6 +55,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from knowledge.library import library_version
 from knowledge.retrieval import domains_for
 from reasoning.models import CitedStatement, ComponentSection, ComponentSupport, FittingSupport, Gap, Quote
 from reasoning.rag import Generation
@@ -72,7 +79,9 @@ DECISIONS = ("approve", "edit", "reject")
 # page's form.
 DESIGN_CHOICE = "design_choice"
 GAP_JUDGEMENTS = ("needed", "not_needed")
-STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
+# "summary_wrong" (version 11): the AI's sentence is wrong, whatever the source says (SYSTEM_DESIGN.md §7.2).
+STATEMENT_JUDGEMENTS = ("relevant", "not_relevant", "summary_wrong")
+MAX_REASON = 500  # characters in a gap's reason
 # Raise when the shape of an entry changes. 2 (2026-10-08): adds "ui_language";
 # version 1 entries were all made on the English page. 3 (2026-10-08): adds
 # "components" (functional level and component statements). 4 (2026-10-09):
@@ -98,8 +107,11 @@ STATEMENT_JUDGEMENTS = ("relevant", "not_relevant")
 # case's "plan" is its prosthetics/plan.py ProstheticPlan (null before: none
 # existed), and a prosthetic "design_choice" logs the configuration, its
 # plan.chosen a dict of component -> option id ("configuration"). Older lines
-# have no prosthetic plan.
-LOG_VERSION = 10
+# have no prosthetic plan. 11 (2026-10-25, the design's review page): a statement's
+# reviewer_judgement may be "summary_wrong"; each gap gains "reviewer_reason"
+# (the reviewer's words, or null); the entry gains "versions" (prompt, models,
+# library build). Older lines lack these keys and have no "summary_wrong".
+LOG_VERSION = 11
 
 # The development server answers requests in threads; one write at a time
 # keeps two decisions from mixing into one line.
@@ -117,17 +129,22 @@ def build_entry(
     gap_judgements: Optional[dict[str, str]] = None,
     ui_language: str = DEFAULT_LANGUAGE,
     statement_judgements: Optional[dict[str, str]] = None,
+    gap_reasons: Optional[dict[str, str]] = None,
 ) -> dict:
     """The log entry for one decision. Raises InvalidDecision if it is not valid.
 
     gap_judgements maps a gap's field path to "needed" or "not_needed";
+    gap_reasons maps a gap's field path to the reviewer's reason, as typed;
     statement_judgements maps the id of a component or fitting statement
-    to "relevant" or "not_relevant". Gaps and statements left out are
-    logged as not marked (None).
+    to "relevant", "not_relevant" or "summary_wrong". Gaps and statements
+    left out are logged as not marked (None).
     """
     note = (note or "").strip() or None
     gap_judgements = gap_judgements or {}
+    gap_reasons = {field: reason.strip() for field, reason in (gap_reasons or {}).items() if (reason or "").strip()}
     statement_judgements = statement_judgements or {}
+    if not decision:
+        raise InvalidDecision("error.choose_decision")
     if decision not in DECISIONS and not (decision == DESIGN_CHOICE and record.plan and record.plan.chosen):
         raise InvalidDecision("error.unknown_decision", decision=decision)
     if decision == "edit" and note is None:
@@ -138,6 +155,11 @@ def build_entry(
             raise InvalidDecision("error.not_a_gap", field=field)
         if judgement not in GAP_JUDGEMENTS:
             raise InvalidDecision("error.unknown_judgement", judgement=judgement, field=field)
+    for field, reason in gap_reasons.items():
+        if field not in gap_fields:
+            raise InvalidDecision("error.not_a_gap", field=field)
+        if len(reason) > MAX_REASON:
+            raise InvalidDecision("error.reason_too_long", n=MAX_REASON)
     shown = {cited.statement.id for cited in record.shown_statements()}
     for statement_id, judgement in statement_judgements.items():
         if statement_id not in shown:
@@ -153,7 +175,7 @@ def build_entry(
         "decision": decision,
         "note": note,
         "ui_language": ui_language,
-        "gaps": [_gap_entry(gap, gap_judgements.get(gap.field)) for gap in record.gaps],
+        "gaps": [_gap_entry(gap, gap_judgements.get(gap.field), gap_reasons.get(gap.field)) for gap in record.gaps],
         "components": _components_entry(record.components, statement_judgements, record),
         "fitting": _fitting_entry(record.fitting, statement_judgements, record),
         "generation": _generation_entry(record.generation),
@@ -171,6 +193,17 @@ def build_entry(
         },
         "case": record.case.to_dict(),
         "plan": record.plan.to_dict() if record.plan else None,
+        "versions": signed_versions(record),
+    }
+
+
+def signed_versions(record: CaseRecord) -> dict:
+    """What made the page a decision is signed on: the prompt version, the models that answered, the library."""
+    generation = record.generation
+    return {
+        "prompt": generation.prompt_version if generation else None,
+        "models": generation.answered_by if generation else [],
+        "library": library_version(),
     }
 
 
@@ -198,7 +231,7 @@ def _generation_entry(generation: Optional[Generation]) -> Optional[dict]:
     }
 
 
-def _gap_entry(gap: Gap, judgement: Optional[str]) -> dict:
+def _gap_entry(gap: Gap, judgement: Optional[str], reason: Optional[str] = None) -> dict:
     evidence = gap.evidence
     source = None
     if evidence is not None:
@@ -223,6 +256,7 @@ def _gap_entry(gap: Gap, judgement: Optional[str]) -> dict:
         "summary_en": gap.summary_en,  # the AI's sentence; None without the AI
         "summary_ar": gap.summary_ar,
         "reviewer_judgement": judgement,  # "needed", "not_needed", or None (not marked)
+        "reviewer_reason": reason,  # the reviewer's words (version 11); None: none given
         "source": source,  # None: the gap cited no passage
     }
 
@@ -260,7 +294,7 @@ def _sections_entry(sections: list[ComponentSection], judgements: dict[str, str]
                     "summary_ar": cited.summary_ar,
                     "chunk_id": cited.chunk_id,  # the passage the quote was found in
                     "passage": passage(cited),  # its full text, as the AI saw it
-                    # "relevant", "not_relevant", or None (not marked)
+                    # "relevant", "not_relevant", "summary_wrong" (version 11), or None (not marked)
                     "reviewer_judgement": judgements.get(cited.statement.id),
                 }
                 for cited in section.statements
@@ -308,11 +342,13 @@ def record_decision(
     path: Optional[Path] = None,
     ui_language: str = DEFAULT_LANGUAGE,
     statement_judgements: Optional[dict[str, str]] = None,
+    gap_reasons: Optional[dict[str, str]] = None,
 ) -> dict:
     """Validate the decision, append it to the log as one line, and return the entry."""
     if decision == DESIGN_CHOICE:  # only through record_design_choice()
         raise InvalidDecision("error.unknown_decision", decision=decision)
-    return _append(build_entry(record, decision, note, gap_judgements, ui_language, statement_judgements), path)
+    return _append(build_entry(record, decision, note, gap_judgements, ui_language, statement_judgements,
+                               gap_reasons), path)
 
 
 def record_design_choice(record: CaseRecord, path: Optional[Path] = None,

@@ -94,7 +94,8 @@ class TrialReportTests(unittest.TestCase):
 
     def test_statement_marks(self):
         rows = {s: (part, section, relevant, not_relevant, unmarked)
-                for s, part, section, _, relevant, not_relevant, unmarked in self.report.statement_rows()}
+                for s, part, section, _, relevant, not_relevant, wrong, unmarked in self.report.statement_rows()}
+        self.assertTrue(all(row[6] == 0 for row in self.report.statement_rows()))  # none before log version 11
         self.assertEqual(rows["icrc_ready_for_fitting"], ("fitting", "readiness", 2, 0, 1))  # tt twice, tf unmarked
         self.assertEqual(rows["cms_elevated_vacuum"], ("components", "suspension", 0, 1, 2))
         self.assertEqual(rows["va_dod_ul_8_no_specific_component"], ("components", "control_and_fit", 1, 0, 0))
@@ -109,7 +110,7 @@ class TrialReportTests(unittest.TestCase):
         report = sections(self.out)
         self.assertEqual(list(report), ["Trial report (counts only)", "Gap fields",
                                         "Gaps shown without a source and marked Needed", "Statements",
-                                        "Decisions", "Edit notes"])
+                                        "Decisions", "Edit notes", "Gap reasons"])
         self.assertIn(["decisions logged", "5"], report["Trial report (counts only)"])
         self.assertEqual(report["Gap fields"][0],
                          ["field", "label", "source passage shown", "needed", "not needed", "not marked"])
@@ -188,3 +189,22 @@ class TrialReportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LogVersion11Tests(unittest.TestCase):
+    """Log version 11 (plan Part 4, 2026-10-25): "summary is wrong" counted, gap reasons listed as written."""
+
+    def test_summary_wrong_and_gap_reasons(self):
+        entry = {"log_version": 11, "logged_at": "2026-10-25T10:00:00+00:00", "case_id": "case-v11",
+                 "decision": "approve", "gaps": [{"field": "residual_limb.pain", "reviewer_judgement": "not_needed",
+                                                  "reviewer_reason": "asked by the team", "source": None}],
+                 "components": {"sections": [{"component": "knee", "statements": [
+                     {"id": "s1", "doc_id": "d", "reviewer_judgement": "summary_wrong"}]}]}}
+        report = build_report([entry], Path("log.jsonl"))
+        self.assertEqual(report.statement_rows(), [("s1", "components", "knee", "d", 0, 0, 1, 0)])
+        self.assertEqual(report.gap_reasons, [("2026-10-25T10:00:00+00:00", "case-v11", "residual_limb.pain",
+                                               "not_needed", "asked by the team")])
+        out = io.StringIO()
+        print_summary(report, out)
+        self.assertIn("Gap reasons (1)", out.getvalue())
+        self.assertIn("asked by the team", out.getvalue())
