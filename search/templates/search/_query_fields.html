@@ -1,0 +1,8 @@
+{# The search's own question and filters, and its log id, carried by a mark or a suggestion so the page comes back
+   to the same search (search/routes.py). #}
+<input type="hidden" name="search_id" value="{{ search_id or '' }}">
+<input type="hidden" name="q" value="{{ question }}">
+{% for d in filters.domains %}<input type="hidden" name="domain" value="{{ d }}">{% endfor %}
+{% for k in filters.kinds %}<input type="hidden" name="kind" value="{{ k }}">{% endfor %}
+<input type="hidden" name="language" value="{{ filters.language }}">
+{% if filters.from_year %}<input type="hidden" name="year" value="{{ filters.from_year }}">{% endif %}

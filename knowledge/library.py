@@ -137,9 +137,13 @@ def library_rows(catalog=None, manifest_path: Optional[Path] = None, store_dir: 
     return rows
 
 
-def curator_queue(rows: list[LibraryRow], search_runs: list[dict], library: Optional[dict]) -> list[dict]:
-    """What needs a curator: {"what" (an interface text key under "curate."), "params"}."""
+def curator_queue(rows: list[LibraryRow], search_runs: list[dict], library: Optional[dict],
+                  suggestions: int = 0) -> list[dict]:
+    """What needs a curator: {"what" (an interface text key under "curate."), "params"}. `suggestions`: sources
+    suggested from the search page (search/log.py)."""
     queue = []
+    if suggestions:
+        queue.append({"what": "suggested", "params": {"n": suggestions}})
     for row in rows:
         if row.doc_id and row.facts is None:
             queue.append({"what": "not_extracted", "params": {"title": row.title}})

@@ -1882,6 +1882,33 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
   (component catalogues, stock, outcome-measure norms).
 - Tests: 612, all passing; checks 0-2 fail only on 0.3 (uncommitted changes);
   golden cases OK; the Arabic term sheet exported again (1,318 texts).
+  Committed `2f3fa99`, pushed (2026-10-25).
+
+## Smart search (use case 05, plan Part 6, 2026-10-25)
+
+- **Asked (owner, 2026-10-25):** "part 6". Owner's answers: commit and push
+  Part 5 first (done, `2f3fa99`); the AI part **built, switched off**
+  (`SEARCH_CLOUD_AI = False`: a question is typed text, which CLAUDE.md never
+  sends, until the owner switches it on); pinning a passage to a case
+  **later**; the search log keeps **the question, the filters and the marks**,
+  on this machine only, never who asked.
+- **Built** (SYSTEM_DESIGN.md §7.3; docs/SYSTEM_DESCRIPTION.md §4.13): the
+  shared part "Search and education" (`search/`: engine.py, log.py, routes.py,
+  nav.py) with the smart search page: question and filters, passages in order
+  of match, what the sources say (behind the switch), no-answer with
+  "suggest a source", marks; the search log (`data/records/search_log.jsonl`,
+  gitignored, protected by the yardstick hook); suggestions on the knowledge
+  sources page, counts on the quality page.
+- **Seen with the real search:** for "suspension options when limb volume
+  changes" the first passages came from the upper-limb VA/DoD guideline's
+  literature-search appendix (its search syntax was not removed at
+  extraction: "literature-search syntax: 0 lines removed" for that document).
+  Not tuned here; a candidate for the extraction's search-syntax removal.
+- **Waiting for the owner:** whether to switch `SEARCH_CLOUD_AI` on (and,
+  with it, CLAUDE.md principle 4 for search questions); pinning a passage to a
+  case (review log version 12); case-based learning (use case 06, Part 7).
+- Tests: 622, all passing; checks 0-2 fail only on 0.3 (uncommitted changes);
+  golden cases OK; the Arabic term sheet exported again (1,375 texts).
 
 ## Open decisions
 

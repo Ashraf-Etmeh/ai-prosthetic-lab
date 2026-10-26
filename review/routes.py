@@ -31,6 +31,7 @@ from quality import measures, results
 from quality.releases import load_releases
 from reasoning.gap_analysis import explain_gap
 from reasoning.writer import configured_model
+from search import log as search_log
 from review import decision_log
 from review.decision_log import InvalidDecision, read_decisions, record_decision
 from shared import domains
@@ -212,4 +213,4 @@ def quality():
         marks=marks, wrong_share=measures.share(marks["wrong"], marks["marked"]),
         gate=measures.release_gate(runs, owner_releases[-1] if owner_releases else None),
         audit=measures.audit_rows(entries, runs, library_version(), load_rules(), owner_releases),
-        texts=len(TEXT))
+        texts=len(TEXT), searches=search_log.counts(search_log.read_log()))

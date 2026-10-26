@@ -131,8 +131,9 @@ capabilities they cover: 1 تقييم حالات البتر, 2–3 تحليل ا
 دعم اختيار المكونات, 4 دعم قرارات التصميم والتركيب, 5 المتابعة والتقييم; since
 2026-10-24 each is a page of its own (§4.10), and the review page below is
 the specialist review reached from module 1. The orthotics map (`/orthotics`)
-does the same for its six (§4.9). Two shared parts sit next to the domains:
-the knowledge layer (§4.12) and reasoning and review (§4.11).
+does the same for its six (§4.9). Three shared parts sit next to the
+domains: the knowledge layer (§4.12), reasoning and review (§4.11), and search
+and education (§4.13).
 
 1. **Intake form** (`GET /intake`). The user enters a test case: amputation
    level (12 levels, 6 lower and 6 upper limb) and side (left, right,
@@ -586,6 +587,43 @@ search index, `items.json`, the owner's rule table and clinic rules
 `--record` (`quality/results.py`, kind "search_quality"), and the quality
 page's audit trail lists it.
 
+### 4.13 Smart search (use case 05, plan Part 6, 2026-10-25)
+
+The shared part "Search and education" (SYSTEM_DESIGN.md §7.3;
+`docs/design/08-search-and-education/Main.html`; `search/`) has one tab so far,
+**1 Smart search** (`/search`):
+
+- **Question and filters:** a question in English or Arabic; filters for
+  domain, kind of source, language (both, English, Arabic) and from year. The
+  search (`search/engine.py` find) uses the same local index as the cases,
+  every document of the chosen domains and kinds (none ticked: all), in the
+  languages the app searches, top `SEARCH_TOP_K` (8). The evidence layer the
+  design filters by belongs to the knowledge items, not to passages, so it is
+  not a filter.
+- **Passages found:** in order of match, never of quality, each with its kind
+  of source, language, title, year and page, the source's authors and licence
+  where recorded, and its full text; Arabic passages are quoted in Arabic.
+- **What the sources say:** AI sentences over checked quotes, from the same
+  pipeline and checks as a case's (`reasoning/rag.py` run_part with the
+  search's own instructions, prompt `search-v1`): never advice, options in the
+  order the passages mention them, at most `SEARCH_MAX_ITEMS` (6). A question
+  is typed text, so a cloud writer is never called until the owner sets
+  `SEARCH_CLOUD_AI` (off: owner's decision 2026-10-25); until then the page
+  says why and shows the passages. "The sources differ" notices of the design
+  are not built (code can't tell when sources differ; the instructions ask for
+  each side as its own item).
+- **No answer:** no passage found, or the AI answered and no sentence passed
+  the checks: the page says so, writes nothing in its place and offers
+  "Suggest a source to the curator", listed on the knowledge sources page.
+- **The search log** (`search/log.py`, `data/records/search_log.jsonl`, not in
+  git, only ever added to, protected by the yardstick hook): each search (the
+  question as typed, the filters, the passages found, whether the AI answered,
+  the prompt and library versions), each mark on an answer (useful, not
+  useful, a summary is wrong) and each suggestion; never who asked. The
+  quality page shows the counts.
+- **Not built yet:** pinning a passage to an open case (owner's answer,
+  2026-10-25: later), case-based learning (use case 06).
+
 ---
 
 ## 5. Structure
@@ -593,7 +631,7 @@ page's audit trail lists it.
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 612 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 622 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -849,7 +887,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **612 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **622 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -955,6 +993,11 @@ uses a missing key.
   knowledge graph, a glossary with statuses, the case library and structured
   data are not built; "pages with almost no text" counts figures and
   dividers as well as scans; no search-quality run recorded yet.
+- Smart search (§4.13, 2026-10-25): no AI summary until the owner sets
+  `SEARCH_CLOUD_AI`; a free question can be matched by a guideline's
+  search-strategy appendix page (seen: the upper-limb VA/DoD guideline, whose
+  literature-search syntax extraction did not remove); no "sources differ"
+  notice; pinning to a case not built.
 
 ---
 

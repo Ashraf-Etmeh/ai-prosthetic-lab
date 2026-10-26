@@ -197,8 +197,8 @@ http://127.0.0.1:5000/orthotics.
 ## The pages
 
 Every page has the same header (since 2026-10-23): Prosthetics / Orthotics /
-Knowledge layer / Reasoning and review, the part's modules, and on a case's
-pages a bar with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
+Knowledge layer / Reasoning and review / Search and education, the part's
+modules, and on a case's pages a bar with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
 four prosthetic modules; the orthotics map is at /orthotics.
 
 **Knowledge layer** (2026-10-25, `docs/design/06-knowledge-layer/`) has three
@@ -219,6 +219,20 @@ pages, all read-only:
   their status, version, owner and approval date; the Arabic term sheet's
   state; and what is not built yet (the design knowledge graph, a glossary
   with a status per term, the case library, structured data).
+
+**Search and education** (2026-10-25, `docs/design/08-search-and-education/`):
+**1 Smart search** (`/search`). Ask in English or Arabic; the local search
+looks through the whole library in both languages, narrowed by domain, kind
+of source, language and year, and lists the passages found in order of match
+(Arabic passages quoted in Arabic). "What the sources say" (AI sentences, each
+over a quote checked word for word) appears only once the owner sets
+`SEARCH_CLOUD_AI` in `shared/config.py`: a question is typed text, so until
+then it never leaves the machine. When nothing answers, the page says so and
+offers "Suggest a source to the curator" (listed on the knowledge sources
+page). Each search, mark (useful / not useful / a summary is wrong) and
+suggestion goes to `data/records/search_log.jsonl` on this machine, never
+who asked; the quality page counts them. Pinning a passage to a case comes
+later.
 
 **Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
 has three pages:
@@ -521,6 +535,10 @@ review/             Reasoning and review: the review page and the append-only de
                     header shows for this shared part)
   templates/review/
   tests/
+search/             Search and education: smart search (engine.py: filters, the local search, the AI part
+                    behind SEARCH_CLOUD_AI; log.py: the search log; routes.py, nav.py)
+  templates/search/
+  tests/
 quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
                     trial-case loader, the recorded results (results.py), the owner's release sign-offs
                     (releases.py) and the quality page's measures (measures.py)
@@ -552,8 +570,8 @@ data/knowledge/     The owner's evidence rules and clinic rules, the knowledge i
 data/quality/       golden_cases/ and the frozen golden_cases_held_out/ with their manifest, measurement
                     baselines, trial/ (Arabic term sheet, prepared trial cases; the report not in git),
                     results/runs.jsonl (the recorded results) and releases.csv (the owner's sign-offs)
-data/records/       What the app records on this machine (not in git): cases/ (one JSON file per case)
-                    and the review logs
+data/records/       What the app records on this machine (not in git): cases/ (one JSON file per case),
+                    the review logs and the search log
 ```
 
 A new clinical domain adds a package with the same files as the others (case.py,

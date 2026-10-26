@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # The code's parts, one package each (README.md, "Folder layout"): the shared core, the shared
 # parts of the system, then the clinical domains. Tools that scan the code (the i18n key check,
 # the Arabic term sheet) read these.
-CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "prosthetics", "orthotics")
+CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "search", "prosthetics", "orthotics")
 
 # The data, grouped like the code (since 2026-10-24): data/knowledge/ for the
 # knowledge layer, data/quality/ for the yardstick and the trial, data/records/
@@ -177,6 +177,19 @@ ORTHOTIC_RETRIEVAL_DOMAINS = ("orthotics",)
 # tone. With no case words in the search text, a limit of 1, 2 or 3 found a
 # right passage for 18, 18 and 20 of the 26; 3 is kept (Choo 50 of 146).
 ORTHOTIC_PASSAGES_PER_DOCUMENT = 3
+# ---- Smart search (use case 05; plan Part 6, 2026-10-25; search/)
+SEARCH_TOP_K = 8  # passages the search page lists, in order of match
+SEARCH_MAX_ITEMS = 6  # AI sentences kept for one question, each over a checked quote
+SEARCH_PROMPT_VERSION = "search-v1"
+# Whether a typed search question may go to the cloud writer (LLM_PROVIDER) with the passages
+# found. Owner's decision 2026-10-25: built, switched off. A question is typed text, which
+# CLAUDE.md principle 4 never sends; until the owner sets this, the search page shows the
+# passages found without summaries, whatever key is set (search/engine.py).
+SEARCH_CLOUD_AI = False
+# Every search, mark and source suggestion, on this machine only (search/log.py; not in git):
+# the question as typed, the filters, the passages found; never who asked (owner, 2026-10-25).
+SEARCH_LOG_PATH = RECORDS_DIR / "search_log.jsonl"
+
 # Whether an orthotic case may go to the cloud writer (LLM_PROVIDER). Owner's
 # decision 2026-10-23: not yet. The orthotic library holds the ICRC AFO manual
 # (no reuse statement), NICE HTG178 and WHO text (CC BY-NC-SA 3.0 IGO), and the

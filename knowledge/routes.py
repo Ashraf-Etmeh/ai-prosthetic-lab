@@ -23,6 +23,7 @@ from knowledge.evidence_rules import load_rules as load_evidence_rules
 from knowledge.items import read_items
 from knowledge.models import UNASSIGNED, VALIDATION_STATUSES
 from quality import results
+from search import log as search_log
 from quality.releases import latest_release
 from shared import config
 from shared.i18n import TEXT
@@ -58,7 +59,8 @@ def sources():
                  catalogued=catalogued, others=[row for row in shown if not row.doc_id],
                  counts={k: sum(1 for row in rows if row.source_type == k) for k in KINDS},
                  total=sum(1 for row in rows if row.doc_id),
-                 queue=library.curator_queue(rows, searches, version), last_search=searches[-1] if searches else None)
+                 queue=library.curator_queue(rows, searches, version, search_log.counts(search_log.read_log())["suggestions"]),
+                 last_search=searches[-1] if searches else None)
 
 
 def topic_key(topic: str) -> str:

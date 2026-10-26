@@ -1,0 +1,123 @@
+{% extends "ui_base.html" %}
+{# Smart search in the specialist library (use case 05; docs/design/08-search-and-education/Main.html; SYSTEM_DESIGN.md
+   §7.3): ask in English or Arabic; the passages found in order of match, never of quality, each in its own language;
+   what the sources say, as AI sentences each over a quote checked word for word, only while the owner's
+   SEARCH_CLOUD_AI is on (a question is typed text); when nothing answers, the page says so, writes nothing in its
+   place and offers to suggest a source. Nothing here is ranked or recommended. #}
+{% block title %}{{ t('srch.title') }}{% endblock %}
+{% block kicker %}{{ t('srch.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('srch.intro') }}</p>{% endblock %}
+{% block brief %}البحث الذكي داخل المعرفة المتخصصة{% endblock %}
+{% block content %}
+{% set statements = answer.statements if answer else [] %}
+{# No answer: no passage found, or the AI answered and no sentence passed the checks (with the AI switched off, the
+   passages found are the answer). #}
+{% set nothing = question and (not passages or (answer and answer.part.status == 'ok' and not statements)) %}
+{% if marked %}<div class="ui-saved" role="status">{{ t('srch.marked') }}</div>{% endif %}
+{% if suggested %}<div class="ui-saved" role="status">{{ t('srch.suggested') }}</div>{% endif %}
+
+<section class="ui-card" style="margin-top: 1.25rem">
+  <form id="search-form" role="search" method="get" action="{{ url_for('search.smart_search') }}" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end">
+    <label style="flex: 1 1 420px">{{ t('srch.question') }}<input type="search" name="q" value="{{ question }}" dir="auto" maxlength="500" placeholder="{{ t('srch.placeholder') }}" style="width: 100%; box-sizing: border-box; min-height: 48px"></label>
+    <button class="ui-btn" type="submit" style="min-height: 48px">{{ t('srch.search') }}</button>
+  </form>
+  <div class="ui-tags" style="margin-top: 0.75rem">
+    <span class="ui-tag">{{ t('srch.both_languages') }}</span>
+    <span class="ui-tag">{% if library %}{{ t('path_data.library', built=(library.built or '')[:10], n=library.passages) }}{% else %}{{ t('path_data.no_library') }}{% endif %} · {{ t('srch.sources', n=sources) }}</span>
+    <span class="ui-tag">{{ t('srch.local') }}</span>
+    {% if lang != 'ar' %}<span class="ui-tag" lang="ar" dir="rtl">جرّب: خيارات التعليق لمستخدم تحت الركبة</span>{% endif %}
+  </div>
+</section>
+
+<div class="ui-cols" style="margin-top: 1.25rem">
+  <aside class="ui-col-side" aria-label="{{ t('srch.filters') }}" style="flex: 1 1 220px; max-width: 280px">
+    <section class="ui-card">
+      <h2>{{ t('srch.filters') }}</h2>
+      <fieldset style="border: 0; padding: 0; margin: 0.75rem 0 0"><legend style="font-weight: 600; font-size: 0.875rem">{{ t('srch.domain') }}</legend>
+        <div class="ui-checks">{% for d in domain_choices %}<label><input form="search-form" type="checkbox" name="domain" value="{{ d }}"{{ " checked" if d in filters.domains }}><span>{{ t('kdomain.' ~ d) }}</span></label>{% endfor %}</div></fieldset>
+      <fieldset style="border: 0; padding: 0; margin: 0.75rem 0 0"><legend style="font-weight: 600; font-size: 0.875rem">{{ t('srch.kind') }}</legend>
+        <div class="ui-checks">{% for k in kind_choices %}<label><input form="search-form" type="checkbox" name="kind" value="{{ k }}"{{ " checked" if k in filters.kinds }}><span>{{ t('source_type.' ~ k) }}</span></label>{% endfor %}</div></fieldset>
+      <label style="display: block; margin-top: 0.75rem">{{ t('srch.language') }}<select form="search-form" name="language">{% for l in languages %}<option value="{{ l }}"{{ " selected" if l == filters.language }}>{{ t('srch_lang.' ~ l) }}</option>{% endfor %}</select></label>
+      <label style="display: block; margin-top: 0.5rem">{{ t('srch.from_year') }}<select form="search-form" name="year"><option value="">{{ t('srch.any_year') }}</option>{% for y in years %}<option value="{{ y }}"{{ " selected" if y == filters.from_year }}>{{ y }}</option>{% endfor %}</select></label>
+      <p class="ui-note">{{ t('srch.filters_note') }}</p>
+      <button class="ui-btn ui-btn-quiet" type="submit" form="search-form" style="width: 100%; justify-content: center">{{ t('srch.apply') }}</button>
+    </section>
+  </aside>
+
+  <div class="ui-col-main">
+    {% if warning %}<div class="ui-error" role="alert"><span lang="en" dir="ltr">{{ warning }}</span></div>{% endif %}
+    {% if question %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('srch.what_sources_say') }}</h2>
+        {% if statements %}<span class="ui-tag ui-tag-warn">{{ t('srch.ai_count', n=statements | length) }}</span>{% endif %}</div>
+      {% if statements %}
+      <p class="ui-note">{{ t('srch.order_note') }}</p>
+      <ol style="padding-inline-start: 1.2rem; margin: 0.5rem 0 0">
+        {% for cited in statements %}{% set statement = cited.statement %}
+        <li style="margin-top: 0.75rem">
+          <p style="margin: 0"><span class="ui-tag ui-tag-warn">{{ t('analysis.ai_label') }}</span> <span dir="auto">{{ cited.summary(lang) }}</span></p>
+          <blockquote dir="auto" lang="{{ cited.language }}" style="margin: 0.4rem 0 0; padding: 0.4rem 0.8rem; border-inline-start: 3px solid #9bb7d4; background: #F6F9FC">{{ statement.quote.text }}</blockquote>
+          <div class="ui-note" style="margin: 0.2rem 0 0"><span dir="auto" lang="{{ cited.language }}">{{ cited.citation(statement.quote) }}</span> · {{ t('srch.checked') }} · {% if statement.grade %}{{ t('components.grade') }} {{ t('grade.' ~ statement.grade) }}{% else %}{{ t('srch.no_grade') }}{% endif %} · {{ t('source_type.' ~ cited.source_type) }}</div>
+        </li>
+        {% endfor %}
+      </ol>
+      <form method="post" action="{{ url_for('search.mark') }}" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 1rem">
+        {% include "search/_query_fields.html" %}
+        <span class="ui-note" style="margin: 0">{{ t('srch.your_mark') }}</span>
+        {% for m in ['useful', 'not_useful', 'summary_wrong'] %}<button class="ui-btn ui-btn-quiet" type="submit" name="mark" value="{{ m }}">{{ t('srch_mark.' ~ m) }}</button>{% endfor %}
+      </form>
+      {% elif answer and answer.part.status == 'unavailable' %}
+      <p class="ui-note">{% if answer.part.reason == ai_off %}{{ t('srch.ai_off') }}{% else %}{{ t('srch.ai_unavailable') }} <span lang="en" dir="ltr">{{ answer.part.reason }}</span>{% endif %}</p>
+      {% elif passages %}
+      <p class="ui-note">{{ t('srch.none_kept') }}</p>
+      {% endif %}
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('srch.passages') }}</h2>{% if passages %}<span class="ui-note" style="margin: 0">{{ t('srch.passages_count', n=passages | length, docs=documents) }}</span>{% endif %}</div>
+      {% if passages %}
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for chunk in passages %}
+        <li style="padding: 0.6rem 0; border-bottom: 1px solid var(--ui-line-soft)">
+          <div class="ui-tags"><span class="ui-tag">{{ t('source_type.' ~ kinds.get(chunk.doc_id, 'scientific_reference')) }}</span> <span class="ui-tag">{{ chunk.language | upper }}</span></div>
+          <b dir="auto" lang="{{ chunk.language }}">{{ chunk.title }}</b>
+          <div class="ui-note" style="margin: 0">{% if chunk.year %}{{ chunk.year }} · {% endif %}{{ t('srch.page', p=chunk.page) }}{% if chunk.language == 'ar' %} · {{ t('srch.arabic_kept') }}{% endif %}</div>
+          {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto" style="margin: 0">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
+          <details><summary>{{ t('srch.open_passage') }}</summary><blockquote dir="auto" lang="{{ chunk.language }}" style="white-space: pre-line">{{ chunk.text }}</blockquote></details>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="ui-note">{{ t('srch.no_passages') }}</p>{% endif %}
+    </section>
+    {% else %}
+    <section class="ui-card"><p class="ui-note" style="margin: 0">{{ t('srch.start') }}</p></section>
+    {% endif %}
+  </div>
+
+  <aside class="ui-col-side" style="flex: 1 1 260px; max-width: 320px">
+    {% if nothing %}
+    <section class="ui-warm">
+      <div class="ui-kicker">{{ t('srch.no_answer_kicker') }}</div>
+      <p style="margin: 0.4rem 0 0"><b>{{ t('srch.no_answer') }}</b> {{ t('srch.nothing_written') }}</p>
+      <form method="post" action="{{ url_for('search.suggest') }}" style="margin-top: 0.75rem">
+        {% include "search/_query_fields.html" %}
+        <label style="display: block">{{ t('srch.suggest_note') }}<textarea name="note" rows="2" dir="auto" maxlength="500"></textarea></label>
+        <button class="ui-btn" type="submit" style="margin-top: 0.5rem">{{ t('srch.suggest') }}</button>
+      </form>
+    </section>
+    {% endif %}
+    <section class="ui-card">
+      <h2>{{ t('srch.in_a_case') }}</h2>
+      <p class="ui-note">{{ t('srch.pin_later') }}</p>
+    </section>
+    <section class="ui-card">
+      <h2>{{ t('srch.what_leaves') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">
+        <li>{{ t('srch.leaves_on') if cloud else t('srch.leaves_off') }}</li>
+        <li>{{ t('srch.never_notes') }}</li>
+        <li>{{ t('srch.logged_no_who') }}</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

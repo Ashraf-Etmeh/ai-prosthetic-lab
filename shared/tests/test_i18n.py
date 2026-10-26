@@ -208,6 +208,10 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"curate.{what}" for what in ("not_extracted", "not_in_index", "link_only", "search_quality_due")}
         expected |= {f"{prefix}.{key}" for prefix in ("kgr_part", "kgr_does") for key in ("graph", "cases", "data")}
         expected |= {"kev.other_topic", "functional.heading", "audit.search_quality", "audit.search_quality_orthotics"}
+        # Smart search (plan Part 6, 2026-10-25): its languages, marks and the curator's line for suggestions
+        from search import engine as search_engine, log as search_log
+        expected |= {f"srch_lang.{language}" for language in search_engine.LANGUAGES}
+        expected |= {f"srch_mark.{mark}" for mark in search_log.MARKS} | {"curate.suggested"}
         self.assertEqual(expected - set(TEXT), set())
 
 
