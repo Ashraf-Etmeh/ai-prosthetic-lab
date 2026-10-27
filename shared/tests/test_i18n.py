@@ -246,6 +246,22 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"rehab_does.{key}" for key, _, _ in rehab_nav.MODULES} | {rehab_nav.NEEDS_CASE}
         expected |= {f"rehab_honest.{k}" for k in ("team_values", "sources", "no_ai", "drafts")}
         expected |= {f"fu.back_to.{key}" for key in rehab_plan.BACK_TO} | {"rteam.session"}
+        # Gait analysis (plan Part 10, 2026-10-27): its vocabularies, measures, threshold tests and cards
+        from gait import nav as gait_nav, rules as gait_rules, session as gait_session
+        for prefix, vocabulary in (("gait_source", gait_session.Source), ("gait_source_does", gait_session.Source),
+                                   ("gait_pace", gait_session.Pace), ("gait_marker", gait_session.Marker),
+                                   ("gait_cmp", gait_session.ComparisonKind), ("gait_mark", gait_session.Mark)):
+            expected |= {f"{prefix}.{member.value}" for member in vocabulary}
+        expected |= {f"gait_measure.{m}" for m in gait_session.MEASURES} | {f"gait_curve.{c}" for c in gait_session.CURVES}
+        expected |= {f"gait_rule.{test}" for test in gait_rules.TESTS} | {f"side_word.{s}" for s in gait_session.SIDES}
+        expected |= {f"gait_does.{key}" for key, _, _ in gait_nav.MODULES} | {gait_nav.NEEDS_CASE}
+        expected |= {f"gait_proto.{k}" for k in ("measures_elsewhere", "no_video", "device", "thresholds")}
+        expected |= {f"gcap_privacy.{k}" for k in ("no_video", "numbers_only", "consent", "not_sent")}
+        expected |= {f"gcmp_care.{k}" for k in ("person_changed", "association", "specialist")}
+        expected |= {f"gcap.{k}" for k in ("frame_rate", "trials", "trials_whole_body", "steps", "hidden_foot_trials",
+                                           "walkway", "device_state", "footwear", "aid", "source", "pace", "version")}
+        expected |= {f"gcmp.{k}" for k in ("first", "second")} | {f"rec_ev.{k}" for k in ("gait_session",
+                                                                                         "gait_comparison")}
         self.assertEqual(expected - set(TEXT), set())
 
 

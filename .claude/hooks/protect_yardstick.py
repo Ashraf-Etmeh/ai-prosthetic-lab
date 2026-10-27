@@ -39,6 +39,8 @@ PROTECTED = (
     "data/records/people/",  # each person's record: consent, cases, notes, requests; lines only ever added
     "data/records/access_log.jsonl",  # append-only: every look at or change to a person's record
     "data/governance/",  # the owner's: who may see what, the retention period and its law
+    "data/knowledge/gait_thresholds.csv",  # the owner's: thresholds that make a gait indicator (drafts so far)
+    "data/knowledge/gait_references.csv",  # the owner's: reference bands and smallest real changes, with sources
     "data/records/review_log.test.jsonl",
     "data/records/review_log.test-2026-10-23.jsonl",  # the 2 test lines moved out before the trial
 )

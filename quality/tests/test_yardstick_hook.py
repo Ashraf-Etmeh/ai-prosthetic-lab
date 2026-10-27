@@ -29,7 +29,8 @@ class FileToolTests(unittest.TestCase):
                      "data/quality/results/runs.jsonl", "data/records/search_log.jsonl",
                      "data/education/teaching_cases/TC-01.json", "data/records/learning/log.jsonl",
                      "data/records/people/P-3F9A2C.jsonl", "data/records/access_log.jsonl",
-                     "data/governance/roles.csv"):
+                     "data/governance/roles.csv", "data/knowledge/gait_thresholds.csv",
+                     "data/knowledge/gait_references.csv"):
             with self.subTest(path):
                 self.assertTrue(decide("Edit", file_path=str(PROJECT_ROOT / path)))
                 self.assertTrue(decide("Write", file_path=path))

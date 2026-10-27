@@ -96,7 +96,8 @@ differ it says where the build is heading, and this file still sets the rules).
   the recorded results (`data/quality/results/`), the review logs, the
   search log, the teaching cases (`data/education/teaching_cases/`), the
   learning log, the people's records and access trail (`data/records/people/`,
-  `access_log.jsonl`) or the governance settings (`data/governance/`)
+  `access_log.jsonl`), the governance settings (`data/governance/`) or the
+  gait thresholds and references (`data/knowledge/gait_*.csv`)
   (`.claude/hooks/protect_yardstick.py`, in `.claude/settings.json`); such a
   prompt is intended, not an error. Results are recorded only by the
   measuring commands (`--record`), never written by hand.
@@ -105,8 +106,8 @@ differ it says where the build is heading, and this file still sets the rules).
   roadmap item.
 - **Everything lives in its part's folder** (owner's decision, 2026-10-24;
   README.md, "Folder layout"): one package per part of the system (`shared/`,
-  `knowledge/`, `reasoning/`, `review/`, `quality/`, `search/`, `record/`, `rehabilitation/` (on a
-  domain's case), and one per clinical
+  `knowledge/`, `reasoning/`, `review/`, `quality/`, `search/`, `record/`, `rehabilitation/` and
+  `gait/` (each on a domain's case), and one per clinical
   domain: `prosthetics/`, `orthotics/`), each with its own `templates/<part>/`
   and `tests/`; the data likewise under `data/knowledge/`, `data/quality/`,
   `data/education/`, `data/governance/`, `data/records/`. A domain has the same files as the others (`case.py`,

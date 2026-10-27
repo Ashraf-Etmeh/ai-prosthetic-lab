@@ -1,0 +1,6 @@
+id,measure,test,value,unit,status,version,owner,approved_on,note
+stance_sides,stance,side_difference,5,points,draft,1,,,"Draft by Claude for the prototype (2026-10-27), from common practice in gait reports: stance differs between the sides by this many points of the cycle. Not the clinic's rule; the owner replaces or approves it."
+step_length_sides,step_length,side_difference_percent,10,%,draft,1,,,"Draft by Claude for the prototype (2026-10-27): step length differs between the sides by this share of their mean (a symmetry index). Not the clinic's rule."
+walking_speed_low,walking_speed,below,0.8,m/s,draft,1,,,"Draft by Claude for the prototype (2026-10-27): walking speed below this value. Not the clinic's rule."
+stride_variability_high,stride_time_cv,above,5,%,draft,1,,,"Draft by Claude for the prototype (2026-10-27): stride-to-stride variability above this value. Not the clinic's rule."
+min_steps,steps,min_steps,10,steps,draft,1,,,"Draft by Claude for the prototype (2026-10-27): the fewest steps a session should capture (SYSTEM_DESIGN.md §11.3). Not the clinic's rule."

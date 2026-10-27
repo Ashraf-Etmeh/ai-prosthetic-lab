@@ -16,7 +16,8 @@ and fitting sections are not available. What the reviewer saw at each
 decision is in the review log (review/decision_log.py). Version 3
 (2026-10-23) adds an orthotic case's "plan": the orthotist's requirements,
 design options and choice, and design workflow (orthotics/plan.py). Version 5
-(2026-10-27) adds "rehab", the case's rehabilitation (rehabilitation/plan.py).
+(2026-10-27) adds "rehab", the case's rehabilitation (rehabilitation/plan.py); version 6
+(2026-10-27) adds "gait", its gait sessions and comparisons (gait/session.py).
 
 Cases hold no patient identifiers (shared/case_schema.py); the file is named
 after the case's random case_id.
@@ -29,6 +30,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from gait.session import GaitRecord
 from knowledge.models import ProtocolChunk
 from reasoning.models import ComponentSupport, FittingSupport, Gap
 from reasoning.rag import Generation, components_from, fitting_from
@@ -49,7 +51,9 @@ from shared.config import CASES_DIR
 # check. Older files read with the new keys empty.
 # 5 (2026-10-27, plan Part 9): adds "rehab", the case's rehabilitation plan, progress, training and team record
 # (rehabilitation/plan.py RehabPlan), for a case of either domain; null before any is saved.
-CASE_FILE_VERSION = 5
+# 6 (2026-10-27, plan Part 10): adds "gait", the case's gait sessions (measures from the capture system, their
+# conditions and quality checks, the specialist's reviews) and comparisons (gait/session.py GaitRecord).
+CASE_FILE_VERSION = 6
 
 # What a case id may look like to be used as a file name (generated ids are
 # 12 hexadecimal characters). Anything else is never looked up on disk.
@@ -77,6 +81,8 @@ class CaseRecord:
     plan: Optional[Any] = None
     # The case's rehabilitation (rehabilitation/plan.py RehabPlan; plan Part 9). None: nothing saved yet.
     rehab: Optional[Any] = None
+    # The case's gait sessions and comparisons (gait/session.py GaitRecord; plan Part 10). None: none yet.
+    gait: Optional[Any] = None
 
     def shown_statements(self) -> list:
         """Every component and fitting statement on the review page (CitedStatement)."""
@@ -100,6 +106,7 @@ def record_to_dict(record: CaseRecord) -> dict:
         "generation": record.generation.to_dict() if record.generation else None,
         "plan": record.plan.to_dict() if record.plan else None,
         "rehab": record.rehab.to_dict() if record.rehab else None,
+        "gait": record.gait.to_dict() if record.gait else None,
     }
 
 
@@ -123,6 +130,7 @@ def record_from_dict(data: dict) -> CaseRecord:
         # none before version 3
         plan=domains.part(case.domain, "plan").PLAN.from_dict(data["plan"]) if data.get("plan") else None,
         rehab=RehabPlan.from_dict(data["rehab"]) if data.get("rehab") else None,  # none before version 5
+        gait=GaitRecord.from_dict(data["gait"]) if data.get("gait") else None,  # none before version 6
     )
 
 

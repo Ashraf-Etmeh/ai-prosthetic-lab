@@ -75,7 +75,7 @@ class SameShapeTests(unittest.TestCase):
                 self.assertLessEqual({nav.MAP} | {endpoint for _, endpoint, _ in nav.MODULES}, endpoints)
                 self.assertNotIn(shared, domains.DOMAINS)
         with self.assertRaises(ValueError):
-            domains.nav("gait")
+            domains.nav("podiatry")  # no such part
 
     def test_an_unknown_domain_is_refused(self):
         with self.assertRaisesRegex(ValueError, "domain must be one of"):

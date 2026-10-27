@@ -1,0 +1,88 @@
+{% extends "ui_base.html" %}
+{% from "ui_forms.html" import sent with context %}
+{% from "gait/macros.html" import gait_bar, num, no_session with context %}
+{# Module 4, device and performance (docs/design/04-gait-analysis/DevicePerf.html): two sessions of the case; their
+   conditions checked first; the device setting that changed, linked to where it was logged; each measure's
+   difference, against the smallest real change only where the owner set one from a source; "read with care"; the
+   comparison sent to the case. The specialist decides whether to keep, change or retest. #}
+{% block title %}{{ t('gcmp.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=4) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('gcmp.intro') }}</p>{% endblock %}
+{% block brief %}فهم العلاقة بين الجهاز والأداء{% endblock %}
+{% block bar %}{{ gait_bar(record, second) }}{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('gcmp.saved') }}</div>{% endif %}
+{% if gait.sessions | length < 2 %}
+<section class="ui-card" style="margin-top: 1.25rem"><p class="ui-note" style="margin: 0">{{ t('gcmp.need_two') }}</p>
+  <div class="ui-actions"><a class="ui-btn" href="{{ url_for('gait.capture', case_id=case.case_id) }}">{{ t('gmod.capture') }}</a></div></section>
+{% else %}
+<form class="ui-card" method="get" action="{{ url_for('gait.compare', case_id=case.case_id) }}" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; margin-top: 1.25rem">
+  {% for name, current in [('first', first), ('second', second)] %}
+  <label style="flex: 1 1 150px">{{ t('gcmp.' ~ name) }}<select name="{{ name }}">{% for s in gait.sessions %}<option value="{{ s.id }}"{{ " selected" if current and s.id == current.id }}>{{ s.id }} · {{ s.on }}</option>{% endfor %}</select></label>
+  {% endfor %}
+  <label style="flex: 2 1 220px">{{ t('gcmp.kind') }}<select name="kind">{% for k in kinds %}<option value="{{ k.value }}"{{ " selected" if k == kind }}>{{ t('gait_cmp.' ~ k.value) }}</option>{% endfor %}</select></label>
+  <button class="ui-btn ui-btn-quiet" type="submit">{{ t('gcmp.show') }}</button>
+</form>
+
+{% if first and second and first.id != second.id %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('gcmp.same') }}</h2><span class="ui-note" style="margin: 0">{{ t('gcmp.checked_first') }}</span></div>
+      <ul class="ui-kv">
+        {% for name in ['source', 'walkway', 'pace', 'footwear', 'aid'] %}
+        {% set a, b = first[name], second[name] %}
+        <li><span>{{ t('gcap.' ~ name) }}</span><b>{% if name not in differing %}{{ t('gcmp.same_value') }}{% if a %}, {% if a.value is defined %}{{ t(('gait_source.' if name == 'source' else 'gait_pace.') ~ a.value) }}{% else %}<bdi>{{ a }}</bdi>{% endif %}{% endif %}{% else %}<span style="color: var(--ui-alert, #9a3412)">{{ t('gcmp.differs') }}:</span> {% for v in [a, b] %}{% if v is none or v == '' %}—{% elif v.value is defined %}{{ t(('gait_source.' if name == 'source' else 'gait_pace.') ~ v.value) }}{% else %}<bdi>{{ v }}</bdi>{% endif %}{{ ' → ' if loop.first }}{% endfor %}{% endif %}</b></li>
+        {% endfor %}
+        <li><span>{{ t('gcmp.apart') }}</span><b><bdi>{{ first.on }}</bdi> → <bdi>{{ second.on }}</bdi></b></li>
+      </ul>
+      {% if differing %}<p class="ui-note"><b>{{ t('gcmp.not_fair') }}</b></p>{% endif %}
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('gcmp.setting') }}</h2>
+      {% if first.device_version != second.device_version and (first.device_version or second.device_version) %}
+      {% set la, lb = labels.get(first.device_version), labels.get(second.device_version) %}
+      <p style="margin: 0.5rem 0 0">{% if la %}{{ t(la[0], n=la[1]) }}{% else %}{{ t('gcmp.no_version') }}{% endif %} → {% if lb %}{{ t(lb[0], n=lb[1]) }}{% else %}{{ t('gcmp.no_version') }}{% endif %}
+        {% set page = (lb or la)[2] if (lb or la) else none %}{% if page %} · <a href="{{ url_for(page, case_id=case.case_id) }}">{{ t('gcmp.where_logged') }}</a>{% endif %}</p>
+      {% elif first.device_version and first.device_version == second.device_version %}
+      <p class="ui-note">{{ t('gcmp.same_version') }}</p>
+      {% else %}<p class="ui-note">{{ t('gcmp.no_versions') }}</p>{% endif %}
+      {% if (first.device_state or '') != (second.device_state or '') %}<p class="ui-note" dir="auto">{{ t('gcap.device_state') }}: <bdi>{{ first.device_state or '—' }}</bdi> → <bdi>{{ second.device_state or '—' }}</bdi></p>{% endif %}
+    </section>
+
+    <section class="ui-card">
+      <h2>{{ t('gcmp.measures', a=first.id, b=second.id) }}</h2>
+      {% if rows %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 560px">
+          <thead><tr><th scope="col">{{ t('gait.measure') }}</th><th scope="col">{{ first.id }}</th><th scope="col">{{ second.id }}</th><th scope="col">{{ t('gcmp.change') }}</th><th scope="col">{{ t('gcmp.vs_src') }}</th></tr></thead>
+          <tbody>{% for r in rows %}
+            <tr><td>{{ t('gait_measure.' ~ r.measure) }}{% if r.side != 'both' %}, {{ t('side_word.' ~ r.side) }}{% endif %} <span class="ui-note" style="margin: 0">(<bdi>{{ measures[r.measure][0] }}</bdi>)</span></td>
+              <td>{{ num(r.first) }}</td><td>{{ num(r.second) }}</td>
+              <td><b><bdi>{{ ('+' if r.change > 0 else ('−' if r.change < 0 else '')) ~ ("%g" | format(r.change | abs)) }}</bdi></b></td>
+              <td>{% set at = r.at_least_smallest_real_change %}{% if at is none %}<span style="color: var(--ui-muted)">{{ t('gcmp.src_not_set') }}</span>{% elif at %}{{ t('gcmp.at_least', n="%g" | format(r.reference.smallest_real_change)) }}{% else %}{{ t('gcmp.below', n="%g" | format(r.reference.smallest_real_change)) }}{% endif %}</td></tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      {% else %}<p class="ui-note">{{ t('gcmp.nothing_in_both') }}</p>{% endif %}
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('gcmp.care') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">{% for key in ['person_changed', 'association', 'specialist'] %}<li>{{ t('gcmp_care.' ~ key) }}</li>{% endfor %}</ul>
+    </section>
+    <form class="ui-card" method="post" action="{{ url_for('gait.compare', case_id=case.case_id) }}">
+      <input type="hidden" name="first" value="{{ first.id }}"><input type="hidden" name="second" value="{{ second.id }}"><input type="hidden" name="kind" value="{{ kind.value }}">
+      <h2>{{ t('gcmp.send') }}</h2>
+      <label style="display: block; margin-top: 0.5rem">{{ t('gcmp.note') }}<input type="text" name="note" dir="auto" value="{{ sent(form if form else none, 'note', '') }}"></label>
+      <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('gcmp.send_button') }}</button></div>
+      {% if gait.comparisons %}<ul class="ui-kv">{% for c in gait.comparisons | reverse %}<li><span>{{ c.first }} → {{ c.second }} · {{ t('gait_cmp.' ~ c.kind.value) }}</span><b><bdi>{{ c.saved_at[:10] }}</bdi></b></li>{% endfor %}</ul>{% endif %}
+    </form>
+  </aside>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

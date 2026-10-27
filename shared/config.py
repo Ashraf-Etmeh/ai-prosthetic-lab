@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # parts of the system, then the clinical domains. Tools that scan the code (the i18n key check,
 # the Arabic term sheet) read these.
 CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "search", "record", "rehabilitation",
-                 "prosthetics", "orthotics")
+                 "gait", "prosthetics", "orthotics")
 
 # The data, grouped like the code (since 2026-10-24): data/knowledge/ for the
 # knowledge layer, data/quality/ for the yardstick and the trial, data/records/
@@ -220,6 +220,15 @@ RETENTION_PATH = GOVERNANCE_DIR / "retention.csv"
 # The catalog domains searched for what the sources say about an intervention (rehabilitation/sources.py; local
 # search only: nothing of a rehabilitation plan is sent to a language model).
 REHAB_RETRIEVAL_DOMAINS = ("rehabilitation",)
+
+# ---- Gait analysis (SYSTEM_DESIGN.md §6.3; plan Part 10, 2026-10-27; gait/)
+# The owner's files (in git, protected by the yardstick hook): the thresholds that make an indicator (drafts by
+# Claude for the prototype until the owner sets them) and each measure's reference band and smallest real change,
+# each from a cited source with its page (none yet). This app measures nothing: the numbers come from the capture
+# system; no video reaches it (gait/session.py).
+GAIT_THRESHOLDS_PATH = DATA_DIR / "knowledge" / "gait_thresholds.csv"
+GAIT_REFERENCES_PATH = DATA_DIR / "knowledge" / "gait_references.csv"
+GAIT_MAX_UPLOAD = 200_000  # bytes in an imported table of measures
 
 # Whether an orthotic case may go to the cloud writer (LLM_PROVIDER). Owner's
 # decision 2026-10-23: not yet. The orthotic library holds the ICRC AFO manual

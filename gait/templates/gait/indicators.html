@@ -1,0 +1,62 @@
+{% extends "ui_base.html" %}
+{% from "ui_forms.html" import sent with context %}
+{% from "gait/macros.html" import gait_bar, num, session_picker, status_tag, next_link, no_session with context %}
+{# Module 3, indicators (docs/design/04-gait-analysis/Indicators.html): each measured value past a threshold the
+   clinic or a cited source set (gait/rules.py; the thresholds now are Claude's drafts, shown as drafts), with the
+   session's data facts; the specialist marks it reviewed or dismisses it with a reason, each mark added to the
+   session. The page never names a cause, a diagnosis or a fall risk, and never proposes an adjustment. #}
+{% block title %}{{ t('gind.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=3) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('gind.intro') }}</p>{% endblock %}
+{% block brief %}تحديد مؤشرات تحتاج تقييم المختص{% endblock %}
+{% block bar %}{{ gait_bar(record, session) }}{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% if not session %}{{ no_session() }}{% else %}
+{{ session_picker(gait, session, 'gait.indicators') }}
+{% set q = session.quality %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    {% if min_steps and q.steps is not none and q.steps < min_steps.value %}
+    <div class="ui-alert">{{ t('gind.few_steps', n=q.steps, min="%g" | format(min_steps.value)) }} {{ status_tag(min_steps) }}</div>
+    {% endif %}
+    {% for i in found %}{% set review = session.review_of(i.id) %}
+    <section class="ui-card" id="{{ i.id | replace(':', '-') }}">
+      <div class="ui-titlebar" style="align-items: baseline">
+        <h2>{% if i.threshold %}{{ t('gait_rule.' ~ i.threshold.test, measure=t('gait_measure.' ~ i.measure)) }}{% else %}{{ t('gind.outside_band', measure=t('gait_measure.' ~ i.measure)) }}{% endif %}</h2>
+        <span class="ui-tag{{ ' ui-tag-accent' if review else ' ui-tag-warn' }}">{% if review %}{{ t('gait_mark.' ~ review.mark.value) }}{% else %}{{ t('gind.to_review') }}{% endif %}</span>
+      </div>
+      <p style="margin: 0.5rem 0 0">
+        {% for side, value in i.observed.items() %}{% if side != 'both' %}{{ t('side_word.' ~ side) }} {% endif %}{{ num(value) }} <bdi>{{ measures[i.measure][0] }}</bdi>{{ ' · ' if not loop.last }}{% endfor %}
+        {% if i.difference is not none %} · {{ t('gind.difference', n="%g" | format(i.difference), unit=i.threshold.unit) }}{% endif %}
+      </p>
+      <p class="ui-note">
+        {% if i.threshold %}{{ t('gind.threshold', value="%g" | format(i.threshold.value), unit=i.threshold.unit, v=i.threshold.version) }} {{ status_tag(i.threshold) }}
+        {% else %}{{ t('gind.band', low="%g" | format(i.reference.low) if i.reference.low is not none else '—', high="%g" | format(i.reference.high) if i.reference.high is not none else '—') }} <span dir="auto">{{ i.reference.doc_id }}, p. {{ i.reference.page }}</span>{% endif %}
+      </p>
+      <p class="ui-note">{{ t('gind.data') }}
+        {% if q.steps is not none %}{{ t('gait.steps_n', n=q.steps) }}{% endif %}{% if q.trials is not none and q.trials_whole_body is not none %} · {{ t('gcap.whole_body_of', n=q.trials_whole_body, m=q.trials) }}{% endif %}{% if q.hidden_foot_trials %} · {{ t('gcap.hidden', n=q.hidden_foot_trials, side=t('side_word.' ~ q.hidden_side) if q.hidden_side else '') }}{% endif %} · {{ t('gait_source.' ~ session.source.value) }}
+      </p>
+      {% if review %}<p class="ui-note" dir="auto">{{ t('gind.marked_on', date=review.at[:10]) }}{% if review.words %} “<bdi>{{ review.words }}</bdi>”{% endif %}</p>{% endif %}
+      {% set f = form if form and form.get('indicator') == i.id else none %}
+      <form method="post" action="{{ url_for('gait.indicators', case_id=case.case_id, session=session.id) }}" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; margin-top: 0.5rem">
+        <input type="hidden" name="indicator" value="{{ i.id }}"><input type="hidden" name="session" value="{{ session.id }}">
+        <label style="flex: 2 1 220px">{{ t('gind.words') }}<input type="text" name="words" dir="auto" value="{{ sent(f, 'words', '') }}"></label>
+        <button class="ui-btn ui-btn-quiet" type="submit" name="mark" value="reviewed">{{ t('gind.mark_reviewed') }}</button>
+        <button class="ui-btn ui-btn-quiet" type="submit" name="mark" value="dismissed">{{ t('gind.dismiss') }}</button>
+      </form>
+    </section>
+    {% else %}
+    <section class="ui-card"><p class="ui-note" style="margin: 0">{{ t('gind.none') }}</p></section>
+    {% endfor %}
+  </div>
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('gind.never') }}</h2>
+      <p class="ui-note">{{ t('gind.never_note') }}</p>
+    </section>
+    {{ next_link('gait.compare', t('gind.to_compare')) }}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

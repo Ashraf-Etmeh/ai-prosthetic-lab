@@ -197,9 +197,9 @@ http://127.0.0.1:5000/orthotics.
 ## The pages
 
 Every page has the same header (since 2026-10-23): Prosthetics / Orthotics /
-Rehabilitation / Knowledge layer / Reasoning and review / Search and
-education / Patient record, the part's modules, and on a case's pages a bar
-with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
+Gait analysis / Rehabilitation / Knowledge layer / Reasoning and review /
+Search and education / Patient record, the part's modules, and on a case's
+pages a bar with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
 four prosthetic modules; the orthotics map is at /orthotics.
 
 **Knowledge layer** (2026-10-25, `docs/design/06-knowledge-layer/`) has three
@@ -307,6 +307,34 @@ page. Its plan is kept with the case (case file version 5).
 Nothing of a rehabilitation plan is sent to a language model. The lists of
 interventions, roles and task statuses are Claude's draft, awaiting the
 owner and a therapist.
+
+**Gait analysis** (2026-10-27, `docs/design/04-gait-analysis/`): works on a
+prosthetic or orthotic case, like rehabilitation (`/gait`). This app
+measures nothing: the numbers come from the capture system (a phone app,
+sensors, insoles or the gait lab), typed in or imported as a table
+(columns measure, left, right, both; `/gait/<case id>/template.csv`). No
+video reaches the app; a filmed session needs the person's consent to
+filming.
+- **1 Capture**: each session's source, conditions (walkway, pace, device
+  state and the device version logged, footwear, aid) and quality checks
+  (frame rate, trials with the whole body in frame, steps against the
+  minimum, a hidden foot, the scale marker). A session is saved once.
+- **2 Interpret**: the gait cycle side by side, each time-distance measure
+  next to its reference band and smallest real change (the owner's, from a
+  source with its page, in `data/knowledge/gait_references.csv`: none yet),
+  the knee flexion curve.
+- **3 Indicators**: each value past a threshold of
+  `data/knowledge/gait_thresholds.csv` (Claude's drafts for the prototype,
+  shown as drafts), with the session's data facts; the specialist marks it
+  reviewed or dismisses it with a reason. Never a cause, diagnosis or fall
+  risk.
+- **4 Device and performance**: two sessions, their conditions checked, the
+  device version that changed (linked to where it was logged), each
+  measure's difference, "read with care", and the comparison sent to the
+  case.
+
+Measuring movement is a medical-device function: before any clinical use,
+the capture system and this module need validation and regulatory advice.
 
 **Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
 has three pages:
@@ -624,6 +652,10 @@ rehabilitation/     Rehabilitation on a case of either domain: the plan and its 
                     nav.py
   templates/rehabilitation/
   tests/
+gait/               Gait analysis on a case of either domain: sessions and the table import (session.py), the
+                    owner's thresholds and references, indicators and comparisons (rules.py), routes.py, nav.py
+  templates/gait/
+  tests/
 quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
                     trial-case loader, the recorded results (results.py), the owner's release sign-offs
                     (releases.py) and the quality page's measures (measures.py)
@@ -646,8 +678,8 @@ docs/               SYSTEM_DESCRIPTION.md (what is built), FUTURE_WORK.md (decis
                     items), the independent blueprint, older hand-offs and manual checks
   design/           The target system: SYSTEM_DESIGN.md and its screen designs (open index.html)
 
-data/knowledge/     The owner's evidence rules and clinic rules, the knowledge items and the items to
-                    curate (in git)
+data/knowledge/     The owner's evidence rules, clinic rules and gait thresholds and references, the
+                    knowledge items and the items to curate (in git)
   sources/          Knowledge documents: catalog.json and the registry in git, the PDFs kept local
   extracted/        Cleaned text per document (generated, not in git)
   vector_store/     Chunks and their vectors (generated, not in git)

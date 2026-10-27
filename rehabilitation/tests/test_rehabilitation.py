@@ -32,7 +32,7 @@ from record.timeline import record_view
 from record import people
 from shared.dates import DateError
 from shared.requirements import Requirement
-from shared.store import CaseRecord, CaseStore, store
+from shared.store import CASE_FILE_VERSION, CaseRecord, CaseStore, store
 from shared.testing import chunk_record, fake_embed, visible_text
 
 
@@ -85,7 +85,7 @@ class PlanTests(unittest.TestCase):
             case_store.save(record)
             path = Path(folder) / f"{record.case.case_id}.json"
             data = json.loads(path.read_text(encoding="utf-8"))
-            self.assertEqual(data["case_file_version"], 5)
+            self.assertEqual(data["case_file_version"], CASE_FILE_VERSION)  # "rehab" since version 5
             self.assertEqual(CaseStore(Path(folder)).get(record.case.case_id).rehab.to_dict(), full_plan().to_dict())
             data.pop("rehab")  # a version 4 file
             data["case_file_version"] = 4

@@ -2007,6 +2007,40 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
 - Tests: 675, all passing; checks 0-2 fail only on 0.3 (uncommitted
   changes); golden cases OK; the Arabic term sheet exported again (1,865 texts).
 
+## Gait analysis (SYSTEM_DESIGN.md §6.3, plan Part 10, 2026-10-27)
+
+- **Asked (owner, 2026-10-27):** "it's just a prototype now, I haven't
+  received legal and clinical calls, so can you do it with insight of the
+  other app and what you think is right. go ahead and do part 10" (Part 9
+  committed and pushed first, `3ee0176`).
+- **Decided by Claude for the prototype** (following how gait systems split
+  the work: the capture system measures, the clinical record keeps and
+  compares), each open to the owner's change:
+  - **regulatory route:** the app measures nothing; it keeps, shows and
+    compares numbers measured elsewhere, so the measuring (the medical-device
+    function) stays with the capture system; validation and regulatory
+    advice come before clinical use;
+  - **data formats:** a CSV table (measure, left, right, both) or typed
+    values; C3D and other lab formats need a reader (a new dependency, the
+    owner's call) and are not built;
+  - **privacy:** no video or sensor file enters the app; consent to filming
+    recorded per filmed session;
+  - **thresholds:** five draft rows in `data/knowledge/gait_thresholds.csv`
+    (stance differing by 5 points, step length by 10 % of the mean, walking
+    speed below 0.8 m/s, stride variability above 5 %, at least 10 steps),
+    from common practice in gait reports, every one shown as a draft;
+  - **references:** `data/knowledge/gait_references.csv` starts empty: a
+    reference band or smallest real change needs a source's words and page
+    (tested word for word), which only the owner or a cited source gives;
+  - sessions saved once, reviews and comparisons added; the comparison
+    computes differences only (no conclusion).
+- **Waiting for the owner:** approve or replace the thresholds; the
+  reference bands and smallest real changes, with their sources; which
+  capture systems and formats the clinic uses; the validation and
+  regulatory route before clinical use (SYSTEM_DESIGN.md §11.6).
+- Tests: 691, all passing; checks 0-2 fail only on 0.3 (uncommitted
+  changes); golden cases OK; the Arabic term sheet exported again (2,061 texts).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

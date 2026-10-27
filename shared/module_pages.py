@@ -78,3 +78,28 @@ def latest_case_id(domain: Optional[str], folder) -> Optional[str]:
         if domain is None or saved.get("domain", DEFAULT_DOMAIN) == domain:  # no "domain": the default's
             return path.stem
     return None
+
+
+def recent_records(limit: int, folder=None) -> list[CaseRecord]:
+    """The cases of any domain on this machine, newest first: those opened since the server started, then the
+    case files by time (for a part that works on a domain's case: rehabilitation, gait analysis)."""
+    seen, records = set(), []
+    for record in reversed(store.all()):
+        seen.add(record.case.case_id)
+        records.append(record)
+    folder = store.folder or folder
+    paths = []
+    if folder and folder.is_dir():
+        paths = sorted(folder.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for path in paths:
+        if len(records) >= limit:
+            break
+        if path.stem in seen:
+            continue
+        try:
+            record = store.get(path.stem)
+        except (ValueError, KeyError):
+            continue
+        if record is not None:
+            records.append(record)
+    return records[:limit]

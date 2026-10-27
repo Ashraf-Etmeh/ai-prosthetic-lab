@@ -1,0 +1,114 @@
+{% extends "ui_base.html" %}
+{% from "ui_forms.html" import sent with context %}
+{% from "gait/macros.html" import gait_bar, num, prototype_card, next_link with context %}
+{# Module 1, capture (docs/design/04-gait-analysis/Main.html): the case's sessions, each with where its measures came
+   from, its conditions (so two sessions can be compared fairly) and the quality checks the capture system ran; and
+   the form that adds one, its measures typed or imported as a table. This app measures nothing; no video reaches
+   it; a filmed session needs the person's consent to filming. #}
+{% block title %}{{ t('gcap.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=1) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('gcap.intro') }}</p>{% endblock %}
+{% block brief %}تحليل المشي والحركة{% endblock %}
+{% block bar %}{{ gait_bar(record, gait.sessions[-1] if gait.sessions else none) }}{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set f = form if form else none %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card" id="sessions">
+      <h2>{{ t('gait.sessions') }}</h2>
+      {% if gait.sessions %}
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for s in gait.sessions | reverse %}{% set q = s.quality %}
+        <li class="ui-row" style="justify-content: space-between">
+          <div style="min-width: 0; flex: 1 1 320px">
+            <b>{{ s.id }}</b> · <bdi>{{ s.on }}</bdi> · {{ t('gait_source.' ~ s.source.value) }}{% if s.filmed %} · {{ t('gcap.consent_recorded') }}{% endif %}
+            <div class="ui-note" style="margin: 0.15rem 0 0">
+              {% for name in ['walkway', 'device_state', 'footwear', 'aid'] if s[name] %}{{ t('gcap.' ~ name) }}: <bdi>{{ s[name] }}</bdi>{{ ' · ' if not loop.last }}{% endfor %}{% if s.pace %} · {{ t('gait_pace.' ~ s.pace.value) }}{% endif %}
+              {% if s.device_version %}{% set v = s.device_version.split(':') %} · {{ t(versions | selectattr(0, 'equalto', s.device_version) | map(attribute=1) | first or 'gcap.version', n=v[1]) }}{% endif %}
+            </div>
+            <div class="ui-note" style="margin: 0.15rem 0 0">
+              {% if q.frame_rate is not none %}{{ t('gcap.fps', n="%g" | format(q.frame_rate)) }} · {% endif %}
+              {% if q.trials is not none and q.trials_whole_body is not none %}{{ t('gcap.whole_body_of', n=q.trials_whole_body, m=q.trials) }} · {% endif %}
+              {% if q.steps is not none %}{{ t('gait.steps_n', n=q.steps) }}{% if min_steps and q.steps < min_steps.value %} <b>{{ t('gcap.below_min', n="%g" | format(min_steps.value)) }}</b>{% endif %} · {% endif %}
+              {% if q.hidden_foot_trials %}{{ t('gcap.hidden', n=q.hidden_foot_trials, side=t('side_word.' ~ q.hidden_side) if q.hidden_side else '') }} · {% endif %}
+              {% if q.scale_marker %}{{ t('gcap.marker') }}: {{ t('gait_marker.' ~ q.scale_marker.value) }}{% endif %}
+            </div>
+          </div>
+          <div class="ui-actions" style="margin: 0"><a class="ui-btn ui-btn-quiet" href="{{ url_for('gait.interpret', case_id=case.case_id, session=s.id) }}">{{ t('gmod.interpret') }}</a></div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="ui-note">{{ t('gait.no_session') }}</p>{% endif %}
+    </section>
+
+    <form class="ui-card" method="post" action="{{ url_for('gait.capture', case_id=case.case_id) }}" enctype="multipart/form-data" id="new-session">
+      <h2>{{ t('gcap.new') }}</h2>
+      <h3>{{ t('gcap.source') }}</h3>
+      <div class="ui-checks">{% set src = f.get('source', '') if f else '' %}{% for s in sources %}<label><input type="radio" name="source" value="{{ s.value }}"{{ " checked" if s.value == src }}><span><b>{{ t('gait_source.' ~ s.value) }}</b> · {{ t('gait_source_does.' ~ s.value) }}</span></label>{% endfor %}</div>
+      <label class="ui-checks" style="margin-top: 0.5rem"><input type="checkbox" name="filming_consent" value="1"{{ " checked" if f and f.get('filming_consent') }}><span>{{ t('gcap.filming_consent') }}</span></label>
+
+      <h3>{{ t('gcap.conditions') }}</h3>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+        <label style="flex: 1 1 150px">{{ t('gcap.on') }}<input type="date" name="on" value="{{ sent(f, 'on', '') }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+        <label style="flex: 1 1 150px">{{ t('gcap.walkway') }}<input type="text" name="walkway" dir="auto" value="{{ sent(f, 'walkway', '') }}"></label>
+        {% set pc = f.get('pace', '') if f else '' %}
+        <label style="flex: 1 1 130px">{{ t('gcap.pace') }}<select name="pace"><option value="">{{ t('intake.not_recorded') }}</option>{% for p in paces %}<option value="{{ p.value }}"{{ " selected" if p.value == pc }}>{{ t('gait_pace.' ~ p.value) }}</option>{% endfor %}</select></label>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem">
+        <label style="flex: 2 1 200px">{{ t('gcap.device_state') }}<input type="text" name="device_state" dir="auto" value="{{ sent(f, 'device_state', '') }}"></label>
+        {% set dv = f.get('device_version', '') if f else '' %}
+        <label style="flex: 1 1 180px">{{ t('gcap.device_version') }}<select name="device_version"><option value="">{{ t('options.none') }}</option>{% for value, key, n, page in versions %}<option value="{{ value }}"{{ " selected" if value == dv }}>{{ t(key, n=n) }}</option>{% endfor %}</select></label>
+        <label style="flex: 1 1 150px">{{ t('gcap.footwear') }}<input type="text" name="footwear" dir="auto" value="{{ sent(f, 'footwear', '') }}"></label>
+        <label style="flex: 1 1 150px">{{ t('gcap.aid') }}<input type="text" name="aid" dir="auto" value="{{ sent(f, 'aid', '') }}"></label>
+      </div>
+      {% if not versions %}<p class="ui-note">{{ t('gcap.no_versions', domain=t('domain.' ~ case.domain)) }}</p>{% endif %}
+
+      <h3>{{ t('gcap.quality') }}</h3>
+      <p class="ui-note" style="margin-top: 0">{{ t('gcap.quality_note') }}</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+        {% for name in ['frame_rate', 'trials', 'trials_whole_body', 'steps', 'hidden_foot_trials'] %}<label style="flex: 1 1 120px">{{ t('gcap.' ~ name) }}<input type="text" inputmode="decimal" name="{{ name }}" value="{{ sent(f, name, '') }}"></label>{% endfor %}
+        {% set hs = f.get('hidden_side', '') if f else '' %}
+        <label style="flex: 1 1 120px">{{ t('gcap.hidden_side') }}<select name="hidden_side"><option value="">{{ t('options.none') }}</option>{% for s in sides %}<option value="{{ s }}"{{ " selected" if s == hs }}>{{ t('side_word.' ~ s) }}</option>{% endfor %}</select></label>
+        {% set mk = f.get('scale_marker', '') if f else '' %}
+        <label style="flex: 1 1 140px">{{ t('gcap.marker') }}<select name="scale_marker"><option value="">{{ t('intake.not_recorded') }}</option>{% for m in markers %}<option value="{{ m.value }}"{{ " selected" if m.value == mk }}>{{ t('gait_marker.' ~ m.value) }}</option>{% endfor %}</select></label>
+      </div>
+      {% if min_steps %}<p class="ui-note">{{ t('gcap.min_steps', n="%g" | format(min_steps.value)) }} {% if min_steps.status == 'draft' %}({{ t('gait.draft_rule') }}){% endif %}</p>{% endif %}
+
+      <h3>{{ t('gcap.measures') }}</h3>
+      <div class="ui-scroll">
+        <table class="ui-table" style="min-width: 480px">
+          <thead><tr><th scope="col">{{ t('gait.measure') }}</th><th scope="col">{{ t('side_word.left') }}</th><th scope="col">{{ t('side_word.right') }}</th><th scope="col">{{ t('gait.both') }}</th></tr></thead>
+          <tbody>{% for m, (unit, sided) in measures.items() %}
+            <tr><td>{{ t('gait_measure.' ~ m) }} <span class="ui-note" style="margin: 0">(<bdi>{{ unit }}</bdi>)</span></td>
+              {% if sided %}{% for side in sides %}<td><input type="text" inputmode="decimal" name="m_{{ m }}_{{ side }}" value="{{ sent(f, 'm_' ~ m ~ '_' ~ side, '') }}" aria-label="{{ t('gait_measure.' ~ m) }}, {{ t('side_word.' ~ side) }}"></td>{% endfor %}<td></td>
+              {% else %}<td></td><td></td><td><input type="text" inputmode="decimal" name="m_{{ m }}_both" value="{{ sent(f, 'm_' ~ m ~ '_both', '') }}" aria-label="{{ t('gait_measure.' ~ m) }}"></td>{% endif %}</tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      {% for c, unit in curves.items() %}
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem">
+        {% for side in sides %}<label style="flex: 1 1 240px">{{ t('gait_curve.' ~ c) }}, {{ t('side_word.' ~ side) }} (<bdi>{{ unit }}</bdi>)<textarea name="c_{{ c }}_{{ side }}" rows="2" dir="ltr">{{ sent(f, 'c_' ~ c ~ '_' ~ side, '') }}</textarea></label>{% endfor %}
+      </div>
+      {% endfor %}
+      <p class="ui-note">{{ t('gcap.curve_note') }}</p>
+
+      <h3>{{ t('gcap.import') }}</h3>
+      <label style="display: block">{{ t('gcap.table') }}<input type="file" name="table" accept=".csv,text/csv"></label>
+      <p class="ui-note">{{ t('gcap.table_note') }} <a href="{{ url_for('gait.template', case_id=case.case_id) }}">{{ t('gcap.template') }}</a></p>
+      <label style="display: block; margin-top: 0.5rem">{{ t('gcap.notes') }}<input type="text" name="notes" dir="auto" value="{{ sent(f, 'notes', '') }}"></label>
+      <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('gcap.save') }}</button></div>
+      <p class="ui-note">{{ t('gcap.saved_once') }}</p>
+    </form>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('gcap.privacy') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">{% for key in ['no_video', 'numbers_only', 'consent', 'not_sent'] %}<li>{{ t('gcap_privacy.' ~ key) }}</li>{% endfor %}</ul>
+    </section>
+    {{ prototype_card() }}
+    {% if gait.sessions %}{{ next_link('gait.interpret', t('gcap.to_interpret'), gait.sessions[-1]) }}{% endif %}
+  </aside>
+</div>
+{% endblock %}

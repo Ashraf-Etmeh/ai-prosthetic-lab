@@ -131,8 +131,9 @@ capabilities they cover: 1 تقييم حالات البتر, 2–3 تحليل ا
 دعم اختيار المكونات, 4 دعم قرارات التصميم والتركيب, 5 المتابعة والتقييم; since
 2026-10-24 each is a page of its own (§4.10), and the review page below is
 the specialist review reached from module 1. The orthotics map (`/orthotics`)
-does the same for its six (§4.9). Rehabilitation (§4.16) works on a case of
-either domain. Four shared parts sit next to the domains: the knowledge
+does the same for its six (§4.9). Rehabilitation (§4.16) and gait analysis
+(§4.17) work on a case of either domain. Four shared parts sit next to the
+domains: the knowledge
 layer (§4.12), reasoning and review (§4.11), search and education (§4.13,
 §4.14), and the patient record (§4.15).
 
@@ -775,6 +776,59 @@ with none). Every value is the team's (`rehabilitation/plan.py` RehabPlan):
   clips, the AI-drafted handover, sending the handover. The vocabularies are
   Claude's draft, awaiting the owner and a therapist.
 
+### 4.17 Gait analysis (SYSTEM_DESIGN.md §6.3, plan Part 10, 2026-10-27)
+
+`gait/` works on a case of either domain, like rehabilitation (listed first
+in SHARED_PARTS; its tabs carry the case's id). Its sessions are kept with
+the case (`shared/store.py` CaseRecord.gait, case file version 6).
+
+**Prototype decisions** (Claude, 2026-10-27, at the owner's request while no
+legal or clinical advice exists; `gait/session.py`):
+- The app measures nothing. The numbers come from the capture system, typed
+  or imported as a CSV table (measure, left, right, both; a curve's points in
+  left and right). Measuring from video or sensors is a medical-device
+  function and stays with the system that does it; before clinical use, that
+  system and this module need validation and regulatory advice.
+- No video or sensor file reaches the app, so nothing needs blurring and only
+  numbers are kept. A filmed session (phone video, lab capture) needs the
+  person's consent to filming, recorded for the session.
+- A session is saved once; the specialist's reviews are added to it.
+- The measures are a fixed list (walking speed, cadence, step length, stance,
+  swing, step width, stride time variability) and one curve (knee flexion).
+
+**The modules:**
+- **1 Capture** (`/gait/<id>/capture`): the sessions with their source,
+  conditions (walkway, pace, device state, the device version logged from
+  the domain's nav.py RECORD_VERSIONS, footwear, aid) and quality checks
+  (frame rate, trials, trials with the whole body in frame, steps against the
+  minimum-steps threshold, a hidden foot, the scale marker); the form adds
+  one, its measures typed or imported (an imported value wins).
+- **2 Interpret**: the gait cycle side by side (stance and swing per side);
+  each measure next to its reference band and smallest real change from the
+  owner's `data/knowledge/gait_references.csv` (each row with its source,
+  page and words, checked word for word by `gait/tests`; empty, so "not
+  set"); the knee curve as a chart; the capture system's accuracy for the
+  angle is the owner's to add.
+- **3 Indicators** (`gait/rules.py`): each value past a threshold of the
+  owner's `data/knowledge/gait_thresholds.csv` (a difference between the
+  sides in points or as a share of their mean, or a value below or above;
+  five rows, all Claude's drafts for the prototype, shown as drafts), or
+  outside a reference band; with the session's data facts (steps, trials,
+  a hidden foot, the source). The specialist marks it reviewed or dismisses
+  it with a reason. The page never names a cause, a diagnosis or a fall
+  risk, and never proposes an adjustment.
+- **4 Device and performance**: two sessions (and the kind of comparison:
+  one device setting, with and without the device, two devices, before and
+  after training); the conditions checked first, a difference flagged; the
+  device version that changed, linked to the page where it was logged; each
+  measure's difference, and whether it reaches the smallest real change only
+  where the owner set one; "read with care"; the comparison sent to the case
+  (kept with it; on the patient record's timeline).
+- **Not sent anywhere**: nothing of gait analysis goes to a language model.
+  **Not built**: measuring from video or sensors, clips, C3D or other lab
+  file formats (only the CSV table), reference bands and smallest real
+  changes (the owner's), approved thresholds.
+
 ---
 
 ## 5. Structure
@@ -782,7 +836,7 @@ with none). Every value is the team's (`rehabilitation/plan.py` RehabPlan):
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 675 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 691 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -893,6 +947,15 @@ rehabilitation/            rehabilitation on a case of either domain (§4.16)
   templates/rehabilitation/  map.html, plan.html, progress.html, training.html, home_programme.html, team.html,
                            macros.html
   tests/
+gait/                      gait analysis on a case of either domain (§4.17)
+  session.py               GaitRecord, Session (source, conditions, quality, measures, curves, reviews),
+                           Comparison; the measures list; reading the capture system's CSV table
+  rules.py                 the owner's thresholds and references, indicators, the two-session comparison
+  routes.py                GET /gait; GET/POST /gait/<id>/capture, /indicators, /compare; GET /interpret,
+                           /template.csv
+  nav.py                   what the header shows for gait analysis (its tabs need a case)
+  templates/gait/          map.html, capture.html, interpret.html, indicators.html, compare.html, macros.html
+  tests/
 prosthetics/               use cases 01-02
   case.py                  Case (amputation level, side, residual limb, activity, prior devices), its enums
   fields.py                the 17 prosthetic gap fields: label, search query, topic terms (en/de/ar); query_for()
@@ -923,7 +986,8 @@ orthotics/                 use case 03 (drafts)
 scripts/                   verify_prompts_0_2.py (checks for prompts 0-2), verify_all.py (that + golden cases)
 docs/                      this file, FUTURE_WORK.md, the independent blueprint, design/ (the target system)
 data/
-  knowledge/               evidence_rules.csv and clinic_rules.csv (the owner's), items.json,
+  knowledge/               evidence_rules.csv, clinic_rules.csv, gait_thresholds.csv and gait_references.csv
+                           (the owner's), items.json,
                            items_to_curate.csv (in git; regenerate after changing a guide or the rule table)
     sources/               catalog.json, 00_registry/sources_manifest.csv (in git); PDFs (local only)
     extracted/             cleaned text per document (generated)
@@ -1075,7 +1139,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **675 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **691 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -1200,6 +1264,11 @@ uses a missing key.
   wording, the roles and task statuses are Claude's drafts; the smallest
   change that matters and clinic-rule alerts wait for the owner; no video
   clips; the handover is typed and signed in the tool but sent outside it.
+- Gait analysis (§4.17, 2026-10-27): measures nothing itself (only numbers
+  from the capture system, as a CSV table or typed); the thresholds are
+  Claude's drafts, the reference bands and smallest real changes not set; no
+  clips; no lab file formats beyond the table; needs validation and
+  regulatory advice before clinical use.
 
 ---
 

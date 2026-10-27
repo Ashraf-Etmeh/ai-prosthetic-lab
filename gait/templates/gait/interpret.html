@@ -1,0 +1,93 @@
+{% extends "ui_base.html" %}
+{% from "gait/macros.html" import gait_bar, num, session_picker, next_link, no_session with context %}
+{# Module 2, interpret (docs/design/04-gait-analysis/Interpret.html): the gait cycle side by side; each time-distance
+   measure as recorded, next to its reference band and smallest real change, both the owner's, copied from a source
+   with its page (gait/rules.py; "not set" until then); the knee curve over the cycle. Nothing is concluded from a
+   value. #}
+{% block title %}{{ t('gint.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=2) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('gint.intro') }}</p>{% endblock %}
+{% block brief %}تفسير البيانات الحركية{% endblock %}
+{% block bar %}{{ gait_bar(record, session) }}{% endblock %}
+{% block content %}
+{% if not session %}{{ no_session() }}{% else %}
+{{ session_picker(gait, session, 'gait.interpret') }}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    {% set stance_l, stance_r = session.value('stance', 'left'), session.value('stance', 'right') %}
+    {% if stance_l is not none or stance_r is not none %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('gint.cycle') }}</h2>
+        {% if session.quality.steps is not none %}<span class="ui-note" style="margin: 0">{{ t('gint.average_of', n=session.quality.steps) }}</span>{% endif %}</div>
+      {% for side in sides %}{% set st = session.value('stance', side) %}{% set sw = session.value('swing', side) %}
+      {% if st is not none %}
+      <div style="margin-top: 0.75rem">
+        <div class="ui-note" style="margin: 0 0 0.25rem"><b>{{ t('side_word.' ~ side) }}</b></div>
+        <div style="display: flex; height: 1.75rem; border-radius: 6px; overflow: hidden; border: 1px solid var(--ui-line)" role="img" aria-label="{{ t('gint.stance_swing', stance="%g" | format(st), swing="%g" | format(sw if sw is not none else 100 - st)) }}">
+          <div style="flex: 0 0 {{ st }}%; background: var(--ui-accent); color: #FFFFFF; font-size: 0.8rem; display: flex; align-items: center; padding-inline: 0.5rem">{{ t('gint.stance', n="%g" | format(st)) }}</div>
+          <div style="flex: 1 1 auto; background: var(--ui-accent-soft); color: var(--ui-accent-dark); font-size: 0.8rem; display: flex; align-items: center; padding-inline: 0.5rem">{{ t('gint.swing', n="%g" | format(sw if sw is not none else 100 - st)) }}</div>
+        </div>
+      </div>
+      {% endif %}{% endfor %}
+      <p class="ui-note">{{ t('gint.cycle_note') }}</p>
+    </section>
+    {% endif %}
+
+    <section class="ui-card">
+      <h2>{{ t('gint.time_distance') }}</h2>
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 600px">
+          <thead><tr><th scope="col">{{ t('gait.measure') }}</th><th scope="col">{{ t('side_word.left') }}</th><th scope="col">{{ t('side_word.right') }}</th><th scope="col">{{ t('gint.band') }}</th><th scope="col">{{ t('gint.src') }}</th></tr></thead>
+          <tbody>{% for m, (unit, sided) in measures.items() if m in session.values %}
+            {% set ref = reference_for(m, 'left' if sided else 'both') %}
+            <tr><td>{{ t('gait_measure.' ~ m) }} <span class="ui-note" style="margin: 0">(<bdi>{{ unit }}</bdi>)</span></td>
+              {% if sided %}{% for side in sides %}<td>{% if session.value(m, side) is not none %}{{ num(session.value(m, side)) }}{% else %}—{% endif %}</td>{% endfor %}
+              {% else %}<td colspan="2" style="text-align: center">{{ num(session.value(m)) }}</td>{% endif %}
+              <td>{% if ref and (ref.low is not none or ref.high is not none) %}{% if ref.low is not none %}{{ num(ref.low) }}{% endif %}–{% if ref.high is not none %}{{ num(ref.high) }}{% endif %}<div class="ui-note" style="margin: 0" dir="auto">{{ ref.doc_id }}, p. {{ ref.page }}</div>{% else %}<span style="color: var(--ui-muted)">{{ t('gait.not_set') }}</span>{% endif %}</td>
+              <td>{% if ref and ref.smallest_real_change is not none %}{{ num(ref.smallest_real_change) }}<div class="ui-note" style="margin: 0" dir="auto">{{ ref.doc_id }}, p. {{ ref.page }}</div>{% else %}<span style="color: var(--ui-muted)">{{ t('gait.not_set') }}</span>{% endif %}</td></tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      <p class="ui-note">{{ t('gint.references_note') }}</p>
+    </section>
+
+    {% for curve, by_side in charts.items() %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('gait_curve.' ~ curve) }}</h2><span class="ui-note" style="margin: 0">{{ t('gint.side_view') }}</span></div>
+      {% set any = by_side.values() | first %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <svg viewBox="-40 -10 {{ any.width + 60 }} {{ any.height + 40 }}" width="100%" style="max-width: 520px; display: block" role="img" aria-label="{{ t('gait_curve.' ~ curve) }}">
+          <line x1="0" y1="{{ any.height }}" x2="{{ any.width }}" y2="{{ any.height }}" style="stroke: var(--ui-line)"></line>
+          <line x1="0" y1="0" x2="0" y2="{{ any.height }}" style="stroke: var(--ui-line)"></line>
+          <text x="-6" y="6" text-anchor="end" style="fill: var(--ui-muted); font-size: 11px">{{ "%g" | format(any.high) }}°</text>
+          <text x="-6" y="{{ any.height }}" text-anchor="end" style="fill: var(--ui-muted); font-size: 11px">{{ "%g" | format(any.low) }}°</text>
+          <text x="0" y="{{ any.height + 16 }}" style="fill: var(--ui-muted); font-size: 11px">0%</text>
+          <text x="{{ any.width }}" y="{{ any.height + 16 }}" text-anchor="end" style="fill: var(--ui-muted); font-size: 11px">100%</text>
+          {% for side, c in by_side.items() %}
+          <polyline points="{{ c.points }}" fill="none" style="stroke: {{ 'var(--ui-accent)' if side == 'left' else 'var(--ui-muted)' }}; stroke-width: 2{{ '; stroke-dasharray: 5 4' if side == 'right' }}"></polyline>
+          {% endfor %}
+        </svg>
+      </div>
+      <p class="ui-note">{% for side in by_side %}<span style="color: {{ 'var(--ui-accent)' if side == 'left' else 'var(--ui-muted)' }}">{{ '━' if side == 'left' else '┅' }}</span> {{ t('side_word.' ~ side) }}{{ ' · ' if not loop.last }}{% endfor %}</p>
+      <p class="ui-note">{{ t('gint.curve_note') }}</p>
+    </section>
+    {% endfor %}
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('gint.session') }}</h2>
+      <ul class="ui-kv">
+        <li><span>{{ t('gcap.on') }}</span><b><bdi>{{ session.on }}</bdi></b></li>
+        <li><span>{{ t('gcap.source') }}</span><b>{{ t('gait_source.' ~ session.source.value) }}</b></li>
+        {% for name in ['walkway', 'device_state', 'footwear', 'aid'] if session[name] %}<li><span>{{ t('gcap.' ~ name) }}</span><b dir="auto"><bdi>{{ session[name] }}</bdi></b></li>{% endfor %}
+        {% if session.pace %}<li><span>{{ t('gcap.pace') }}</span><b>{{ t('gait_pace.' ~ session.pace.value) }}</b></li>{% endif %}
+      </ul>
+      {% if session.quality.hidden_foot_trials %}<p class="ui-note">{{ t('gcap.hidden', n=session.quality.hidden_foot_trials, side=t('side_word.' ~ session.quality.hidden_side) if session.quality.hidden_side else '') }}</p>{% endif %}
+      {% if session.notes %}<p class="ui-note" dir="auto"><bdi>{{ session.notes }}</bdi></p>{% endif %}
+    </section>
+    {{ next_link('gait.indicators', t('gint.to_indicators'), session) }}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

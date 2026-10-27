@@ -26,7 +26,8 @@ class Event:
 
     at: str  # a date (YYYY-MM-DD) or a time (ISO 8601): sorted as text, newest first
     domain: str
-    kind: str  # intake, review, choice, version, visit; rehab_plan, rehab_score, team_entry, handover
+    kind: str  # intake, review, choice, version, visit; rehab_plan, rehab_score, team_entry, handover;
+    # gait_session, gait_comparison
     case_id: str
     endpoint: str  # the page it opens
     label: Optional[str] = None  # a version's text key, a visit's name as typed, a decision
@@ -126,6 +127,12 @@ def record_view(person: Person) -> RecordView:
                             for e in rehab.entries]
             view.events += [Event(h.signed_at, domain, "handover", case_id, "rehab.team", label=h.signed_by.value,
                                   number=h.number) for h in rehab.handovers if h.signed_at]
+        gait = record.gait  # its gait sessions and comparisons (gait/session.py; plan Part 10)
+        if gait is not None:
+            view.events += [Event(s.on, domain, "gait_session", case_id, "gait.capture", label=s.id)
+                            for s in gait.sessions]
+            view.events += [Event(c.saved_at, domain, "gait_comparison", case_id, "gait.compare",
+                                  label=f"{c.first} → {c.second}", note=c.note) for c in gait.comparisons]
         columns = [v for v in follow_up.visits if v.values]
         if follow_up.measures and columns:
             view.measures.append(MeasureTable(

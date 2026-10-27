@@ -33,6 +33,8 @@
   {%- elif e.kind == 'rehab_score' %}{{ t('rec_ev.rehab_score', goal=e.label, score=('+' if e.number > 0 else ('−' if e.number < 0 else '')) ~ (e.number | abs)) }}
   {%- elif e.kind == 'team_entry' %}{{ t('rec_ev.team_entry', role=t('role_rehab.' ~ e.label)) }}
   {%- elif e.kind == 'handover' %}{{ t('rec_ev.handover', n=e.number, role=t('role_rehab.' ~ e.label)) }}
+  {%- elif e.kind == 'gait_session' %}{{ t('rec_ev.gait_session', id=e.label) }}
+  {%- elif e.kind == 'gait_comparison' %}{{ t('rec_ev.gait_comparison', ids=e.label) }}
   {%- endif -%}
 {%- endmacro %}
 

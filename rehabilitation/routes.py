@@ -18,7 +18,6 @@ Every value is the team's; the tool writes, scores, doses and ranks nothing, and
 model. A refused form comes back as it was sent (400).
 """
 
-import json
 from dataclasses import dataclass
 from typing import Optional
 
@@ -112,25 +111,9 @@ def _limb(record: CaseRecord) -> str:
 @bp.route("/rehabilitation", methods=["GET"], endpoint="map")
 def first_page():
     """What rehabilitation does, and the cases on this machine to open (newest first)."""
-    seen, records = set(), []
-    folder = store.folder or CASES_DIR
-    paths = sorted(folder.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True) if folder and folder.is_dir() else []
-    for record in reversed(store.all()):
-        seen.add(record.case.case_id)
-        records.append(record)
-    for path in paths:
-        if len(records) >= LISTED_CASES:
-            break
-        if path.stem in seen:
-            continue
-        try:
-            record = store.get(path.stem)
-        except (ValueError, KeyError, json.JSONDecodeError):
-            continue
-        if record is not None:
-            records.append(record)
+    records = pages.recent_records(LISTED_CASES, CASES_DIR)
     return render_template("rehabilitation/map.html", part="rehabilitation", module="map", here=request.path,
-                           case=None, records=records[:LISTED_CASES])
+                           case=None, records=records)
 
 
 # ---- 1 Plan ---------------------------------------------------------------------------------------------

@@ -1,0 +1,56 @@
+{# The gait analysis pages' own pieces (gait/routes.py). #}
+
+{# A number as recorded, without trailing zeros. #}
+{% macro num(value) -%}<bdi>{{ "%g" | format(value) }}</bdi>{%- endmacro %}
+
+{# Under the header: the case in its domain's own one-line summary, the session shown, fake data, and that the
+   specialist interprets. #}
+{% macro gait_bar(record, session) %}
+<div class="ui-casebar">
+  <div class="ui-wrap">
+    <strong>{{ t('mod.case', id=record.case.case_id) }}{% if session %} · {{ t('gait.session_n', id=session.id) }}{% endif %}</strong>
+    <span class="ui-tag">{{ t('domain.' ~ record.case.domain) }}</span>
+    {% with case = record.case, plan = record.plan, module = 'gait' %}{% include domain_nav(record.case.domain).CASE_BAR %}{% endwith %}
+    {% if session %}<span style="color: var(--ui-muted)">{{ t('gait_source.' ~ session.source.value) }}{% if session.quality.steps is not none %} · {{ t('gait.steps_n', n=session.quality.steps) }}{% endif %}{% if session.pace %} · {{ t('gait_pace.' ~ session.pace.value) }}{% endif %}</span>{% endif %}
+    <span class="ui-chip">{{ t('mod.fake_data') }}</span>
+    <span class="ui-chip ui-chip-accent">{{ t('gait.specialist_interprets') }}</span>
+  </div>
+</div>
+{% endmacro %}
+
+{# The case's sessions as tags; the one shown marked. #}
+{% macro session_picker(gait, current, endpoint) %}
+{% if gait.sessions | length > 1 %}
+<nav class="ui-tags" aria-label="{{ t('gait.sessions') }}" style="margin-top: 0.75rem">
+  {% for s in gait.sessions %}<a class="ui-tag{{ ' ui-tag-accent' if current and s.id == current.id }}" href="{{ url_for(endpoint, case_id=case.case_id, session=s.id) }}"{% if current and s.id == current.id %} aria-current="true"{% endif %}>{{ s.id }} · <bdi>{{ s.on }}</bdi></a>{% endfor %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{# A threshold's or reference's status, like a clinic rule's: a draft as a draft. #}
+{% macro status_tag(row) -%}
+  <span class="ui-tag{{ ' ui-tag-accent' if row.status == 'approved' else ' ui-tag-warn' }}">{% if row.status == 'approved' %}{{ t('gait.approved', owner=row.owner, date=row.approved_on) }}{% else %}{{ t('gait.draft_rule') }}{% endif %}</span>
+{%- endmacro %}
+
+{# The prototype's decisions on measuring, data and the regulatory route (gait/session.py). #}
+{% macro prototype_card() %}
+<section class="ui-card">
+  <h2>{{ t('gait.prototype') }}</h2>
+  <ul class="ui-plain" style="margin-top: 0.5rem">
+    {% for key in ['measures_elsewhere', 'no_video', 'device', 'thresholds'] %}<li>{{ t('gait_proto.' ~ key) }}</li>{% endfor %}
+  </ul>
+</section>
+{% endmacro %}
+
+{# The next module, as the design's screens end. #}
+{% macro next_link(endpoint, label, session=none) %}
+<div class="ui-actions"><a class="ui-btn ui-btn-quiet" href="{{ url_for(endpoint, case_id=case.case_id, session=session.id if session else none) }}">{{ label }} →</a></div>
+{% endmacro %}
+
+{# No session yet: the way to capture one. #}
+{% macro no_session() %}
+<section class="ui-card" style="margin-top: 1.25rem">
+  <p class="ui-note" style="margin: 0">{{ t('gait.no_session') }}</p>
+  <div class="ui-actions"><a class="ui-btn" href="{{ url_for('gait.capture', case_id=case.case_id) }}">{{ t('gmod.capture') }}</a></div>
+</section>
+{% endmacro %}
