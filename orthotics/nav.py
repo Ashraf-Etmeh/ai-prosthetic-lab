@@ -16,3 +16,8 @@ WORDS = {"judge": "hard_status.judge", "stop_banner": "hard.stop_banner", "draft
 # The review page's links (review/templates/review/review.html): back to module 1, and on: (endpoint, text key).
 REVIEW_BACK = ("orthotic_modules.analysis", "review.to_analysis")
 REVIEW_NEXT = ("orthotic_modules.requirements", "review.to_requirements")
+# The patient record's timeline (record/timeline.py; plan Part 8): the plan's versioned records (plan field, text
+# key, page), and the pages a design choice and a follow-up visit open.
+RECORD_VERSIONS = (("parameter_versions", "rec_ev.parameter_version", "orthotic_modules.design"),)
+RECORD_CHOICE = "orthotic_modules.options"
+RECORD_FOLLOW_UP = "orthotic_modules.follow_up"

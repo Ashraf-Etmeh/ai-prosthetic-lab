@@ -161,3 +161,10 @@ class RouteTestCase(unittest.TestCase):
         learning_dir = patch.object(config, "LEARNING_DIR", Path(tmp.name) / "learning")
         learning_dir.start()
         self.addCleanup(learning_dir.stop)
+        # People's records and the access trail, never the real data/records/people/ and access_log.jsonl
+        # (record/people.py, record/access.py).
+        for name, value in (("PEOPLE_DIR", Path(tmp.name) / "people"),
+                            ("ACCESS_LOG_PATH", Path(tmp.name) / "access_log.jsonl")):
+            patcher = patch.object(config, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)

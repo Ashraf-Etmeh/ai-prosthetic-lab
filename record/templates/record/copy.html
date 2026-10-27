@@ -1,0 +1,65 @@
+{% extends "ui_base.html" %}
+{% from "record/macros.html" import person_bar, event_title, shown_value, domain_tag with context %}
+{# A copy of everything held about the person (SYSTEM_DESIGN.md §7.4, "the person can ask for a copy"): each
+   case's recorded values, the timeline, the outcome measures, the hand-over notes, every consent line, the
+   requests and the access trail. Printed from the browser; the header and buttons are left out of the print. #}
+{% block title %}{{ t('copy.title', code=person.code) }}{% endblock %}
+{% block kicker %}{{ t('gov.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('copy.intro') }}</p>
+<style>@media print { .ui-top, .ui-noprint { display: none !important; } .ui-card { break-inside: avoid; } }</style>{% endblock %}
+{% block brief %}الموافقة والخصوصية وحوكمة البيانات{% endblock %}
+{% block bar %}{{ person_bar(person) }}{% endblock %}
+{% block content %}
+<p class="ui-note ui-noprint"><a href="{{ url_for('record.governance', code=person.code) }}#requests">{{ t('copy.back') }}</a> · {{ t('copy.print') }}</p>
+<div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1rem">
+  <section class="ui-card">
+    <h2>{{ t('copy.cases') }}</h2>
+    {% for case_id, record in view.records %}
+    <h3>{% if record %}{{ domain_tag(record.case.domain) }} {% endif %}<span dir="ltr">{{ case_id }}</span>{% if record %} · <bdi>{{ record.case.created_at[:10] }}</bdi>{% endif %}</h3>
+    {% if record %}
+    {# The domain's own one-line summary (its level or condition, side, months, age, weight), then each item it
+       records. #}
+    <p style="display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0">{% with case = record.case, plan = none, module = 'copy' %}{% include domain_nav(record.case.domain).CASE_BAR %}{% endwith %}</p>
+    <table class="ui-table"><tbody>{% for path, value in shown_values[case_id] %}<tr><td style="color: var(--ui-muted)">{{ field_label(path) }}</td><td>{{ shown_value(value) }}</td></tr>{% endfor %}
+      {% if record.case.intake_notes %}<tr><td style="color: var(--ui-muted)">{{ t('intake.notes') }}</td><td dir="auto"><bdi>{{ record.case.intake_notes }}</bdi></td></tr>{% endif %}</tbody></table>
+    {% else %}<p class="ui-note">{{ t('rec.case_missing', id=case_id) }}</p>{% endif %}
+    {% else %}<p class="ui-note">{{ t('rec.no_cases_short') }}</p>{% endfor %}
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('rec.timeline') }}</h2>
+    {% if view.events %}<ul class="ui-kv">{% for e in view.events %}<li><span><bdi>{{ e.day }}</bdi> · {{ t('domain.' ~ e.domain) }} · <span dir="ltr">{{ e.case_id }}</span></span><b>{{ event_title(e) }}</b></li>{% endfor %}</ul>
+    {% else %}<p class="ui-note">{{ t('rec.no_events') }}</p>{% endif %}
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('rec.measures') }}</h2>
+    {% for table in view.measures %}
+    <h3>{{ domain_tag(table.domain) }} <span dir="ltr">{{ table.case_id }}</span></h3>
+    <div class="ui-scroll"><table class="ui-table">
+      <thead><tr><th scope="col">{{ t('rec.measure') }}</th>{% for name, day in table.columns %}<th scope="col"><bdi>{{ name }}</bdi>{% if day %} · <bdi>{{ day }}</bdi>{% endif %}</th>{% endfor %}</tr></thead>
+      <tbody>{% for name, unit, how, values in table.rows %}<tr><td><bdi>{{ name }}</bdi>{% if unit %} (<bdi>{{ unit }}</bdi>){% endif %}{% if how %} · <bdi>{{ how }}</bdi>{% endif %}</td>{% for value in values %}<td><bdi>{{ value or '—' }}</bdi></td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="ui-note">{{ t('rec.no_measures') }}</p>{% endfor %}
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('rec.notes') }}</h2>
+    {% for n in person.notes %}<p style="margin: 0.5rem 0 0" dir="auto"><bdi>{{ n.at[:10] }}</bdi> · <bdi>{{ n.text }}</bdi></p>{% else %}<p class="ui-note">{{ t('copy.no_notes') }}</p>{% endfor %}
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('gov.consent') }}</h2>
+    {% if person.consent %}<ul class="ui-kv">{% for line in person.consent %}<li><span><bdi>{{ line.at[:16] | replace('T', ' ') }}</bdi> · {{ t('consent.' ~ line.item) }}</span><b>{{ t('consent_answer.' ~ line.answer) }} · {{ t('srch_lang.' ~ line.language) }}</b></li>{% endfor %}</ul>
+    {% else %}<p class="ui-note">{{ t('rec.not_recorded') }}</p>{% endif %}
+    <h3>{{ t('gov.requests') }}</h3>
+    {% if person.requests %}<ul class="ui-kv">{% for r in person.requests %}<li><span>{{ t('request_kind.' ~ r.kind) }}{% if r.by %} · {{ t('requested_by.' ~ r.by) }}{% endif %}</span><b><bdi>{{ r.at[:10] }}</bdi></b></li>{% endfor %}</ul>
+    {% else %}<p class="ui-note">{{ t('gov.no_requests') }}</p>{% endif %}
+  </section>
+
+  <section class="ui-card">
+    <h2>{{ t('gov.trail') }}</h2>
+    <ul class="ui-kv">{% for line in trail %}<li><span>{{ t('access_action.' ~ line.action) }} · {{ t('copy.who_not_recorded') }}</span><b><bdi>{{ line.at[:16] | replace('T', ' ') }}</bdi></b></li>{% endfor %}</ul>
+  </section>
+</div>
+{% endblock %}

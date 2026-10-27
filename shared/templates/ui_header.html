@@ -3,11 +3,12 @@
    the case bar.
    Uses: domain (a case's own domain wins; none: the default domain), or part (a shared part with pages of its
    own, e.g. 'review': shared/domains.py SHARED_PARTS); case (or none), module (the current one's key), here (this
-   page's path); lang_form: the id of the page's form on an intake form, whose language button posts the form so
+   page's path); part_args: what a shared part's tabs need in their address (the patient record: the person's code); lang_form: the id of the page's form on an intake form, whose language button posts the form so
    it comes back filled in (nothing typed is lost).
    What each domain or shared part shows (its map, intake, module tabs, who decides, its case-bar summary) is in
    its own nav.py, found through shared/domains.py: this header names none of them. #}
 {% set part = part if part is defined else none %}
+{% set part_args = part_args if part_args is defined and part_args else {} %}
 {% if part %}
 {% set nav = domain_nav(part) %}
 {% set part_name = t('part.' ~ part) %}
@@ -35,7 +36,7 @@
     <nav class="ui-nav" aria-label="{{ t('domain.modules', domain=part_name) }}">
       {% if part %}
       {% for key, endpoint, anchor in nav.MODULES %}
-      <a href="{{ url_for(endpoint) }}{{ anchor }}"{% if module == key %} aria-current="page"{% endif %}>{{ t(nav.LABELS ~ key) }}</a>
+      <a href="{{ url_for(endpoint, **part_args) }}{{ anchor }}"{% if module == key %} aria-current="page"{% endif %}>{{ t(nav.LABELS ~ key) }}</a>
       {% endfor %}
       {% else %}
       <a href="{{ map_url }}"{% if module == 'map' %} aria-current="page"{% endif %}>{{ t('mod.map') }}</a>

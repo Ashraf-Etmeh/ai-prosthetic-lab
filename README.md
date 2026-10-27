@@ -197,8 +197,8 @@ http://127.0.0.1:5000/orthotics.
 ## The pages
 
 Every page has the same header (since 2026-10-23): Prosthetics / Orthotics /
-Knowledge layer / Reasoning and review / Search and education, the part's
-modules, and on a case's pages a bar with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
+Knowledge layer / Reasoning and review / Search and education / Patient
+record, the part's modules, and on a case's pages a bar with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
 four prosthetic modules; the orthotics map is at /orthotics.
 
 **Knowledge layer** (2026-10-25, `docs/design/06-knowledge-layer/`) has three
@@ -248,6 +248,36 @@ them set, so the page says the panel has not answered yet. The learning log
 (`data/records/learning/log.jsonl`, one for this machine until roles and
 login come) gives the cases worked, the CPD minutes recorded and a CSV
 export.
+
+**Patient record** (2026-10-27, `docs/design/09-patient-record/`, use case
+07): one record per person across domains, under a code the app makes
+(P-XXXXXX); the name, birth date and file number stay in the clinic's own
+system. Open a record at `/record`, record the person's consent first, then
+attach a case at its intake by typing the code in the form's "Person code"
+field (empty: a case on its own, as before).
+- **1 Record and follow-up** (`/record/<code>`): the cases, the latest
+  design choice, the next review due, open alerts and the consent; the
+  timeline across domains (each case's intake, signed reviews, design
+  choices, socket, alignment or design versions, follow-up visits), the
+  outcome measures as entered, the follow-up schedule, and hand-over notes
+  that stay on this machine.
+- **2 Consent and governance** (`/record/<code>/governance`): four consent
+  items, each separate, shown in Arabic or English as the person chooses,
+  each change a new line. A case of a person who has not agreed to the cloud
+  model gets no AI summaries; one who has not agreed to quality use is left
+  out of the quality counts. Also: where each piece of data goes (read from
+  the code's own switches), who may see what (`data/governance/roles.csv`,
+  a draft awaiting the owner, not enforced until sign-in), the retention
+  period and its law (not set), the access trail (every look, who: not
+  recorded until sign-in), a copy for the person, and deletion requests.
+
+A deletion is done by the owner by hand: delete the person's case files
+(`data/records/cases/<case id>.json`, the ids are in the person's file),
+then cut the person's file (`data/records/people/<code>.jsonl`) down to its
+`created` line and its deletion `request` line, and add one line
+`{"record_version": 1, "kind": "deleted", "at": "<UTC time>"}`. The page then
+says the content was deleted. The review log's lines for those cases stay
+(it is append-only): see docs/FUTURE_WORK.md, "Patient record".
 
 **Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
 has three pages:
@@ -555,6 +585,11 @@ search/             Search and education: smart search (engine.py: filters, the 
                     learning (learning.py: teaching cases, attempts, the learning log; learning_routes.py)
   templates/search/
   tests/
+record/             Patient record and governance: each person's record (people.py: consent, cases, notes,
+                    requests), the access trail (access.py), roles and retention (governance.py), the
+                    timeline (timeline.py), routes.py, nav.py
+  templates/record/
+  tests/
 quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
                     trial-case loader, the recorded results (results.py), the owner's release sign-offs
                     (releases.py) and the quality page's measures (measures.py)
@@ -587,9 +622,10 @@ data/quality/       golden_cases/ and the frozen golden_cases_held_out/ with the
                     baselines, trial/ (Arabic term sheet, prepared trial cases; the report not in git),
                     results/runs.jsonl (the recorded results) and releases.csv (the owner's sign-offs)
 data/education/     teaching_cases/: the educator's invented teaching cases (in git; three drafts so far)
+data/governance/    The owner's: roles.csv (who may see what) and retention.csv (in git)
 data/records/       What the app records on this machine (not in git): cases/ (one JSON file per case),
-                    the review logs, the search log and learning/ (attempts, the learning log, the
-                    teaching cases' analyses)
+                    the review logs, the search log, learning/ (attempts, the learning log, the
+                    teaching cases' analyses), people/ (one file per person) and access_log.jsonl
 ```
 
 A new clinical domain adds a package with the same files as the others (case.py,

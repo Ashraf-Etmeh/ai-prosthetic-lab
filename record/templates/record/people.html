@@ -1,0 +1,46 @@
+{% extends "ui_base.html" %}
+{% from "record/macros.html" import answer_tag, domain_tag with context %}
+{# The records on this machine (record/routes.py person, no code): each under its code, with its cases and its
+   consent to keep a care record. A new record starts with its consent (the governance page). #}
+{% block title %}{{ t('rec.title_list') }}{% endblock %}
+{% block kicker %}{{ t('rec.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('rec.intro') }}</p>{% endblock %}
+{% block brief %}تنظيم وتوثيق بيانات المرضى والمتابعة{% endblock %}
+{% block content %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: center">
+        <h2>{{ t('rec.records') }}</h2>
+        <form method="post" action="{{ url_for('record.new') }}"><button class="ui-btn" type="submit">{{ t('rec.new') }}</button></form>
+      </div>
+      {% if records %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 560px">
+          <thead><tr><th scope="col">{{ t('rec.col_code') }}</th><th scope="col">{{ t('rec.col_opened') }}</th><th scope="col">{{ t('rec.col_cases') }}</th><th scope="col">{{ t('consent.care_record') }}</th></tr></thead>
+          <tbody>
+            {% for person in records %}
+            <tr>
+              <td><a href="{{ url_for('record.person', code=person.code) }}"><b dir="ltr">{{ person.code }}</b></a>{% if person.deleted_at %} <span class="ui-tag ui-tag-warn">{{ t('rec.deleted_short') }}</span>{% elif person.deletion_requested %} <span class="ui-tag ui-tag-warn">{{ t('rec.deletion_open_short') }}</span>{% endif %}</td>
+              <td><bdi>{{ person.created_at[:10] }}</bdi></td>
+              <td>{% if person.cases %}{% for link in person.cases %}{{ domain_tag(link.domain) }} {% endfor %}{% else %}<span style="color: var(--ui-muted)">{{ t('rec.no_cases_short') }}</span>{% endif %}</td>
+              <td>{{ answer_tag(person.consent_now('care_record')) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="ui-note">{{ t('rec.none_yet') }}</p>{% endif %}
+    </section>
+  </div>
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('rec.how') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">
+        {% for key in ['code', 'consent_first', 'attach', 'never_sent', 'no_sign_in'] %}<li>{{ t('rec_how.' ~ key) }}</li>{% endfor %}
+      </ul>
+      <a class="ui-btn ui-btn-quiet" href="{{ url_for('record.governance') }}" style="margin-top: 0.75rem">{{ t('rec.to_governance') }}</a>
+    </section>
+  </aside>
+</div>
+{% endblock %}

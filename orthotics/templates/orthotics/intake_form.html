@@ -272,6 +272,8 @@
       <textarea id="intake_notes" name="intake_notes" dir="auto">{{ sent('intake_notes') }}</textarea>
     </fieldset>
 
+    {% include "ui_person_field.html" %}
+
     <p class="banner">{{ t('ort.ai_note') }}</p>
     <button type="submit">{{ t('intake.submit') }}</button>
   </form>

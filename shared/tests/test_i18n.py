@@ -220,6 +220,20 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"learn_honest.{key}" for key in ("no_grade", "panel_once", "invented")}
         from search import learning_routes
         expected |= {f"learn_unit.{unit}" for _, unit in learning_routes.UNITS} | {"learn_unit.months"}
+        # The patient record and governance (plan Part 8, 2026-10-27)
+        from record import access as record_access, governance as record_governance, people
+        expected |= {f"{prefix}.{item}" for prefix in ("consent", "consent_does", "consent_short")
+                     for item in people.CONSENT_ITEMS}
+        expected |= {f"consent_answer.{a}" for a in people.ANSWERS} | {f"consent_do.{a}" for a in people.ANSWERS}
+        expected |= {f"requested_by.{by}" for by in people.REQUESTED_BY} | {f"request_kind.{k}" for k in people.REQUESTS}
+        expected |= {f"access_action.{action}" for action in record_access.ACTIONS}
+        expected |= {f"role.{role}" for role in record_governance.ROLES}
+        expected |= {f"access.{v}" for values in record_governance.ACCESS.values() for v in values}
+        expected |= {f"gov_col.{c}" for c in record_governance.ACCESS} | {f"gov_setting.{s}" for s in record_governance.SETTINGS}
+        expected |= {f"gov_cloud.{k}" for k in ("on", "off", "search_on")}
+        expected |= {f"rec_how.{k}" for k in ("code", "consent_first", "attach", "never_sent", "no_sign_in")}
+        expected |= {f"rec_ev.{k}" for k in ("intake", "review", "choice", "visit")}
+        expected |= {key for domain in domains.DOMAINS for _, key, _ in domains.part(domain, "nav").RECORD_VERSIONS}
         self.assertEqual(expected - set(TEXT), set())
 
 

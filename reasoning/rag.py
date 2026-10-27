@@ -61,6 +61,7 @@ from reasoning.models import (
 from reasoning.quote_check import QuoteRefused, find_quote, grade_after, locate_pages
 from reasoning.rag_topics import GAPS, Topic, topics_for_case
 from reasoning.writer import OfflineWriter, Writer, WriterUnavailable, is_cloud
+from record import people
 from shared import domains
 from shared.case_schema import CaseCore
 from shared.config import LLM_EFFORT, MAX_ITEMS_PER_TOPIC
@@ -355,11 +356,16 @@ def generate(case: CaseCore, passages: dict[str, list[ProtocolChunk]], writer: W
 
     A case whose domain's profile keeps it from the cloud (an orthotic case while
     ORTHOTIC_CLOUD_AI is off) never reaches a cloud writer, whoever passes the
-    writer (the app, the trial loader, golden_cases --rag).
+    writer (the app, the trial loader, golden_cases --rag). Nor does a case
+    attached to a person whose latest consent to the cloud model is not
+    "agreed" (record/people.py; owner, 2026-10-27); a case with no person is
+    not affected.
     """
     profile = profile_for(case)
     if is_cloud(writer) and not profile.cloud_ai():
         writer = OfflineWriter(profile.ai_off_reason)
+    if is_cloud(writer) and people.cloud_consent(case.case_id) is False:
+        writer = OfflineWriter(people.CONSENT_OFF)
     topics = topics if topics is not None else topics_for_case(case)
     with ThreadPoolExecutor(max_workers=len(profile.parts)) as pool:
         futures = {part: pool.submit(run_part, part, case, [t for t in topics if t.part == part], passages, writer,

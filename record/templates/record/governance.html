@@ -1,0 +1,133 @@
+{% extends "ui_base.html" %}
+{% from "record/macros.html" import person_bar, answer_tag with context %}
+{# 2 Consent and governance (use case 07; docs/design/09-patient-record/Governance.html). For a person: each consent
+   item separate, shown in the language the person chose, each change a new line; their access trail; a copy or a
+   deletion request. For everyone: where each piece of data goes (read from the code's own settings), who may see
+   what and the retention period (the owner's files, data/governance/; not enforced until sign-in). #}
+{% block title %}{{ t('gov.title') }}{% endblock %}
+{% block kicker %}{{ t('gov.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('gov.intro') }}</p>{% endblock %}
+{% block brief %}الموافقة والخصوصية وحوكمة البيانات{% endblock %}
+{% block bar %}{% if person %}{{ person_bar(person) }}{% endif %}{% endblock %}
+{% block content %}
+{% if created %}<div class="ui-saved" role="status">{{ t('gov.created', code=person.code) }}</div>
+{% elif request.args.get('saved') is not none %}<div class="ui-saved" role="status">{{ t('gov.saved') }}</div>{% endif %}
+
+<div class="ui-cols">
+  <div class="ui-col-main">
+    {% if person %}
+    <section class="ui-card" id="consent">
+      <div class="ui-titlebar" style="align-items: center"><h2>{{ t('gov.consent') }}</h2>
+        <div class="ui-tags" role="group" aria-label="{{ t('gov.consent_lang') }}">
+          <span class="ui-note" style="margin: 0">{{ t('gov.consent_lang') }}</span>
+          {% for code, name in [('en', 'English'), ('ar', 'العربية')] %}<a class="ui-tag{{ ' ui-tag-accent' if code == consent_lang }}" lang="{{ code }}" href="{{ url_for('record.governance', code=person.code, consent_lang=code) }}#consent"{% if code == consent_lang %} aria-current="true"{% endif %}>{{ name }}</a>{% endfor %}
+        </div>
+      </div>
+      <p class="ui-note">{{ t('gov.consent_note') }}</p>
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for item in items %}
+        {% set now = person.consent_now(item) %}
+        <li class="ui-row" style="justify-content: space-between">
+          <div lang="{{ consent_lang }}" dir="{{ 'rtl' if consent_lang == 'ar' else 'ltr' }}" style="min-width: 0; flex: 1 1 280px">
+            <b>{{ consent_t('consent.' ~ item) }}</b>
+            <div class="ui-note" style="margin: 0.15rem 0 0">{{ consent_t('consent_does.' ~ item) }}</div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center">
+            {{ answer_tag(now) }}{% if now %} <span class="ui-note" style="margin: 0">{{ t('gov.shown_in', language=t('srch_lang.' ~ now.language)) }}</span>{% endif %}
+            {% for answer in (['withdrawn'] if now and now.answer == 'agreed' else ['agreed', 'declined']) if not (now and now.answer == answer) %}
+            <form method="post" action="{{ url_for('record.consent', code=person.code) }}">
+              <input type="hidden" name="item" value="{{ item }}"><input type="hidden" name="answer" value="{{ answer }}"><input type="hidden" name="consent_lang" value="{{ consent_lang }}">
+              <button class="ui-btn{{ ' ui-btn-quiet' if answer != 'agreed' }}" type="submit">{{ t('consent_do.' ~ answer) }}</button>
+            </form>
+            {% endfor %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if person.consent %}
+      <details style="margin-top: 0.75rem"><summary>{{ t('gov.consent_history', n=person.consent | length) }}</summary>
+        <ul class="ui-kv">{% for line in person.consent | reverse %}<li><span><bdi>{{ line.at[:16] | replace('T', ' ') }}</bdi> · {{ t('consent_short.' ~ line.item) }}</span><b>{{ t('consent_answer.' ~ line.answer) }} · {{ t('srch_lang.' ~ line.language) }}</b></li>{% endfor %}</ul>
+      </details>
+      {% endif %}
+      <p class="ui-note">{{ t('gov.consent_draft') }}</p>
+    </section>
+    {% else %}
+    <section class="ui-card">
+      <h2>{{ t('gov.consent') }}</h2>
+      <p class="ui-note">{{ t('gov.open_person') }}</p>
+      <a class="ui-btn ui-btn-quiet" href="{{ url_for('record.person') }}" style="margin-top: 0.5rem">{{ t('gov.to_records') }}</a>
+    </section>
+    {% endif %}
+
+    <section class="ui-card">
+      <div class="ui-titlebar"><h2>{{ t('gov.where') }}</h2><span class="ui-note" style="margin: 0">{{ t('gov.where_from') }}</span></div>
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 600px">
+          <thead><tr><th scope="col">{{ t('gov.col_data') }}</th><th scope="col">{{ t('gov.col_here') }}</th><th scope="col">{{ t('gov.col_cloud') }}</th><th scope="col">{{ t('gov.col_quality') }}</th></tr></thead>
+          <tbody>
+            <tr><td>{{ t('gov_data.identifiers') }}</td><td>{{ t('gov.never_clinic') }}</td><td>{{ t('gov.never') }}</td><td>{{ t('gov.never') }}</td></tr>
+            <tr><td>{{ t('gov_data.coded') }}</td><td>{{ t('gov.kept') }}</td>
+              <td><ul class="ui-plain">{% for use in clouds %}{% set is_domain = use.what in all_domains %}<li>{{ t('gov_cloud.' ~ ('off' if not use.on else ('on' if is_domain else 'search_on')), what=(t('domain.' ~ use.what) if is_domain else t('gov.search_questions'))) }}</li>{% endfor %}</ul>
+                <div class="ui-note" style="margin: 0.3rem 0 0">{{ t('gov.provider', provider=provider) }}</div></td>
+              <td>{{ t('gov.counts_consent') }}</td></tr>
+            <tr><td>{{ t('gov_data.typed') }}</td><td>{{ t('gov.kept') }}</td><td>{{ t('gov.never') }}</td><td>{{ t('gov.never') }}</td></tr>
+            <tr><td>{{ t('gov_data.recordings') }}</td><td>{{ t('gov.not_collected') }}</td><td>{{ t('gov.never') }}</td><td>{{ t('gov.never') }}</td></tr>
+            <tr><td>{{ t('gov_data.marks') }}</td><td>{{ t('gov.kept') }}</td><td>{{ t('gov.never') }}</td><td>{{ t('gov.counts_consent') }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ui-note">{{ t('gov.where_note') }}</p>
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar"><h2>{{ t('gov.roles') }}</h2><span class="ui-note" style="margin: 0">{{ t('gov.roles_from') }}</span></div>
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 640px">
+          <thead><tr><th scope="col">{{ t('gov.col_role') }}</th>{% for column in ['record', 'notes', 'sign', 'export'] %}<th scope="col">{{ t('gov_col.' ~ column) }}</th>{% endfor %}<th scope="col">{{ t('gov.col_status') }}</th></tr></thead>
+          <tbody>{% for row in roles %}
+            <tr><td>{{ t('role.' ~ row.role) }}</td>
+              {% for column in ['record', 'notes', 'sign', 'export'] %}<td>{% if row.access[column] %}{{ t('access.' ~ row.access[column]) }}{% else %}<span style="color: var(--ui-muted)">{{ t('gov.not_set') }}</span>{% endif %}</td>{% endfor %}
+              <td><span class="ui-tag{{ ' ui-tag-warn' if row.status == 'draft' else ' ui-tag-accent' }}">{% if row.status == 'draft' %}{{ t('gov.draft') }}{% else %}{{ t('gov.approved', owner=row.owner, date=row.approved_on) }}{% endif %}</span></td></tr>
+          {% else %}<tr><td colspan="6"><span class="ui-note">{{ t('gov.no_roles') }}</span></td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      <p class="ui-note">{{ t('gov.not_enforced') }}</p>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    {% if person %}
+    <section class="ui-card">
+      <h2>{{ t('gov.trail') }}</h2>
+      {% if trail %}
+      <ul class="ui-kv">{% for line in trail[:12] %}<li><span>{{ t('access_action.' ~ line.action) }}{% if line.detail %} · <bdi dir="ltr">{{ t('consent_short.' ~ line.detail) if line.action == 'consent' else (t('requested_by.' ~ line.detail) if line.action == 'deletion_requested' else line.detail) }}</bdi>{% endif %}</span><b><bdi>{{ line.at[:16] | replace('T', ' ') }}</bdi></b></li>{% endfor %}</ul>
+      {% if trail | length > 12 %}<p class="ui-note">{{ t('gov.trail_more', n=trail | length - 12) }}</p>{% endif %}
+      {% endif %}
+      <p class="ui-note">{{ t('gov.trail_note') }}</p>
+    </section>
+    {% endif %}
+
+    <section class="ui-card" id="requests">
+      <h2>{{ t('gov.retention') }}</h2>
+      <ul class="ui-kv">{% for name in ['retention_period', 'law'] %}{% set s = retention[name] %}<li><span>{{ t('gov_setting.' ~ name) }}</span><b>{% if s.value %}<bdi>{{ s.value }}</bdi>{% if s.status == 'draft' %} · {{ t('gov.draft') }}{% endif %}{% else %}{{ t('gov.not_set') }}{% endif %}</b></li>{% endfor %}</ul>
+      {% if person %}
+      <h3>{{ t('gov.requests') }}</h3>
+      {% if person.requests %}<ul class="ui-kv">{% for r in person.requests | reverse %}<li><span>{{ t('request_kind.' ~ r.kind) }}{% if r.by %} · {{ t('requested_by.' ~ r.by) }}{% endif %}</span><b><bdi>{{ r.at[:10] }}</bdi></b></li>{% endfor %}</ul>
+      {% else %}<p class="ui-note" style="margin: 0">{{ t('gov.no_requests') }}</p>{% endif %}
+      <form method="post" action="{{ url_for('record.request', code=person.code) }}" style="margin-top: 0.75rem">
+        <input type="hidden" name="kind" value="copy"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('gov.give_copy') }}</button>
+      </form>
+      {% if not person.deletion_requested %}
+      <form method="post" action="{{ url_for('record.request', code=person.code) }}" style="margin-top: 0.75rem">
+        <input type="hidden" name="kind" value="deletion">
+        <label style="display: block">{{ t('gov.on_whose_request') }}<select name="by">{% for by in ['person', 'representative', 'clinic'] %}<option value="{{ by }}">{{ t('requested_by.' ~ by) }}</option>{% endfor %}</select></label>
+        <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('gov.record_deletion') }}</button></div>
+      </form>
+      {% elif person.deleted_at %}<p class="ui-note">{{ t('rec.deleted', date=person.deleted_at[:10]) }}</p>
+      {% else %}<p class="ui-note">{{ t('rec.deletion_open', date=person.deletion_requested.at[:10], by=t('requested_by.' ~ person.deletion_requested.by)) }}</p>{% endif %}
+      <p class="ui-note">{{ t('gov.deletion_note') }}</p>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

@@ -7,7 +7,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # The code's parts, one package each (README.md, "Folder layout"): the shared core, the shared
 # parts of the system, then the clinical domains. Tools that scan the code (the i18n key check,
 # the Arabic term sheet) read these.
-CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "search", "prosthetics", "orthotics")
+CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "search", "record", "prosthetics",
+                 "orthotics")
 
 # The data, grouped like the code (since 2026-10-24): data/knowledge/ for the
 # knowledge layer, data/quality/ for the yardstick and the trial, data/records/
@@ -199,6 +200,21 @@ TEACHING_CASES_DIR = EDUCATION_DIR / "teaching_cases"
 # (search and AI, done once), and the learning log (one line per case worked, only ever added to).
 # One log for this machine until roles and login come (owner, 2026-10-25).
 LEARNING_DIR = RECORDS_DIR / "learning"
+
+# ---- Patient record and governance (use case 07; plan Part 8, 2026-10-27; record/)
+# One record per person across domains, under a code the app makes (P-XXXXXX); the name, birth date and file
+# number stay in the clinic's own system and never reach this app (owner, 2026-10-27). Each person's file is
+# a list of lines only ever added to: consent given or withdrawn, cases attached, hand-over notes, requests
+# (not in git; protected by the yardstick hook).
+PEOPLE_DIR = RECORDS_DIR / "people"
+# Every look at or change to a person's record, one line each, only ever added to (not in git; protected).
+# Who did it is not recorded until roles and sign-in come.
+ACCESS_LOG_PATH = RECORDS_DIR / "access_log.jsonl"
+# The owner's governance settings (in git; protected): who may see what, the retention period and the law
+# it follows. Nothing here is enforced until sign-in exists (owner, 2026-10-27).
+GOVERNANCE_DIR = DATA_DIR / "governance"
+ROLES_PATH = GOVERNANCE_DIR / "roles.csv"
+RETENTION_PATH = GOVERNANCE_DIR / "retention.csv"
 
 # Whether an orthotic case may go to the cloud writer (LLM_PROVIDER). Owner's
 # decision 2026-10-23: not yet. The orthotic library holds the ICRC AFO manual

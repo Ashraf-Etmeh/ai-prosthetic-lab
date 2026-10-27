@@ -1,0 +1,45 @@
+{# The patient record pages' own pieces (record/routes.py). #}
+
+{# Under the header on a person's pages: the code only, never a name; fake data; the care team decides. #}
+{% macro person_bar(person) %}
+<div class="ui-casebar">
+  <div class="ui-wrap">
+    <strong>{{ t('rec.person', code=person.code) }}</strong>
+    <span>{{ t('rec.code_only') }}</span>
+    <span class="ui-chip">{{ t('rec.fake_data') }}</span>
+    <span class="ui-chip ui-chip-accent">{{ t('rec.team_decides') }}</span>
+  </div>
+</div>
+{% endmacro %}
+
+{# A consent item's line that holds: its answer and date, or that it was never recorded. #}
+{% macro answer_tag(line) -%}
+  {%- if line -%}
+  <span class="ui-tag {{ 'ui-tag-accent' if line.answer == 'agreed' else 'ui-tag-warn' }}">{{ t('consent_answer.' ~ line.answer) }}</span>
+  <span class="ui-note" style="margin: 0"><bdi>{{ line.at[:10] }}</bdi></span>
+  {%- else -%}
+  <span class="ui-tag">{{ t('rec.not_recorded') }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{# What a timeline item was, in a few words (record/timeline.py Event). #}
+{% macro event_title(e) -%}
+  {%- if e.kind == 'intake' %}{{ t('rec_ev.intake') }}
+  {%- elif e.kind == 'review' %}{{ t('rec_ev.review', decision=t('decision.' ~ e.label)) }}
+  {%- elif e.kind == 'choice' %}{{ t('rec_ev.choice') }}
+  {%- elif e.kind == 'version' %}{{ t(e.label, n=e.number) }}
+  {%- elif e.kind == 'visit' %}{{ t('rec_ev.visit', status=t('visit_status.' ~ e.status)) }} · <bdi>{{ e.label }}</bdi>
+  {%- endif -%}
+{%- endmacro %}
+
+{# A value of a case as recorded: a choice by its label, a list as listed, a number or text as typed. #}
+{% macro shown_value(value) -%}
+  {%- if value.value is defined %}{{ value_label(value) }}
+  {%- elif value is string %}<bdi>{{ value }}</bdi>
+  {%- elif value is number %}<bdi>{{ "%g" | format(value) }}</bdi>
+  {%- elif value %}<bdi>{% for item in value %}{{ item.device_description if item.device_description is defined else (value_label(item) if item.value is defined else item) }}{{ '; ' if not loop.last }}{% endfor %}</bdi>
+  {%- else %}{{ t('rec.none') }}{% endif -%}
+{%- endmacro %}
+
+{# The domain's name as a tag. #}
+{% macro domain_tag(domain) %}<span class="ui-tag">{{ t('domain.' ~ domain) }}</span>{% endmacro %}

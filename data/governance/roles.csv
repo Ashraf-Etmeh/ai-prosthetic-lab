@@ -1,0 +1,8 @@
+role,record,notes,sign,export,status,version,owner,approved_on,note
+treating_specialist,yes,yes,own_domain,with_reason,draft,1,,,"Draft by Claude (2026-10-27) from common practice in clinical record systems (each role sees the least it needs); awaiting the owner"
+therapist,yes,yes,rehabilitation,no,draft,1,,,"Draft by Claude (2026-10-27); awaiting the owner"
+rehab_physician,yes,yes,medical_review,with_reason,draft,1,,,"Draft by Claude (2026-10-27); awaiting the owner"
+gait_lab,sessions_only,no,gait_reports,no,draft,1,,,"Draft by Claude (2026-10-27); awaiting the owner"
+learner_educator,no,no,no,no,draft,1,,,"Draft by Claude (2026-10-27): teaching cases are invented, so no record is needed; awaiting the owner"
+curator,no,no,no,no,draft,1,,,"Draft by Claude (2026-10-27): curates sources, not records; awaiting the owner"
+owner_quality,counts_only,no,rules_and_releases,reports,draft,1,,,"Draft by Claude (2026-10-27); awaiting the owner"

@@ -31,9 +31,10 @@ from quality import measures, results
 from quality.releases import load_releases
 from reasoning.gap_analysis import explain_gap
 from reasoning.writer import configured_model
-from search import log as search_log
+from record import people
 from review import decision_log
 from review.decision_log import InvalidDecision, read_decisions, record_decision
+from search import log as search_log
 from shared import domains
 from shared.case_schema import DEFAULT_DOMAIN
 from shared.config import CASES_DIR
@@ -201,8 +202,11 @@ def quality():
     runs = results.read_runs()
     entries = read_decisions()
     owner_releases = load_releases()
-    quoted = measures.quote_check_counts(_case_files())
-    marks = measures.summary_wrong_counts(entries)
+    # A person who did not agree to quality use is left out of the counts (record/people.py; plan Part 8).
+    left_out = people.left_out_of_counts()
+    counted = [entry for entry in entries if entry["case_id"] not in left_out]
+    quoted = measures.quote_check_counts([f for f in _case_files() if f["case"].get("case_id") not in left_out])
+    marks = measures.summary_wrong_counts(counted)
     return render_template(
         "review/quality.html", part="review", module="quality", here=request.path, case=None,
         versions=results.current_versions(),
@@ -213,4 +217,5 @@ def quality():
         marks=marks, wrong_share=measures.share(marks["wrong"], marks["marked"]),
         gate=measures.release_gate(runs, owner_releases[-1] if owner_releases else None),
         audit=measures.audit_rows(entries, runs, library_version(), load_rules(), owner_releases),
-        texts=len(TEXT), searches=search_log.counts(search_log.read_log()))
+        texts=len(TEXT), searches=search_log.counts(search_log.read_log()),
+        left_out=len(entries) - len(counted))

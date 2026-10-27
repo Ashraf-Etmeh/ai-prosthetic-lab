@@ -20,3 +20,9 @@ WORDS = {"judge": "phard.judge", "stop_banner": "phard.stop_banner", "draft_rule
 # The review page's links (review/templates/review/review.html): back to module 1, and on: (endpoint, text key).
 REVIEW_BACK = ("prosthetic_modules.assess", "pmod.to_assess")
 REVIEW_NEXT = ("prosthetic_modules.components", "pmod.to_components")
+# The patient record's timeline (record/timeline.py; plan Part 8): the plan's versioned records (plan field, text
+# key, page), and the pages a design choice and a follow-up visit open.
+RECORD_VERSIONS = (("socket_versions", "rec_ev.socket_version", "prosthetic_modules.fitting"),
+                   ("alignment_versions", "rec_ev.alignment_version", "prosthetic_modules.fitting"))
+RECORD_CHOICE = "prosthetic_modules.components"
+RECORD_FOLLOW_UP = "prosthetic_modules.follow_up"

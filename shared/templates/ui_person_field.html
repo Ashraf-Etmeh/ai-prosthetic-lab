@@ -1,0 +1,11 @@
+{# On an intake form: attach the new case to a person's record by its code (record/people.py; plan Part 8). Empty:
+   a case on its own, as before. Never a name or file number: those stay in the clinic's own system. Uses form
+   (what was sent) and editing (a re-assessed case keeps its person, so the field is not shown). #}
+{% if not editing %}
+<fieldset>
+  <legend>{{ t('intake.person') }}</legend>
+  <label for="person_code">{{ t('intake.person_code') }}</label>
+  <input type="text" id="person_code" name="person_code" value="{{ form.get('person_code', '') }}" placeholder="P-XXXXXX" maxlength="12" autocomplete="off" spellcheck="false" dir="ltr">
+  <p class="hint">{{ t('intake.person_hint') }} <a href="{{ url_for('record.person') }}">{{ t('intake.person_open') }}</a></p>
+</fieldset>
+{% endif %}

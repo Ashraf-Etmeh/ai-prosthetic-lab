@@ -39,6 +39,7 @@ from pathlib import Path
 from orthotics.fields import FIELDS as ORTHOTIC_FIELDS
 from prosthetics import component_guide, fitting_guide
 from prosthetics.fields import FIELDS
+from record import people
 from shared.case_schema import DEFAULT_DOMAIN, DOMAIN_CASES
 from shared.config import REVIEW_LOG_PATH, TRIAL_DIR
 
@@ -232,8 +233,15 @@ def main(argv=None) -> None:
     parser.add_argument("--out", type=Path, help=f"default: {REPORT_PATH.name}, or report_<domain>.csv")
     args = parser.parse_args(argv)
     out = args.out or report_path(args.domain)
-    report = build_report(read_log(args.log), args.log, args.domain)
+    entries = read_log(args.log)
+    # A person who did not agree to quality use is left out (record/people.py; plan Part 8, 2026-10-27).
+    left_out = people.left_out_of_counts()
+    counted = [entry for entry in entries if entry["case_id"] not in left_out]
+    report = build_report(counted, args.log, args.domain)
     print_summary(report)
+    if len(counted) < len(entries):
+        print(f"\nLeft out: {len(entries) - len(counted)} decision(s) on cases whose person did not agree to "
+              "quality use (patient record, consent).")
     write_csv(report, out)
     print(f"\nWritten: {out}")
 

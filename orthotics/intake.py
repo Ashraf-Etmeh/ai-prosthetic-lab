@@ -39,6 +39,8 @@ from orthotics.case import (
 )
 from orthotics.plan import linkable
 from reasoning.pathway import analyse_case
+from record import people
+from record.access import log_access
 from shared.case_schema import PriorDevice, Side, YesNoUnknown
 from shared.forms import (
     MAX_PRIOR_DEVICES,
@@ -292,11 +294,16 @@ def submit_form():
             case = _case_from_form(request.form, existing.case.case_id, existing.case.created_at)
         else:
             case = _case_from_form(request.form)
+        # A new case may be attached to a person; a re-assessed one keeps the person it has.
+        person = None if existing is not None else people.person_for_intake(request.form.get("person_code"))
     except ValueError as e:  # TranslatableError is a ValueError
         if not isinstance(e, TranslatableError):
             current_app.logger.warning("orthotic intake value refused: %s", e)
             e = TranslatableError("error.invalid_input")
         return _render_form(error=e.message(lang), form=request.form), 400
+    if person is not None:  # attached before the analysis, so the person's consent to the cloud model applies
+        people.attach_case(person, case)
+        log_access(person.code, "attached_case", case.case_id)
     record = analyse_case(case, writer=current_app.config.get("RAG_WRITER"))
     if existing is not None and existing.plan is not None:
         # The orthotist's plan stays; a requirement keeps only what the re-assessed case still has.

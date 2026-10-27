@@ -31,6 +31,8 @@ from prosthetics.case import (
 )
 from prosthetics.modules import latest_case_id
 from reasoning.pathway import analyse_case
+from record import people
+from record.access import log_access
 from shared.case_schema import PriorDevice, Side
 from shared.forms import (
     MAX_PRIOR_DEVICES,
@@ -152,6 +154,7 @@ def submit_form():
     lang = language_from_cookies(request.cookies)
     try:
         case = _case_from_form(request.form)
+        person = people.person_for_intake(request.form.get("person_code"))  # None: a case on its own
     except ValueError as e:  # a value the form can't use (TranslatableError is a ValueError)
         if not isinstance(e, TranslatableError):
             # Not expected: the parsers (shared/forms.py) translate every refusal. Python's
@@ -159,6 +162,9 @@ def submit_form():
             current_app.logger.warning("intake value refused: %s", e)
             e = TranslatableError("error.invalid_input")
         return _render_form(error=e.message(lang), form=request.form), 400
+    if person is not None:  # attached before the analysis, so the person's consent to the cloud model applies
+        people.attach_case(person, case)
+        log_access(person.code, "attached_case", case.case_id)
     # The app's writer can be replaced (tests: a fake one; the golden cases: none).
     store.save(analyse_case(case, writer=current_app.config.get("RAG_WRITER")))
     return redirect(url_for("review.show_case", case_id=case.case_id))

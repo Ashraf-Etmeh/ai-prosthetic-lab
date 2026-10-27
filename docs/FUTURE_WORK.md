@@ -1935,6 +1935,49 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
 - Tests: 639, all passing; checks 0-2 fail only on 0.3 (uncommitted
   changes); golden cases OK; the Arabic term sheet exported again (1,465 texts).
 
+## Patient record (use case 07, plan Part 8, 2026-10-27)
+
+- **Asked (owner, 2026-10-27):** "continue with part 7 and 8" (Part 7
+  committed and pushed first, `0a1385d`). Owner's answers: an **app-made
+  person code** (name, birth date and file number stay in the clinic's
+  system); the cloud-model consent **gates the AI**; the roles table is
+  **the owner's, shown, not enforced** until sign-in; follow-up intervals,
+  retention and law **left empty**, a copy request gives a copy, a deletion
+  request is **recorded, carried out by the owner**. Then: "make the
+  decisions yourself considering how other similar apps are".
+- **Decided by Claude from common practice** (clinical record systems,
+  consent and audit conventions), each open to the owner's change:
+  - consent and notes as lines only ever added to (the latest consent line
+    per item holds), each consent with the language its text was shown in;
+  - a case joins a person only at its intake, so the cloud consent is known
+    before anything is sent; attaching needs the care-record consent, and a
+    deletion request stops new cases;
+  - an access trail of every look and change (who: null until sign-in), part
+    of the person's copy;
+  - the "quality use" consent applied too: those cases' review-log lines are
+    left out of the quality page and the trial report;
+  - the roles table proposed with the least access each role needs (treating
+    specialist: record, notes, own domain, export with a reason; gait lab:
+    sessions only; learner, educator and curator: no record; owner and
+    quality lead: counts only), all drafts;
+  - "where data goes" read from the code's switches, not written by hand.
+- **Built** (SYSTEM_DESIGN.md §7.4; docs/SYSTEM_DESCRIPTION.md §4.15): the
+  shared part "Patient record" (`record/`), the "Person code" field on both
+  intakes, the consent gate in `reasoning/rag.py`, `data/governance/`
+  (roles.csv, retention.csv, protected), `data/records/people/` and
+  `access_log.jsonl` (gitignored, protected).
+- **Waiting for the owner:** approve or change the roles table; the
+  retention period and the law; the consent wording (the clinic's own form
+  counts); follow-up intervals and reminders (a versioned clinic rule);
+  **erasure versus the append-only review log**: a deletion leaves the
+  review-log lines of the person's cases (they hold the coded case and its
+  typed intake notes under the case id); common practice keeps audit records
+  under a legal-obligation exemption or cuts them to what the audit needs,
+  and the choice is the owner's; sign-in and roles enforced (with it, "who"
+  in the trail).
+- Tests: 659, all passing; checks 0-2 fail only on 0.3 (uncommitted
+  changes); golden cases OK; the Arabic term sheet exported again (1,666 texts).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

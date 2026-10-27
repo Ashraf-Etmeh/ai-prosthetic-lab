@@ -18,7 +18,7 @@ PARTS = {
     "rag": ("PROFILE", "components_from", "fitting_from"),
     "intake": ("bp",),
     "nav": ("MAP", "INTAKE", "MODULES", "LABELS", "DECIDES", "APPROVES", "CASE_BAR", "WORDS", "REVIEW_BACK",
-            "REVIEW_NEXT"),
+            "REVIEW_NEXT", "RECORD_VERSIONS", "RECORD_CHOICE", "RECORD_FOLLOW_UP"),
     # The specialist's work after the intake (since plan Part 3, 2026-10-24, every domain has them).
     "plan": ("PLAN", "BACK_TO"),
     "hard_stops": ("RULES", "DETAILS", "case_checks", "clinic_rules"),
@@ -62,7 +62,11 @@ class SameShapeTests(unittest.TestCase):
             nav = domains.part(domain, "nav")
             with self.subTest(domain):
                 self.assertLessEqual({endpoint for _, endpoint, _ in nav.MODULES}, endpoints)
-                self.assertLessEqual({nav.MAP, nav.INTAKE, nav.REVIEW_BACK[0], nav.REVIEW_NEXT[0]}, endpoints)
+                self.assertLessEqual({nav.MAP, nav.INTAKE, nav.REVIEW_BACK[0], nav.REVIEW_NEXT[0], nav.RECORD_CHOICE,
+                                      nav.RECORD_FOLLOW_UP} | {page for _, _, page in nav.RECORD_VERSIONS}, endpoints)
+                plan = domains.part(domain, "plan").PLAN()  # each versioned record is a list on the plan
+                for name, _, _ in nav.RECORD_VERSIONS:
+                    self.assertIsInstance(getattr(plan, name), list)
                 blueprint = nav.MODULES[0][1].split(".")[0]  # alert_list: the domain's pages' blueprint ~ back_to
                 self.assertLessEqual({f"{blueprint}.{b}" for b in domains.part(domain, "plan").BACK_TO}, endpoints)
         for shared in domains.SHARED_PARTS:  # a shared part's tabs: pages without a case (plan Part 4)

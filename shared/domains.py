@@ -20,7 +20,8 @@ quality/):
 A new domain adds its package and its name to DOMAINS.
 
 A shared part with pages of its own (since plan Part 4, 2026-10-25: review/, the
-reasoning and review pages; Part 5: knowledge/, the knowledge layer; Part 6: search/, smart search) is in
+reasoning and review pages; Part 5: knowledge/, the knowledge layer; Part 6: search/, smart search; Part 8:
+record/, the patient record and governance) is in
 SHARED_PARTS with a <part>/nav.py of the same kind: the header lists it next to
 the domains.
 """
@@ -30,7 +31,8 @@ import importlib.util
 from types import ModuleType
 
 DOMAINS = ("prosthetics", "orthotics")
-SHARED_PARTS = ("knowledge", "review", "search")  # knowledge layer (§7.1), reasoning and review (§7.2), search (§7.3)
+# Knowledge layer (§7.1), reasoning and review (§7.2), search and education (§7.3), patient record (§7.4).
+SHARED_PARTS = ("knowledge", "review", "search", "record")
 
 
 def part(domain: str, name: str) -> ModuleType:

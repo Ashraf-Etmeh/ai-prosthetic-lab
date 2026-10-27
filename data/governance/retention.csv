@@ -1,0 +1,3 @@
+setting,value,status,owner,approved_on,note
+retention_period,,draft,,,"Set locally by the owner, under the law below (SYSTEM_DESIGN.md §7.4)"
+law,,draft,,,"The data protection law the clinic follows, set by the owner"

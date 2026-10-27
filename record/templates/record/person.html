@@ -1,0 +1,109 @@
+{% extends "ui_base.html" %}
+{% from "record/macros.html" import person_bar, answer_tag, event_title, domain_tag with context %}
+{# 1 Record and follow-up (use case 07; docs/design/09-patient-record/Main.html): one person's record across
+   domains, from the cases attached to them (record/timeline.py): the summary, the timeline (?domain=), the outcome
+   measures as entered, the follow-up schedule and the hand-over notes. Nothing is worked out from a value. #}
+{% block title %}{{ t('rec.title_record') }}{% endblock %}
+{% block kicker %}{{ t('rec.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('rec.record_intro') }}</p>{% endblock %}
+{% block brief %}تنظيم وتوثيق بيانات المرضى والمتابعة{% endblock %}
+{% block bar %}{{ person_bar(person) }}{% endblock %}
+{% block content %}
+{% if request.args.get('saved') is not none %}<div class="ui-saved" role="status">{{ t('rec.note_saved') }}</div>{% endif %}
+{% if person.deleted_at %}<div class="ui-error" role="status">{{ t('rec.deleted', date=person.deleted_at[:10]) }}</div>
+{% elif person.deletion_requested %}<div class="ui-error" role="status">{{ t('rec.deletion_open', date=person.deletion_requested.at[:10], by=t('requested_by.' ~ person.deletion_requested.by)) }}</div>{% endif %}
+
+<div class="ui-tiles">
+  <div><div class="ui-note" style="margin: 0">{{ t('rec.cases') }}</div>
+    <div class="ui-big">{{ view.records | length }}</div>
+    <div class="ui-note" style="margin: 0.2rem 0 0">{% for d in view.domains_here() %}{{ domain_tag(d) }} {% endfor %}</div></div>
+  <div><div class="ui-note" style="margin: 0">{{ t('rec.latest_choice') }}</div>
+    {% if view.latest_choice %}<div class="ui-big" style="font-size: 1.05rem"><bdi>{{ view.latest_choice.day }}</bdi></div>
+    <div class="ui-note" style="margin: 0.2rem 0 0">{{ domain_tag(view.latest_choice.domain) }} <a href="{{ url_for(view.latest_choice.endpoint, case_id=view.latest_choice.case_id) }}">{{ t('rec.open') }}</a></div>
+    {% else %}<div class="ui-big" style="font-size: 1.05rem">{{ t('rec.none_recorded') }}</div>{% endif %}</div>
+  <div><div class="ui-note" style="margin: 0">{{ t('rec.follow_up') }}</div>
+    {% set due = view.next_due %}
+    {% if due %}<div class="ui-big" style="font-size: 1.05rem"><bdi>{{ due.name }}</bdi></div>
+    <div class="ui-note" style="margin: 0.2rem 0 0">{% if due.date %}{{ t('rec.due_on', date=due.date) }}{% else %}{{ t('rec.due_no_date') }}{% endif %}{% if due.date_passed %} · <b>{{ t('rec.date_passed') }}</b>{% endif %}</div>
+    {% else %}<div class="ui-big" style="font-size: 1.05rem">{{ t('rec.none_due') }}</div>{% endif %}</div>
+  <div><div class="ui-note" style="margin: 0">{{ t('rec.consent') }}</div>
+    <ul class="ui-kv" style="margin-top: 0.4rem">{% for item in ['care_record', 'cloud_model', 'quality_use', 'teaching_use'] %}<li><span>{{ t('consent_short.' ~ item) }}</span><b>{{ answer_tag(person.consent_now(item)) }}</b></li>{% endfor %}</ul>
+    <a class="ui-note" href="{{ url_for('record.governance', code=person.code) }}#consent">{{ t('rec.see_consent') }}</a></div>
+</div>
+
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: center"><h2>{{ t('rec.timeline') }}</h2>
+        {% if view.domains_here() | length > 1 %}
+        <nav class="ui-tags" aria-label="{{ t('rec.filter') }}">
+          <a class="ui-tag{{ ' ui-tag-accent' if not shown }}" href="{{ url_for('record.person', code=person.code) }}"{% if not shown %} aria-current="true"{% endif %}>{{ t('rec.all') }}</a>
+          {% for d in view.domains_here() %}<a class="ui-tag{{ ' ui-tag-accent' if shown == d }}" href="{{ url_for('record.person', code=person.code, domain=d) }}"{% if shown == d %} aria-current="true"{% endif %}>{{ t('domain.' ~ d) }}</a>{% endfor %}
+        </nav>
+        {% endif %}
+      </div>
+      {% if events %}
+      <ol class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for e in events %}
+        <li class="ui-row" style="justify-content: space-between">
+          <div style="min-width: 0"><div class="ui-note" style="margin: 0"><bdi>{{ e.day }}</bdi> · {{ domain_tag(e.domain) }} <span dir="ltr">{{ e.case_id }}</span></div>
+            <div style="margin-top: 0.2rem"><b>{{ event_title(e) }}</b></div>
+            {% if e.note %}<div class="ui-note" dir="auto">{{ t('rec.reason') }} <bdi>{{ e.note }}</bdi></div>{% endif %}</div>
+          <a class="ui-btn ui-btn-quiet" href="{{ url_for(e.endpoint, case_id=e.case_id) }}">{{ t('rec.open') }}</a>
+        </li>
+        {% endfor %}
+      </ol>
+      {% elif view.records %}<p class="ui-note">{{ t('rec.no_events') }}</p>
+      {% else %}
+      <p class="ui-note">{{ t('rec.no_cases', code=person.code) }}</p>
+      <div class="ui-actions">{% for d in all_domains %}<a class="ui-btn ui-btn-quiet" href="{{ url_for(domain_nav(d).INTAKE) }}">{{ t('rec.new_case', domain=t('domain.' ~ d)) }}</a>{% endfor %}</div>
+      {% endif %}
+      {% for case_id, record in view.records if record is none %}<p class="ui-note">{{ t('rec.case_missing', id=case_id) }}</p>{% endfor %}
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar"><h2>{{ t('rec.measures') }}</h2><span class="ui-note" style="margin: 0">{{ t('rec.measures_by') }}</span></div>
+      {% for table in view.measures %}
+      <h3>{{ domain_tag(table.domain) }} <span dir="ltr">{{ table.case_id }}</span></h3>
+      <div class="ui-scroll">
+        <table class="ui-table" style="min-width: 520px">
+          <thead><tr><th scope="col">{{ t('rec.measure') }}</th>{% for name, day in table.columns %}<th scope="col"><bdi>{{ name }}</bdi>{% if day %}<div class="ui-note" style="margin: 0"><bdi>{{ day }}</bdi></div>{% endif %}</th>{% endfor %}</tr></thead>
+          <tbody>{% for name, unit, how, values in table.rows %}
+            <tr><td><bdi>{{ name }}</bdi>{% if unit %} (<bdi>{{ unit }}</bdi>){% endif %}{% if how %}<div class="ui-note" style="margin: 0"><bdi>{{ how }}</bdi></div>{% endif %}</td>
+              {% for value in values %}<td>{% if value %}<bdi>{{ value }}</bdi>{% else %}<span style="color: var(--ui-muted)">—</span>{% endif %}</td>{% endfor %}</tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      {% else %}<p class="ui-note">{{ t('rec.no_measures') }}</p>{% endfor %}
+      <p class="ui-note">{{ t('rec.measures_note') }}</p>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('rec.schedule') }}</h2>
+      {% if view.schedule %}
+      <ul class="ui-kv">{% for v in view.schedule %}<li><span><bdi>{{ v.name }}</bdi> · {{ t('domain.' ~ v.domain) }}</span><b>{{ t('visit_status.' ~ v.status) }}{% if v.date %} · <bdi>{{ v.date }}</bdi>{% endif %}{% if v.date_passed %} · {{ t('rec.date_passed') }}{% endif %}</b></li>{% endfor %}</ul>
+      {% else %}<p class="ui-note">{{ t('rec.no_visits') }}</p>{% endif %}
+      <p class="ui-note">{{ t('rec.schedule_note') }}</p>
+    </section>
+
+    {% if view.open_alerts %}
+    <section class="ui-card">
+      <h2>{{ t('rec.alerts') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">{% for domain, case_id, words in view.open_alerts %}<li dir="auto"><bdi>{{ words }}</bdi> <span class="ui-note">({{ t('domain.' ~ domain) }}, <span dir="ltr">{{ case_id }}</span>)</span></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+
+    <section class="ui-card" id="notes">
+      <h2>{{ t('rec.notes') }}</h2>
+      <p class="ui-note">{{ t('rec.notes_note') }}</p>
+      {% for n in person.notes | reverse %}<div class="ui-alert" style="margin-top: 0.6rem"><div class="ui-note" style="margin: 0"><bdi>{{ n.at[:16] | replace('T', ' ') }}</bdi></div><p style="margin: 0.2rem 0 0" dir="auto"><bdi>{{ n.text }}</bdi></p></div>{% endfor %}
+      <form method="post" action="{{ url_for('record.note', code=person.code) }}" style="margin-top: 0.75rem">
+        <label style="display: block">{{ t('rec.note') }}<textarea name="text" rows="3" dir="auto">{{ note_form.get('text', '') }}</textarea></label>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('rec.add_note') }}</button></div>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

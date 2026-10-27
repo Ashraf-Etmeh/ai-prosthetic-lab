@@ -131,9 +131,9 @@ capabilities they cover: 1 تقييم حالات البتر, 2–3 تحليل ا
 دعم اختيار المكونات, 4 دعم قرارات التصميم والتركيب, 5 المتابعة والتقييم; since
 2026-10-24 each is a page of its own (§4.10), and the review page below is
 the specialist review reached from module 1. The orthotics map (`/orthotics`)
-does the same for its six (§4.9). Three shared parts sit next to the
-domains: the knowledge layer (§4.12), reasoning and review (§4.11), and search
-and education (§4.13, §4.14).
+does the same for its six (§4.9). Four shared parts sit next to the
+domains: the knowledge layer (§4.12), reasoning and review (§4.11), search
+and education (§4.13, §4.14), and the patient record (§4.15).
 
 1. **Intake form** (`GET /intake`). The user enters a test case: amputation
    level (12 levels, 6 lower and 6 upper limb) and side (left, right,
@@ -669,6 +669,62 @@ Smart search:
 - **Not built:** grading of any kind (by design); "Ask the educator" (needs
   roles and login); a learner's identity in the log.
 
+### 4.15 Patient record and governance (use case 07, plan Part 8, 2026-10-27)
+
+The shared part "Patient record" (SYSTEM_DESIGN.md §7.4 and §8;
+`docs/design/09-patient-record/`; `record/`), two tabs:
+
+- **The record** (`record/people.py`): one file per person,
+  `data/records/people/<code>.jsonl` (not in git, protected by the yardstick
+  hook), of lines only ever added to: created, consent (item, answer,
+  language shown in), case (attached at its intake), note (hand-over), request
+  (a copy given, or a deletion and on whose request), deleted (written by the
+  owner after a deletion). The code (`P-` and six hex digits) is made by the
+  app; nothing else about the person is stored (owner's answer, 2026-10-27).
+- **Attaching a case:** the intake forms of both domains have an optional
+  "Person code" field (`shared/templates/ui_person_field.html`). The person
+  must exist, have agreed to keep a care record, and have no deletion
+  requested; the case is attached before it is analysed. A re-assessed
+  orthotic case keeps its person.
+- **Consent** (four items, SYSTEM_DESIGN.md §7.4): keep a care record (needed
+  to attach a case); send coded fields to the cloud model; de-identified use
+  for quality measures; use as the basis of a teaching case. The latest line
+  per item holds. What it does (owner's answer, 2026-10-27: gate the AI):
+  `reasoning/rag.py` generate sends a case attached to a person to a cloud
+  writer only while that person's cloud item says agreed (else the passages
+  without summaries, the reason on the page), whoever passes the writer; the
+  quality page and `quality.trial_report` leave out the review-log lines of
+  cases whose person has not agreed to quality use. A case with no person
+  works as before. Teaching use is recorded and shown; teaching cases are
+  invented, so none is made from a record. The consent wording is a draft
+  awaiting the owner.
+- **1 Record and follow-up** (`/record`, `/record/<code>`;
+  `record/timeline.py`): the summary (cases, latest design choice, next review
+  due and whether its date has passed, open alerts, consent), the timeline
+  across domains, newest first and filtered by domain (each case's intake,
+  signed reviews and design choices from the review log, the plan's versioned
+  records each domain names in its `nav.py` RECORD_VERSIONS, follow-up visits),
+  each opening its own page; the outcome measures by visit as entered, with
+  how and when (who: not recorded); the follow-up schedule as recorded
+  (intervals and reminders wait for a versioned clinic rule from the owner;
+  nothing is sent to anyone); hand-over notes (added, never changed, never
+  sent to a language model).
+- **2 Consent and governance** (`/record/governance`,
+  `/record/<code>/governance`): the consent items with their lines, in the
+  language the person chose; where each piece of data goes, read from the
+  code's own switches (`record/governance.py` cloud_uses); who may see what
+  from the owner's `data/governance/roles.csv` (seven roles, each cell from a
+  fixed vocabulary; drafts by Claude from common practice, awaiting the owner;
+  not enforced until sign-in); the retention period and its law from
+  `retention.csv` (not set); the access trail (`record/access.py`,
+  `data/records/access_log.jsonl`, append-only, protected: every look and
+  change, "who" null until sign-in); a copy for the person
+  (`/record/<code>/copy`: the cases as recorded, timeline, measures, notes,
+  every consent line, requests, the trail); a deletion request (recorded; the
+  owner deletes by hand, README "Patient record").
+- **Not built:** sign-in and roles enforced; reminders; follow-up intervals
+  (a clinic rule); deleting from the review log (append-only, open decision).
+
 ---
 
 ## 5. Structure
@@ -676,7 +732,7 @@ Smart search:
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 639 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 659 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -767,6 +823,16 @@ search/                    search and education (§4.13, §4.14)
   templates/search/        search.html, _query_fields.html, learning.html, learning_step.html,
                            learning_macros.html
   tests/
+record/                    patient record and governance (§4.15)
+  people.py                one person's lines: consent, cases, notes, requests; cloud_consent(), counts_allowed()
+  access.py                the access trail: every look and change, who not recorded until sign-in
+  governance.py            the owner's roles and retention files; where data goes, from the code's switches
+  timeline.py              the record page: timeline, measures, schedule, summary, from the attached cases
+  routes.py                GET /record, /record/<code>, /record/governance, /record/<code>/governance, /copy;
+                           POST /record/new, /note, /consent, /request
+  nav.py                   what the header shows for the shared part "Patient record"
+  templates/record/        people.html, person.html, governance.html, copy.html, macros.html
+  tests/
 prosthetics/               use cases 01-02
   case.py                  Case (amputation level, side, residual limb, activity, prior devices), its enums
   fields.py                the 17 prosthetic gap fields: label, search query, topic terms (en/de/ar); query_for()
@@ -812,10 +878,13 @@ data/
     releases.csv           the owner's release sign-offs and Arabic checks
   education/
     teaching_cases/        TC-NN.json: the educator's invented teaching cases (three drafts so far)
+  governance/              roles.csv, retention.csv: the owner's (in git; drafts so far)
   records/
     cases/                 one JSON file per case (local only)
     search_log.jsonl       searches, marks and suggestions (local only)
     learning/              attempts/, log.jsonl (the learning log), analysis/ (local only)
+    people/                <code>.jsonl: one person's record, lines only ever added (local only)
+    access_log.jsonl       the access trail (local only)
     review_log.jsonl       decisions (local only); review_log.test.jsonl: earlier test lines
 ```
 
@@ -946,7 +1015,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **639 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **659 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -1062,6 +1131,11 @@ uses a missing key.
   educator sets them, so the compare step has no panel to compare with yet;
   one learning log for the machine, with no learner's name; no "Ask the
   educator".
+- Patient record (§4.15, 2026-10-27): no sign-in, so the roles table is
+  shown, not enforced, and the access trail cannot say who; the roles,
+  retention period, law and consent wording await the owner; a deletion is
+  done by hand, and the review log's lines for the person's cases stay
+  (append-only); no reminders or follow-up intervals.
 
 ---
 
