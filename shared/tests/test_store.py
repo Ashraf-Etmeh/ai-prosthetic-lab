@@ -101,8 +101,9 @@ class PersistenceTests(unittest.TestCase):
         data = json.loads((self.folder / f"{record.case.case_id}.json").read_text(encoding="utf-8"))
         self.assertEqual(data["case_file_version"], CASE_FILE_VERSION)
         self.assertEqual(set(data), {"case_file_version", "case", "knowledge_warning", "retrieved_chunks", "gaps",
-                                     "generation", "plan"})
+                                     "generation", "plan", "rehab"})
         self.assertIsNone(data["plan"])  # a prosthetic case has no orthotic plan
+        self.assertIsNone(data["rehab"])  # nor a rehabilitation plan until one is saved (version 5)
         self.assertEqual(set(data["case"]), set(record.case.to_dict()))  # only the case's own fields
 
     def test_a_version_1_file_still_opens(self):

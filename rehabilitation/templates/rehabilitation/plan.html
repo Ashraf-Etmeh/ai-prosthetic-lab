@@ -1,0 +1,142 @@
+{% extends "ui_base.html" %}
+{% from "ui_forms.html" import sent with context %}
+{% from "rehabilitation/macros.html" import rehab_bar, goal_tag, intervention_sources, next_link with context %}
+{# Module 1, the rehabilitation plan (docs/design/05-rehabilitation/Main.html): the goals the person agreed to, by
+   ICF level, scaled -2 to +2 with a review date; the interventions with the goals they serve and the dose the
+   therapist sets, each next to what the sources say about its kind (local search, quoted as printed; the
+   therapist's own: no source); the phases and the team. Every value is the team's. #}
+{% block title %}{{ t('rplan.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=1) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('rplan.intro') }}</p>{% endblock %}
+{% block brief %}إعداد خطط التأهيل{% endblock %}
+{% block bar %}{{ rehab_bar(record, module) }}{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set action = form.get('action') if form else none %}
+{% set post_url = url_for('rehab.plan', case_id=case.case_id) %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card" id="goals">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('rplan.goals') }}</h2>
+        <span class="ui-note" style="margin: 0">{% if plan.agreed_on %}{{ t('rplan.agreed', date=plan.agreed_on) }}{% else %}{{ t('rplan.not_agreed') }}{% endif %}{% if plan.review_every %} · {{ t('rplan.review_every_is', every=plan.review_every) }}{% endif %}</span></div>
+      {% if plan.goals %}
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for g in plan.goals %}<li class="ui-row" style="padding-block: 0.6rem"><div>{{ goal_tag(g) }} <bdi dir="auto">{{ g.text }}</bdi>{% if g.within %} · {{ t('rplan.within_is', within=g.within) }}{% endif %}<div class="ui-note" style="margin: 0.15rem 0 0">{{ t('rplan.scaled') }}{% if g.review_on %} · {{ t('rplan.review_on_is', date=g.review_on) }}{% endif %}</div></div></li>{% endfor %}
+      </ul>
+      {% else %}<p class="ui-note">{{ t('rplan.no_goals') }}</p>{% endif %}
+
+      {% set f = form if action == 'agreed' else none %}
+      <form method="post" action="{{ post_url }}" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; margin-top: 0.75rem">
+        <input type="hidden" name="action" value="agreed">
+        <label style="flex: 1 1 160px">{{ t('rplan.agreed_on') }}<input type="date" name="agreed_on" value="{{ sent(f, 'agreed_on', plan.agreed_on) }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+        <label style="flex: 1 1 160px">{{ t('rplan.review_every') }}<input type="text" name="review_every" dir="auto" value="{{ sent(f, 'review_every', plan.review_every) }}"></label>
+        <button class="ui-btn ui-btn-quiet" type="submit">{{ t('mod.save') }}</button>
+      </form>
+
+      {% set f = form if action == 'goals' else none %}
+      {% set n_rows = (f.get('goal_rows') | int) if f else (plan.goals | length) + new_rows %}
+      <details{% if f or not plan.goals %} open{% endif %} style="margin-top: 0.75rem"><summary>{{ t('rplan.goals_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="goals"><input type="hidden" name="goal_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set g = plan.goals[n - 1] if (not f and n <= plan.goals | length) else none %}{% set p = 'goal_' ~ n ~ '_' %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--ui-line)">
+            <input type="hidden" name="{{ p }}id" value="{{ sent(f, p ~ 'id', g.id if g else '') }}">
+            {% set lv = f.get(p ~ 'level', '') if f else (g.level.value if g else '') %}
+            <label style="flex: 1 1 150px">{{ t('rplan.level') }}<select name="{{ p }}level"><option value="">{{ t('intake.select') }}</option>{% for l in levels %}<option value="{{ l.value }}"{{ " selected" if l.value == lv }}>{{ t('icf.' ~ l.value) }}</option>{% endfor %}</select></label>
+            <label style="flex: 3 1 260px">{{ t('rplan.goal') }}<input type="text" name="{{ p }}text" dir="auto" value="{{ sent(f, p ~ 'text', g.text if g else '') }}"></label>
+            <label style="flex: 1 1 120px">{{ t('rplan.within') }}<input type="text" name="{{ p }}within" dir="auto" value="{{ sent(f, p ~ 'within', g.within if g else '') }}"></label>
+            <label style="flex: 1 1 150px">{{ t('rplan.review_on') }}<input type="date" name="{{ p }}review_on" value="{{ sent(f, p ~ 'review_on', g.review_on if g else '') }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+          </div>
+          {% endfor %}
+          <p class="ui-note">{{ t('rplan.goals_note') }}</p>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('rplan.save_goals') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    <section class="ui-card" id="interventions">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('rplan.interventions') }}</h2><span class="ui-note" style="margin: 0">{{ t('rplan.dose_by') }}</span></div>
+      {% if library_warning %}<p class="ui-note">{% if lang != 'en' %}{{ t('review.not_searched') }} {% endif %}<span lang="en" dir="ltr">{{ library_warning }}</span></p>{% endif %}
+      {% if plan.interventions %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 640px">
+          <thead><tr><th scope="col">{{ t('rplan.intervention') }}</th><th scope="col">{{ t('rplan.for_goals') }}</th><th scope="col">{{ t('rplan.dose') }}</th><th scope="col" style="width: 40%">{{ t('rplan.sources_say') }}</th></tr></thead>
+          <tbody>{% for item in plan.interventions %}
+            <tr><td><b>{{ t('intervention.' ~ item.kind.value) }}</b>{% if item.name %}<div dir="auto"><bdi>{{ item.name }}</bdi></div>{% endif %}</td>
+              <td>{{ item.goals | join(' · ') or '—' }}</td>
+              <td dir="auto">{% if item.dose %}<bdi>{{ item.dose }}</bdi>{% else %}<span style="color: var(--ui-muted)">{{ t('rplan.no_dose') }}</span>{% endif %}</td>
+              <td>{{ intervention_sources(item, passages, source_types, library_warning) }}</td></tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      <p class="ui-note">{{ t('rplan.sources_note') }}</p>
+      {% else %}<p class="ui-note">{{ t('rplan.no_interventions') }}</p>{% endif %}
+
+      {% set f = form if action == 'interventions' else none %}
+      {% set n_rows = (f.get('int_rows') | int) if f else (plan.interventions | length) + new_rows %}
+      <details{% if f or not plan.interventions %} open{% endif %} style="margin-top: 0.75rem"><summary>{{ t('rplan.interventions_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="interventions"><input type="hidden" name="int_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set item = plan.interventions[n - 1] if (not f and n <= plan.interventions | length) else none %}{% set p = 'int_' ~ n ~ '_' %}
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--ui-line)">
+            <input type="hidden" name="{{ p }}id" value="{{ sent(f, p ~ 'id', item.id if item else '') }}">
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+              {% set kd = f.get(p ~ 'kind', '') if f else (item.kind.value if item else '') %}
+              <label style="flex: 1 1 200px">{{ t('rplan.kind') }}<select name="{{ p }}kind"><option value="">{{ t('intake.select') }}</option>{% for k in kinds %}<option value="{{ k.value }}"{{ " selected" if k.value == kd }}>{{ t('intervention.' ~ k.value) }}</option>{% endfor %}</select></label>
+              <label style="flex: 2 1 220px">{{ t('rplan.intervention_name') }}<input type="text" name="{{ p }}name" dir="auto" value="{{ sent(f, p ~ 'name', item.name if item else '') }}"></label>
+              <label style="flex: 1 1 160px">{{ t('rplan.dose') }}<input type="text" name="{{ p }}dose" dir="auto" value="{{ sent(f, p ~ 'dose', item.dose if item else '') }}"></label>
+            </div>
+            {% if plan.goals %}{% set ticked = f.getlist(p ~ 'goal') if f else (item.goals if item else []) %}
+            <div class="ui-checks"><span class="ui-note" style="margin: 0">{{ t('rplan.for_goals') }}</span>{% for g in plan.goals %}<label><input type="checkbox" name="{{ p }}goal" value="{{ g.id }}"{{ " checked" if g.id in ticked }}><span>{{ g.id }}</span></label>{% endfor %}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <p class="ui-note">{{ t('rplan.interventions_note') }}</p>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('rplan.save_interventions') }}</button></div>
+        </form>
+      </details>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card" id="phases">
+      <h2>{{ t('rplan.phases') }}</h2>
+      {% set f = form if action == 'phases' else none %}
+      <form method="post" action="{{ post_url }}">
+        <input type="hidden" name="action" value="phases">
+        {% for ph in phases %}{% set rec = plan.phase(ph.value) %}{% set p = 'phase_' ~ ph.value ~ '_' %}
+        <div style="margin-top: 0.6rem">
+          <b>{{ t('rphase.' ~ ph.value) }}</b>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+            {% set st = f.get(p ~ 'status', '') if f else rec.status.value %}
+            <label style="flex: 1 1 120px">{{ t('rplan.phase_status') }}<select name="{{ p }}status">{% for s in phase_statuses %}<option value="{{ s.value }}"{{ " selected" if s.value == st }}>{{ t('phase_status.' ~ s.value) }}</option>{% endfor %}</select></label>
+            <label style="flex: 2 1 160px">{{ t('rplan.phase_when') }}<input type="text" name="{{ p }}when" dir="auto" value="{{ sent(f, p ~ 'when', rec.when) }}"></label>
+          </div>
+        </div>
+        {% endfor %}
+        <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('mod.save') }}</button></div>
+      </form>
+    </section>
+
+    <section class="ui-card" id="team">
+      <h2>{{ t('rplan.team') }}</h2>
+      {% if plan.team %}<ul class="ui-kv">{% for m in plan.team %}<li><span>{{ t('role_rehab.' ~ m.role.value) }}</span><b dir="auto"><bdi>{{ m.does or '—' }}</bdi></b></li>{% endfor %}</ul>{% endif %}
+      {% set f = form if action == 'team' else none %}
+      {% set n_rows = (f.get('team_rows') | int) if f else (plan.team | length) + new_rows %}
+      <details{% if f or not plan.team %} open{% endif %} style="margin-top: 0.5rem"><summary>{{ t('rplan.team_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="team"><input type="hidden" name="team_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set m = plan.team[n - 1] if (not f and n <= plan.team | length) else none %}{% set p = 'team_' ~ n ~ '_' %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem">
+            {% set rl = f.get(p ~ 'role', '') if f else (m.role.value if m else '') %}
+            <label style="flex: 1 1 140px">{{ t('rplan.role') }}<select name="{{ p }}role"><option value="">{{ t('intake.select') }}</option>{% for r in roles %}<option value="{{ r.value }}"{{ " selected" if r.value == rl }}>{{ t('role_rehab.' ~ r.value) }}</option>{% endfor %}</select></label>
+            <label style="flex: 1 1 140px">{{ t('rplan.does') }}<input type="text" name="{{ p }}does" dir="auto" value="{{ sent(f, p ~ 'does', m.does if m else '') }}"></label>
+          </div>
+          {% endfor %}
+          <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('mod.save') }}</button></div>
+        </form>
+      </details>
+    </section>
+    {{ next_link('rehab.progress', t('rplan.to_progress')) }}
+  </aside>
+</div>
+{% endblock %}

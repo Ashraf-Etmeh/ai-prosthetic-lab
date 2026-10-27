@@ -131,9 +131,10 @@ capabilities they cover: 1 تقييم حالات البتر, 2–3 تحليل ا
 دعم اختيار المكونات, 4 دعم قرارات التصميم والتركيب, 5 المتابعة والتقييم; since
 2026-10-24 each is a page of its own (§4.10), and the review page below is
 the specialist review reached from module 1. The orthotics map (`/orthotics`)
-does the same for its six (§4.9). Four shared parts sit next to the
-domains: the knowledge layer (§4.12), reasoning and review (§4.11), search
-and education (§4.13, §4.14), and the patient record (§4.15).
+does the same for its six (§4.9). Rehabilitation (§4.16) works on a case of
+either domain. Four shared parts sit next to the domains: the knowledge
+layer (§4.12), reasoning and review (§4.11), search and education (§4.13,
+§4.14), and the patient record (§4.15).
 
 1. **Intake form** (`GET /intake`). The user enters a test case: amputation
    level (12 levels, 6 lower and 6 upper limb) and side (left, right,
@@ -725,6 +726,55 @@ The shared part "Patient record" (SYSTEM_DESIGN.md §7.4 and §8;
 - **Not built:** sign-in and roles enforced; reminders; follow-up intervals
   (a clinic rule); deleting from the review log (append-only, open decision).
 
+### 4.16 Rehabilitation (SYSTEM_DESIGN.md §6.4, plan Part 9, 2026-10-27)
+
+`rehabilitation/` works on a case of either domain (the design's example is
+an orthotic stroke case with its AFO): it has no intake or case type of its
+own, so it is listed in `shared/domains.py` SHARED_PARTS, first, next to the
+domains. Its tabs carry the case's id; without a case they say one is needed
+(the header reads its nav.py NEEDS_CASE). Its plan is kept with the case
+(`shared/store.py` CaseRecord.rehab, case file version 5; older files read
+with none). Every value is the team's (`rehabilitation/plan.py` RehabPlan):
+
+- **1 Plan** (`/rehabilitation/<id>/plan`): when the goals were agreed with
+  the person and how often they are reviewed; goals (G1 ..., by ICF level,
+  in the words agreed, timeframe and review date, scaled −2 to +2);
+  interventions (I1 ..., a kind from a draft list or "the therapist's own"
+  with its name, the goals it serves, the dose as the therapist writes it);
+  phases (inpatient, outpatient, community: status and when) and the team
+  (role and what each does). Next to each intervention: what the library
+  says about its kind (`rehabilitation/sources.py`: fixed wording and topic
+  words per kind, searched in the catalog's "rehabilitation" documents for
+  the case's limb, at most one passage per document, quoted as printed;
+  `knowledge/retrieval.py` search_items, which orthotics/sources.py now uses
+  too). The therapist's own is never searched: "No source in the library".
+- **2 Progress**: the shared follow-up form (measures, sessions with their
+  values, alerts looping back to the plan or the training); goal attainment
+  scores (−2 to +2, a date, a note), each added, never changed. No change,
+  trend or conclusion is computed; the smallest change that matters and
+  clinic-rule alerts wait for the owner (SYSTEM_DESIGN.md §11.2-3).
+- **3 Training with the device**: tasks (T1 ...) naming what they train, the
+  device's requirements (`<domain>/plan.py` requirements, R1 ...) or the
+  goals, with stage and status (not started, with help, with cues,
+  independent); the home programme in Arabic and English, the therapist's
+  words, flagged until an Arabic-reading therapist has checked the Arabic,
+  printable (`/home-programme?lang=`); what was seen in training for the
+  device specialist (the domain's nav.py SPECIALIST by default), added and
+  answered, never changed, shown on the case's follow-up page in a
+  "Rehabilitation" card (`shared/templates/ui_macros.html` rehab_card).
+- **4 Team record**: one timeline of the team's entries (date, role, kind,
+  words; added, never changed), the progress sessions and the device's
+  versioned records (nav.py RECORD_VERSIONS), filtered by therapy, device or
+  medical; the handover, each save a new version, written by a person and
+  signed (final once signed; sending is done outside the tool; no AI draft,
+  SYSTEM_DESIGN.md §11.8); next steps.
+- **The patient record** (§4.15) shows the goals agreed, the attainment
+  scores, the team's entries and the signed handovers on its timeline.
+- **Not sent anywhere:** no rehabilitation value goes to a language model.
+  **Not built:** clinic-rule alerts, the smallest change that matters, video
+  clips, the AI-drafted handover, sending the handover. The vocabularies are
+  Claude's draft, awaiting the owner and a therapist.
+
 ---
 
 ## 5. Structure
@@ -732,7 +782,7 @@ The shared part "Patient record" (SYSTEM_DESIGN.md §7.4 and §8;
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 659 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 675 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -832,6 +882,16 @@ record/                    patient record and governance (§4.15)
                            POST /record/new, /note, /consent, /request
   nav.py                   what the header shows for the shared part "Patient record"
   templates/record/        people.html, person.html, governance.html, copy.html, macros.html
+  tests/
+rehabilitation/            rehabilitation on a case of either domain (§4.16)
+  plan.py                  RehabPlan: goals, scores, interventions, phases, team, progress, tasks, home
+                           programme, observations, entries, handovers, next steps; the draft vocabularies
+  sources.py               fixed wording per kind of intervention, searched locally (no AI)
+  routes.py                GET /rehabilitation; GET/POST /rehabilitation/<id>/plan, /progress, /training, /team;
+                           GET /rehabilitation/<id>/home-programme
+  nav.py                   what the header shows for rehabilitation (its tabs need a case)
+  templates/rehabilitation/  map.html, plan.html, progress.html, training.html, home_programme.html, team.html,
+                           macros.html
   tests/
 prosthetics/               use cases 01-02
   case.py                  Case (amputation level, side, residual limb, activity, prior devices), its enums
@@ -1015,7 +1075,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **659 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **675 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -1136,6 +1196,10 @@ uses a missing key.
   retention period, law and consent wording await the owner; a deletion is
   done by hand, and the review log's lines for the person's cases stay
   (append-only); no reminders or follow-up intervals.
+- Rehabilitation (§4.16, 2026-10-27): the intervention list and its search
+  wording, the roles and task statuses are Claude's drafts; the smallest
+  change that matters and clinic-rule alerts wait for the owner; no video
+  clips; the handover is typed and signed in the tool but sent outside it.
 
 ---
 

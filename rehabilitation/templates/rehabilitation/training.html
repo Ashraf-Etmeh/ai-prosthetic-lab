@@ -1,0 +1,110 @@
+{% extends "ui_base.html" %}
+{% from "ui_forms.html" import sent with context %}
+{% from "rehabilitation/macros.html" import rehab_bar, next_link with context %}
+{# Module 3, training with the device (docs/design/05-rehabilitation/DeviceTraining.html): each task names what it
+   trains, a requirement of the device's plan (R1 ..., as its specialist wrote it) or a goal; its stage and status
+   as the therapist records them. The home programme in Arabic and English, the therapist's words, flagged until an
+   Arabic-reading therapist has checked the Arabic. What was seen in training for the device specialist, added and
+   answered, never changed (no video clip: none reaches the app). #}
+{% block title %}{{ t('rtrain.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=3) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('rtrain.intro') }}</p>{% endblock %}
+{% block brief %}ربط الجهاز بالتدريب الوظيفي{% endblock %}
+{% block bar %}{{ rehab_bar(record, module) }}{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set action = form.get('action') if form else none %}
+{% set post_url = url_for('rehab.training', case_id=case.case_id) %}
+{% set trainable = [] %}
+{% for r in requirements %}{% set _ = trainable.append((r.id, r.text)) %}{% endfor %}
+{% for g in plan.goals %}{% set _ = trainable.append((g.id, g.text)) %}{% endfor %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card" id="tasks">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('rtrain.tasks') }}</h2>
+        <span class="ui-note" style="margin: 0">{% if requirements %}{{ t('rtrain.from_requirements', domain=t('domain.' ~ case.domain)) }}{% else %}{{ t('rtrain.no_requirements', domain=t('domain.' ~ case.domain)) }}{% endif %}</span></div>
+      {% if plan.tasks %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 560px">
+          <thead><tr><th scope="col">{{ t('rtrain.task') }}</th><th scope="col">{{ t('rtrain.trains') }}</th><th scope="col">{{ t('rtrain.stage') }}</th><th scope="col">{{ t('rtrain.status') }}</th></tr></thead>
+          <tbody>{% for task in plan.tasks %}
+            <tr><td dir="auto"><bdi>{{ task.text }}</bdi></td>
+              <td>{% for x in task.trains %}{% set named = trainable | selectattr(0, 'equalto', x) | first %}<span class="ui-tag" title="{{ named[1] if named else '' }}">{{ x }}</span> {% else %}—{% endfor %}</td>
+              <td dir="auto"><bdi>{{ task.stage or '—' }}</bdi></td>
+              <td><span class="ui-tag{{ ' ui-tag-accent' if task.status.value == 'independent' }}">{{ t('task_status.' ~ task.status.value) }}</span></td></tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+      {% else %}<p class="ui-note">{{ t('rtrain.no_tasks') }}</p>{% endif %}
+
+      {% set f = form if action == 'tasks' else none %}
+      {% set n_rows = (f.get('task_rows') | int) if f else (plan.tasks | length) + new_rows %}
+      <details{% if f or not plan.tasks %} open{% endif %} style="margin-top: 0.75rem"><summary>{{ t('rtrain.tasks_edit') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="tasks"><input type="hidden" name="task_rows" value="{{ n_rows }}">
+          {% for n in range(1, n_rows + 1) %}{% set task = plan.tasks[n - 1] if (not f and n <= plan.tasks | length) else none %}{% set p = 'task_' ~ n ~ '_' %}
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--ui-line)">
+            <input type="hidden" name="{{ p }}id" value="{{ sent(f, p ~ 'id', task.id if task else '') }}">
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+              <label style="flex: 3 1 240px">{{ t('rtrain.task') }}<input type="text" name="{{ p }}text" dir="auto" value="{{ sent(f, p ~ 'text', task.text if task else '') }}"></label>
+              <label style="flex: 2 1 160px">{{ t('rtrain.stage') }}<input type="text" name="{{ p }}stage" dir="auto" value="{{ sent(f, p ~ 'stage', task.stage if task else '') }}"></label>
+              {% set st = f.get(p ~ 'status', '') if f else (task.status.value if task else '') %}
+              <label style="flex: 1 1 140px">{{ t('rtrain.status') }}<select name="{{ p }}status">{% for s in task_statuses %}<option value="{{ s.value }}"{{ " selected" if s.value == st }}>{{ t('task_status.' ~ s.value) }}</option>{% endfor %}</select></label>
+            </div>
+            {% if trainable %}{% set ticked = f.getlist(p ~ 'trains') if f else (task.trains if task else []) %}
+            <div class="ui-checks"><span class="ui-note" style="margin: 0">{{ t('rtrain.trains') }}</span>{% for x, words in trainable %}<label title="{{ words }}"><input type="checkbox" name="{{ p }}trains" value="{{ x }}"{{ " checked" if x in ticked }}><span>{{ x }} · <bdi>{{ words | truncate(40) }}</bdi></span></label>{% endfor %}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('rtrain.save_tasks') }}</button></div>
+        </form>
+      </details>
+    </section>
+
+    <section class="ui-card" id="home">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('rtrain.home') }}</h2>
+        <span class="ui-note" style="margin: 0"><a href="{{ url_for('rehab.home_programme', case_id=case.case_id, lang='ar') }}" lang="ar">العربية</a> · <a href="{{ url_for('rehab.home_programme', case_id=case.case_id, lang='en') }}" lang="en">English</a></span></div>
+      {% if plan.home_ar and not plan.home_checked_by %}<div class="ui-draft" style="margin-top: 0.5rem">{{ t('rtrain.not_checked') }}</div>{% endif %}
+      {% set f = form if action == 'home' else none %}
+      <form method="post" action="{{ post_url }}" style="margin-top: 0.5rem">
+        <input type="hidden" name="action" value="home">
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem">
+          <label style="flex: 1 1 260px" lang="ar">{{ t('rtrain.home_ar') }}<textarea name="home_ar" rows="5" dir="rtl" lang="ar">{{ sent(f, 'home_ar', plan.home_ar) }}</textarea></label>
+          <label style="flex: 1 1 260px">{{ t('rtrain.home_en') }}<textarea name="home_en" rows="5" dir="ltr" lang="en">{{ sent(f, 'home_en', plan.home_en) }}</textarea></label>
+        </div>
+        <label style="display: block; margin-top: 0.5rem">{{ t('rtrain.checked_by') }}<input type="text" name="home_checked_by" dir="auto" value="{{ sent(f, 'home_checked_by', plan.home_checked_by) }}"></label>
+        <p class="ui-note">{{ t('rtrain.home_note') }}</p>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('rtrain.save_home') }}</button></div>
+      </form>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card" id="seen">
+      <h2>{{ t('rtrain.seen_heading') }}</h2>
+      {% for o in plan.observations | reverse %}{% set n = plan.observations | length - loop.index0 %}
+      <div class="ui-alert" style="margin-top: 0.6rem">
+        <div class="ui-note" style="margin: 0"><bdi>{{ o.at[:10] }}</bdi> · {{ t('rtrain.for', role=t('role_rehab.' ~ o.for_role.value)) }}</div>
+        <p style="margin: 0.2rem 0 0" dir="auto">“<bdi>{{ o.text }}</bdi>”</p>
+        {% if o.answered_at %}<p class="ui-note" dir="auto">{{ t('rtrain.answered', date=o.answered_at[:10]) }} <bdi>{{ o.answer }}</bdi></p>
+        {% else %}
+        <form method="post" action="{{ post_url }}" style="margin-top: 0.4rem">
+          <input type="hidden" name="action" value="answer"><input type="hidden" name="n" value="{{ n }}">
+          <label style="display: block">{{ t('rtrain.answer') }}<input type="text" name="answer" dir="auto"></label>
+          <div class="ui-actions" style="margin-top: 0.4rem"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('rtrain.save_answer') }}</button></div>
+        </form>
+        {% endif %}
+      </div>
+      {% else %}<p class="ui-note">{{ t('rtrain.none_seen') }}</p>{% endfor %}
+      {% set f = form if action == 'observation' else none %}
+      <form method="post" action="{{ post_url }}" style="margin-top: 0.75rem">
+        <input type="hidden" name="action" value="observation">
+        <label style="display: block">{{ t('rtrain.seen') }}<input type="text" name="text" dir="auto" value="{{ sent(f, 'text', '') }}"></label>
+        <label style="display: block; margin-top: 0.4rem">{{ t('rtrain.for_whom') }}<select name="for_role">{% for r in device_roles %}<option value="{{ r.value }}"{{ " selected" if (f and f.get('for_role') == r.value) or (not f and r.value == specialist) }}>{{ t('role_rehab.' ~ r.value) }}</option>{% endfor %}</select></label>
+        <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('rtrain.send') }}</button></div>
+      </form>
+      <p class="ui-note">{{ t('rtrain.seen_note') }}</p>
+    </section>
+    {{ next_link('rehab.team', t('rtrain.to_team')) }}
+  </aside>
+</div>
+{% endblock %}

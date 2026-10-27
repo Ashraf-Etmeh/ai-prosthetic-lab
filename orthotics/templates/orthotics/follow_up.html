@@ -1,5 +1,5 @@
 {% extends "ui_base.html" %}
-{% from "ui_macros.html" import latest_visit_card, loop_back_links with context %}
+{% from "ui_macros.html" import latest_visit_card, loop_back_links, rehab_card with context %}
 {% from "ui_forms.html" import alerts_card, follow_up_main, visit_steps with context %}
 {# Module 6 (the canvas's screen 6): the visits; the outcome measures the clinician enters at each visit, as bars
    over time, shown as recorded (the clinician judges the change: no score, trend or verdict is computed); the
@@ -22,6 +22,8 @@
     {{ alerts_card(follow, due, form, post_url, back_to, 'orthotic_modules.') }}
 
     {{ latest_visit_card(follow) }}
+
+    {{ rehab_card(record) }}
 
     <section class="ui-dark ui-loop">
       <h2 style="margin: 0; font-size: 1.125rem">{{ t('fu.loop_back') }}</h2>

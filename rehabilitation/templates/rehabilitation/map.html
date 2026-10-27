@@ -1,0 +1,47 @@
+{% extends "ui_base.html" %}
+{# Rehabilitation's first page (rehabilitation/routes.py first_page): its four modules and the brief's capabilities
+   they cover, and the cases on this machine to open (either domain: rehabilitation works on a device case). #}
+{% block title %}{{ t('rehab.title') }}{% endblock %}
+{% block kicker %}{{ t('rehab.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('rehab.intro') }}</p>{% endblock %}
+{% block brief %}إعداد خطط التأهيل · متابعة تطور الحالة · ربط الجهاز بالتدريب الوظيفي · تنظيم معلومات المتابعة{% endblock %}
+{% block content %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <h2>{{ t('rehab.cases') }}</h2>
+      {% if records %}
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for record in records %}
+        <li class="ui-row" style="justify-content: space-between; align-items: center">
+          <div style="min-width: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; align-items: center">
+            <b dir="ltr">{{ record.case.case_id }}</b> <span class="ui-tag">{{ t('domain.' ~ record.case.domain) }}</span>
+            {% with case = record.case, plan = record.plan, module = 'rehab' %}{% include domain_nav(record.case.domain).CASE_BAR %}{% endwith %}
+            {% if record.rehab %}<span class="ui-tag ui-tag-accent">{{ t('rehab.has_plan') }}</span>{% endif %}
+          </div>
+          <a class="ui-btn{{ ' ui-btn-quiet' if not record.rehab }}" href="{{ url_for('rehab.plan', case_id=record.case.case_id) }}">{{ t('rehab.open') if record.rehab else t('rehab.start') }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="ui-note">{{ t('rehab.no_cases') }}</p>
+      <div class="ui-actions">{% for d in all_domains %}<a class="ui-btn ui-btn-quiet" href="{{ url_for(domain_nav(d).INTAKE) }}">{{ t('rec.new_case', domain=t('domain.' ~ d)) }}</a>{% endfor %}</div>
+      {% endif %}
+    </section>
+  </div>
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('rehab.modules') }}</h2>
+      <ol class="ui-plain" style="margin-top: 0.5rem">
+        {% for key in ['plan', 'progress', 'training', 'team'] %}<li><b>{{ t('rehmod.' ~ key) }}</b> · {{ t('rehab_does.' ~ key) }}</li>{% endfor %}
+      </ol>
+    </section>
+    <section class="ui-card">
+      <h2>{{ t('rehab.honest') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">
+        {% for key in ['team_values', 'sources', 'no_ai', 'drafts'] %}<li>{{ t('rehab_honest.' ~ key) }}</li>{% endfor %}
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

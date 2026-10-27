@@ -237,3 +237,15 @@
         {% endfor %}
       </div>
 {% endmacro %}
+
+{# On a device case's follow-up page: its rehabilitation (rehabilitation/; plan Part 9): what was seen in training
+   for the device specialist and not answered yet, and the way to the plan. #}
+{% macro rehab_card(record) %}
+    {% set open = record.rehab.open_observations() if record.rehab else [] %}
+    <section class="ui-card">
+      <h2>{{ t('rehab.card') }}</h2>
+      {% for o in open %}<div class="ui-alert" style="margin-top: 0.6rem"><span dir="auto">“<bdi>{{ o.text }}</bdi>”</span><div class="ui-note" style="margin: 0.2rem 0 0"><bdi>{{ o.at[:10] }}</bdi> · {{ t('rtrain.for', role=t('role_rehab.' ~ o.for_role.value)) }}</div></div>{% endfor %}
+      {% if not open %}<p class="ui-note">{{ t('rehab.card_none') if record.rehab else t('rehab.card_no_plan') }}</p>{% endif %}
+      <div class="ui-actions"><a class="ui-btn ui-btn-quiet" href="{{ url_for('rehab.training', case_id=record.case.case_id) }}#seen">{{ t('rehab.card_open') }}</a></div>
+    </section>
+{% endmacro %}

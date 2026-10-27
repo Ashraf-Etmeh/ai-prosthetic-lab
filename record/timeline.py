@@ -26,7 +26,7 @@ class Event:
 
     at: str  # a date (YYYY-MM-DD) or a time (ISO 8601): sorted as text, newest first
     domain: str
-    kind: str  # intake, review, choice, version, visit
+    kind: str  # intake, review, choice, version, visit; rehab_plan, rehab_score, team_entry, handover
     case_id: str
     endpoint: str  # the page it opens
     label: Optional[str] = None  # a version's text key, a visit's name as typed, a decision
@@ -116,6 +116,16 @@ def record_view(person: Person) -> RecordView:
                 view.events.append(Event(visit.date, domain, "visit", case_id, nav.RECORD_FOLLOW_UP, label=visit.name,
                                          status=status))
         view.open_alerts += [(domain, case_id, alert.text) for alert in follow_up.alerts if not alert.resolved]
+        rehab = record.rehab  # its rehabilitation (rehabilitation/plan.py; plan Part 9)
+        if rehab is not None:
+            if rehab.agreed_on:
+                view.events.append(Event(rehab.agreed_on, domain, "rehab_plan", case_id, "rehab.plan"))
+            view.events += [Event(s.on, domain, "rehab_score", case_id, "rehab.progress", label=s.goal,
+                                  number=s.score) for s in rehab.scores]
+            view.events += [Event(e.on, domain, "team_entry", case_id, "rehab.team", label=e.role.value, note=e.text)
+                            for e in rehab.entries]
+            view.events += [Event(h.signed_at, domain, "handover", case_id, "rehab.team", label=h.signed_by.value,
+                                  number=h.number) for h in rehab.handovers if h.signed_at]
         columns = [v for v in follow_up.visits if v.values]
         if follow_up.measures and columns:
             view.measures.append(MeasureTable(

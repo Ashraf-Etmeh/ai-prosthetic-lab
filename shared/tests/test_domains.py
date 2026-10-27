@@ -18,7 +18,7 @@ PARTS = {
     "rag": ("PROFILE", "components_from", "fitting_from"),
     "intake": ("bp",),
     "nav": ("MAP", "INTAKE", "MODULES", "LABELS", "DECIDES", "APPROVES", "CASE_BAR", "WORDS", "REVIEW_BACK",
-            "REVIEW_NEXT", "RECORD_VERSIONS", "RECORD_CHOICE", "RECORD_FOLLOW_UP"),
+            "REVIEW_NEXT", "RECORD_VERSIONS", "RECORD_CHOICE", "RECORD_FOLLOW_UP", "SPECIALIST"),
     # The specialist's work after the intake (since plan Part 3, 2026-10-24, every domain has them).
     "plan": ("PLAN", "BACK_TO"),
     "hard_stops": ("RULES", "DETAILS", "case_checks", "clinic_rules"),

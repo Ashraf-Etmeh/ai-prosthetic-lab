@@ -197,8 +197,9 @@ http://127.0.0.1:5000/orthotics.
 ## The pages
 
 Every page has the same header (since 2026-10-23): Prosthetics / Orthotics /
-Knowledge layer / Reasoning and review / Search and education / Patient
-record, the part's modules, and on a case's pages a bar with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
+Rehabilitation / Knowledge layer / Reasoning and review / Search and
+education / Patient record, the part's modules, and on a case's pages a bar
+with the case. The prosthetics map, http://127.0.0.1:5000/prosthetics, lists the
 four prosthetic modules; the orthotics map is at /orthotics.
 
 **Knowledge layer** (2026-10-25, `docs/design/06-knowledge-layer/`) has three
@@ -278,6 +279,34 @@ then cut the person's file (`data/records/people/<code>.jsonl`) down to its
 `{"record_version": 1, "kind": "deleted", "at": "<UTC time>"}`. The page then
 says the content was deleted. The review log's lines for those cases stay
 (it is append-only): see docs/FUTURE_WORK.md, "Patient record".
+
+**Rehabilitation** (2026-10-27, `docs/design/05-rehabilitation/`): works on a
+prosthetic or orthotic case (it has no intake of its own); open a case from
+`/rehabilitation`, or from the "Rehabilitation" card on a case's follow-up
+page. Its plan is kept with the case (case file version 5).
+- **1 Plan** (`/rehabilitation/<case id>/plan`): goals agreed with the person
+  by ICF level (scaled −2 to +2, with a review date), interventions with the
+  goals they serve and the dose the therapist sets, each next to what the
+  library says about its kind (local search on fixed wording, quoted as
+  printed; an intervention of the therapist's own: "No source in the
+  library"), phases and the team.
+- **2 Progress**: measures by session as recorded (the shared follow-up
+  form), goal attainment scored by the therapist with the person, alerts in
+  the therapist's words. The smallest change that matters is the owner's,
+  not set yet.
+- **3 Training with the device**: tasks tied to the device's requirements
+  (R1 ...) or the goals, with stage and status; the home programme in Arabic
+  and English, flagged until an Arabic-reading therapist has checked it,
+  printable; what was seen in training for the prosthetist or orthotist,
+  shown on the case's follow-up page and answered there by the specialist.
+- **4 Team record**: one timeline (the team's entries, the sessions, the
+  device's versions) filtered by therapy, device or medical; the handover,
+  written and signed by a person (no AI draft: the owner's open decision);
+  next steps.
+
+Nothing of a rehabilitation plan is sent to a language model. The lists of
+interventions, roles and task statuses are Claude's draft, awaiting the
+owner and a therapist.
 
 **Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
 has three pages:
@@ -589,6 +618,11 @@ record/             Patient record and governance: each person's record (people.
                     requests), the access trail (access.py), roles and retention (governance.py), the
                     timeline (timeline.py), routes.py, nav.py
   templates/record/
+  tests/
+rehabilitation/     Rehabilitation on a case of either domain: the plan and its vocabularies (plan.py), what the
+                    sources say about each kind of intervention (sources.py), the four modules (routes.py),
+                    nav.py
+  templates/rehabilitation/
   tests/
 quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
                     trial-case loader, the recorded results (results.py), the owner's release sign-offs

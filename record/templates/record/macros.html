@@ -29,6 +29,10 @@
   {%- elif e.kind == 'choice' %}{{ t('rec_ev.choice') }}
   {%- elif e.kind == 'version' %}{{ t(e.label, n=e.number) }}
   {%- elif e.kind == 'visit' %}{{ t('rec_ev.visit', status=t('visit_status.' ~ e.status)) }} · <bdi>{{ e.label }}</bdi>
+  {%- elif e.kind == 'rehab_plan' %}{{ t('rec_ev.rehab_plan') }}
+  {%- elif e.kind == 'rehab_score' %}{{ t('rec_ev.rehab_score', goal=e.label, score=('+' if e.number > 0 else ('−' if e.number < 0 else '')) ~ (e.number | abs)) }}
+  {%- elif e.kind == 'team_entry' %}{{ t('rec_ev.team_entry', role=t('role_rehab.' ~ e.label)) }}
+  {%- elif e.kind == 'handover' %}{{ t('rec_ev.handover', n=e.number, role=t('role_rehab.' ~ e.label)) }}
   {%- endif -%}
 {%- endmacro %}
 

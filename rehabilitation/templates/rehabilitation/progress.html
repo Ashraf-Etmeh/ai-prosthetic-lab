@@ -1,0 +1,58 @@
+{% extends "ui_base.html" %}
+{% from "ui_forms.html" import alerts_card, follow_up_main, visit_steps, sent with context %}
+{% from "rehabilitation/macros.html" import rehab_bar, goal_tag, score_text, next_link with context %}
+{# Module 2, progress (docs/design/05-rehabilitation/Progress.html): the measures by session as the therapist
+   recorded them (the shared follow-up form: no change, trend or verdict computed); the smallest change that matters
+   for each is the owner's, from its source (SYSTEM_DESIGN.md §11.2), not set yet; goal attainment scored by the
+   therapist with the person (-2 to +2), each score added, never changed; alerts in the therapist's words, looping
+   back to the plan or the training. Alerts from clinic rules wait for the owner's rules. #}
+{% block title %}{{ t('rprog.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=2) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('rprog.intro') }}</p>{% endblock %}
+{% block brief %}متابعة تطور الحالة{% endblock %}
+{% block bar %}{{ rehab_bar(record, module) }}{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set follow = plan.follow_up %}
+{% set due = follow.next_due() %}
+{% set post_url = url_for('rehab.progress', case_id=case.case_id) %}
+{{ visit_steps(follow, due) }}
+<p class="ui-note">{{ t('rprog.smallest_change') }}</p>
+
+<div class="ui-cols">
+  {{ follow_up_main(follow, form, post_url, new_rows, statuses) }}
+
+  <aside class="ui-col-side">
+    <section class="ui-card" id="goals">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('rprog.attainment') }}</h2><span class="ui-note" style="margin: 0">{{ t('rprog.scored_by') }}</span></div>
+      {% if plan.goals %}
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for g in plan.goals %}{% set latest = plan.latest_score(g.id) %}
+        <li class="ui-row" style="padding-block: 0.6rem; justify-content: space-between">
+          <div style="min-width: 0; flex: 1 1 180px">{{ goal_tag(g) }} <bdi dir="auto">{{ g.text }}</bdi>
+            {% if plan.scores_for(g.id) | length > 1 %}<div class="ui-note" style="margin: 0.15rem 0 0">{% for s in plan.scores_for(g.id) %}<bdi>{{ s.on }}</bdi>: {{ score_text(s.score) }}{{ ' · ' if not loop.last }}{% endfor %}</div>{% endif %}</div>
+          <b>{% if latest %}{{ score_text(latest.score) }} <span class="ui-note" style="margin: 0"><bdi>{{ latest.on }}</bdi></span>{% else %}<span class="ui-note" style="margin: 0">{{ t('rprog.not_scored') }}</span>{% endif %}</b>
+        </li>
+        {% endfor %}
+      </ul>
+      {% set f = form if form.get('action') == 'score' else none %}
+      <form method="post" action="{{ post_url }}" style="margin-top: 0.75rem">
+        <input type="hidden" name="action" value="score">
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+          <label style="flex: 1 1 90px">{{ t('rprog.goal') }}<select name="goal">{% for g in plan.goals %}<option value="{{ g.id }}"{{ " selected" if f and f.get('goal') == g.id }}>{{ g.id }}</option>{% endfor %}</select></label>
+          <label style="flex: 1 1 90px">{{ t('rprog.score') }}<select name="score"><option value="">{{ t('intake.select') }}</option>{% for s in scores %}<option value="{{ s }}"{{ " selected" if f and f.get('score') == s | string }}>{{ score_text(s) }}</option>{% endfor %}</select></label>
+          <label style="flex: 1 1 150px">{{ t('rprog.scored_on') }}<input type="date" name="on" value="{{ sent(f, 'on', '') }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+        </div>
+        <label style="display: block; margin-top: 0.4rem">{{ t('rprog.note') }}<input type="text" name="note" dir="auto" value="{{ sent(f, 'note', '') }}"></label>
+        <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('rprog.add_score') }}</button></div>
+      </form>
+      <p class="ui-note">{{ t('rprog.scores_note') }}</p>
+      {% else %}<p class="ui-note">{{ t('rprog.no_goals') }} <a href="{{ url_for('rehab.plan', case_id=case.case_id) }}#goals">{{ t('rplan.title') }}</a></p>{% endif %}
+    </section>
+
+    {{ alerts_card(follow, due, form, post_url, back_to, 'rehab.') }}
+    <p class="ui-note">{{ t('rprog.rule_alerts') }}</p>
+    {{ next_link('rehab.training', t('rprog.to_training')) }}
+  </aside>
+</div>
+{% endblock %}

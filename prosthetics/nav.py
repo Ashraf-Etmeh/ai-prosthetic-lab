@@ -26,3 +26,5 @@ RECORD_VERSIONS = (("socket_versions", "rec_ev.socket_version", "prosthetic_modu
                    ("alignment_versions", "rec_ev.alignment_version", "prosthetic_modules.fitting"))
 RECORD_CHOICE = "prosthetic_modules.components"
 RECORD_FOLLOW_UP = "prosthetic_modules.follow_up"
+# Who makes and fits the device: what rehabilitation's training notes are sent to (rehabilitation/plan.py TeamRole).
+SPECIALIST = "prosthetist"

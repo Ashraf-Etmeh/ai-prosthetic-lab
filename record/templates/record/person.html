@@ -48,7 +48,7 @@
         <li class="ui-row" style="justify-content: space-between">
           <div style="min-width: 0"><div class="ui-note" style="margin: 0"><bdi>{{ e.day }}</bdi> · {{ domain_tag(e.domain) }} <span dir="ltr">{{ e.case_id }}</span></div>
             <div style="margin-top: 0.2rem"><b>{{ event_title(e) }}</b></div>
-            {% if e.note %}<div class="ui-note" dir="auto">{{ t('rec.reason') }} <bdi>{{ e.note }}</bdi></div>{% endif %}</div>
+            {% if e.note %}<div class="ui-note" dir="auto">{% if e.kind == 'choice' %}{{ t('rec.reason') }} {% endif %}<bdi>{{ e.note }}</bdi></div>{% endif %}</div>
           <a class="ui-btn ui-btn-quiet" href="{{ url_for(e.endpoint, case_id=e.case_id) }}">{{ t('rec.open') }}</a>
         </li>
         {% endfor %}

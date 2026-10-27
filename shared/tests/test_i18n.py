@@ -234,6 +234,18 @@ class CompletenessTests(unittest.TestCase):
         expected |= {f"rec_how.{k}" for k in ("code", "consent_first", "attach", "never_sent", "no_sign_in")}
         expected |= {f"rec_ev.{k}" for k in ("intake", "review", "choice", "visit")}
         expected |= {key for domain in domains.DOMAINS for _, key, _ in domains.part(domain, "nav").RECORD_VERSIONS}
+        expected |= {f"rec_ev.{k}" for k in ("rehab_plan", "rehab_score", "team_entry", "handover")}
+        # Rehabilitation (plan Part 9, 2026-10-27): its vocabularies, the first page's lists, its alerts' links
+        from rehabilitation import plan as rehab_plan
+        from rehabilitation import nav as rehab_nav
+        for prefix, vocabulary in (("icf", rehab_plan.IcfLevel), ("intervention", rehab_plan.InterventionKind),
+                                   ("rphase", rehab_plan.Phase), ("phase_status", rehab_plan.PhaseStatus),
+                                   ("role_rehab", rehab_plan.TeamRole), ("task_status", rehab_plan.TaskStatus),
+                                   ("entry_kind", rehab_plan.EntryKind)):
+            expected |= {f"{prefix}.{member.value}" for member in vocabulary}
+        expected |= {f"rehab_does.{key}" for key, _, _ in rehab_nav.MODULES} | {rehab_nav.NEEDS_CASE}
+        expected |= {f"rehab_honest.{k}" for k in ("team_values", "sources", "no_ai", "drafts")}
+        expected |= {f"fu.back_to.{key}" for key in rehab_plan.BACK_TO} | {"rteam.session"}
         self.assertEqual(expected - set(TEXT), set())
 
 

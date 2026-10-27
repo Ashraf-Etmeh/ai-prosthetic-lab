@@ -19,16 +19,15 @@ AFO manual's designs, Choo 2021's AFO types, Wang 2025 on 3D printing, NICE
 HTG178 on FES); the owner may revise it.
 """
 
-import re
 from typing import Callable, Optional
 
 import numpy as np
 
 from knowledge.embedding import embed_texts
 from knowledge.models import ProtocolChunk
-from knowledge.retrieval import VectorStore, get_store
+from knowledge.retrieval import VectorStore, search_items
 from orthotics.plan import DeviceType, Part, Step
-from shared.config import ORTHOTIC_RETRIEVAL_DOMAINS, RETRIEVAL_LANGUAGES
+from shared.config import ORTHOTIC_RETRIEVAL_DOMAINS
 
 PASSAGES_PER_ITEM = 3
 PER_DOCUMENT = 2  # at most this many of an item's passages from one document
@@ -89,26 +88,8 @@ STEPS = {
                    r"deliver|follow-up|fitting|check-?out"),
 }
 
-# A table of contents ("18 3.1 Moulding of EVA 18 3.2 Orthosis trim line"): never shown.
-_CONTENTS_ENTRY = re.compile(r"\b\d{1,3}\s+\d{1,2}\.\d{1,2}\s")
-CONTENTS_ENTRIES = 3
-
-# Each search's passages, by (store, search text): the vocabulary is fixed, so a page
-# shown again needs no new search. A re-ingested library is a new store.
-_cache: dict[tuple[int, str], list[ProtocolChunk]] = {}
-
-
-def _shown(chunks: list[ProtocolChunk], topic: str) -> list[ProtocolChunk]:
-    """The first PASSAGES_PER_ITEM that mention the topic, at most PER_DOCUMENT from one document."""
-    pattern, kept, per_document = re.compile(topic, re.IGNORECASE), [], {}
-    for chunk in chunks:
-        if len(kept) == PASSAGES_PER_ITEM:
-            break
-        if (pattern.search(chunk.text) and per_document.get(chunk.doc_id, 0) < PER_DOCUMENT
-                and len(_CONTENTS_ENTRY.findall(chunk.text)) < CONTENTS_ENTRIES):
-            per_document[chunk.doc_id] = per_document.get(chunk.doc_id, 0) + 1
-            kept.append(chunk)
-    return kept
+# Each search's passages, by (store, limb, search text) (knowledge/retrieval.py search_items).
+_cache: dict[tuple, list[ProtocolChunk]] = {}
 
 
 def find_passages(
@@ -120,12 +101,5 @@ def find_passages(
 
     Raises KnowledgeBaseMissing if the library hasn't been ingested.
     """
-    store = store if store is not None else get_store()
-    todo = {key: (query, topic) for key, (query, topic) in items.items() if (id(store), query) not in _cache}
-    if todo:
-        vectors = embed([query for query, _ in todo.values()])
-        for (query, topic), vector in zip(todo.values(), vectors):
-            found = store.search(vector, CANDIDATES, domains=ORTHOTIC_RETRIEVAL_DOMAINS,
-                                 languages=RETRIEVAL_LANGUAGES, limb="lower", exclude=EXCLUDED_DOCUMENTS)
-            _cache[(id(store), query)] = _shown(found, topic)
-    return {key: _cache[(id(store), query)] for key, (query, _) in items.items()}
+    return search_items(items, _cache, ORTHOTIC_RETRIEVAL_DOMAINS, "lower", EXCLUDED_DOCUMENTS,
+                        PASSAGES_PER_ITEM, PER_DOCUMENT, CANDIDATES, store=store, embed=embed)

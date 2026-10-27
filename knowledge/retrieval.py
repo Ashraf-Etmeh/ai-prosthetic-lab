@@ -13,6 +13,7 @@ around 0 means unrelated. The chunks with the highest scores win.
 """
 
 import json
+import re
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -217,3 +218,58 @@ def domains_for(case) -> tuple[str, ...]:
     """The catalog domains searched for the case, as its domain says (<domain>/topics.py SEARCH_DOMAINS):
     an orthotic case searches the orthotic sources."""
     return domains.part(case.domain, "topics").SEARCH_DOMAINS
+
+
+# ---- Passages for a fixed vocabulary (orthotics/sources.py, rehabilitation/sources.py) ----------------------
+# A page that shows what the library says about each item of a vocabulary (a device type, a part, an
+# intervention) searches each item's fixed wording, never what was typed, and keeps the passages that mention the
+# item's topic words. Nothing is summarised or checked to support the case: the page quotes them as printed.
+
+# A table of contents ("18 3.1 Moulding of EVA 18 3.2 Orthosis trim line"): never shown.
+_CONTENTS_ENTRY = re.compile(r"\b\d{1,3}\s+\d{1,2}\.\d{1,2}\s")
+CONTENTS_ENTRIES = 3
+
+
+def topic_passages(chunks: list[ProtocolChunk], topic: str, per_item: int, per_document: int) -> list[ProtocolChunk]:
+    """The first `per_item` chunks that mention the topic, at most `per_document` from one document, no table of
+    contents."""
+    pattern, kept, from_document = re.compile(topic, re.IGNORECASE), [], {}
+    for chunk in chunks:
+        if len(kept) == per_item:
+            break
+        if (pattern.search(chunk.text) and from_document.get(chunk.doc_id, 0) < per_document
+                and len(_CONTENTS_ENTRY.findall(chunk.text)) < CONTENTS_ENTRIES):
+            from_document[chunk.doc_id] = from_document.get(chunk.doc_id, 0) + 1
+            kept.append(chunk)
+    return kept
+
+
+def search_items(
+    items: dict[str, tuple[str, str]],
+    cache: dict,
+    searched_domains: Iterable[str],
+    limb: Optional[str],
+    exclude: Iterable[str] = (),
+    per_item: int = 3,
+    per_document: int = 2,
+    candidates: int = 25,
+    store: Optional[VectorStore] = None,
+    embed: Callable[[list[str]], np.ndarray] = embed_texts,
+) -> dict[str, list[ProtocolChunk]]:
+    """key -> the passages shown for its (search text, topic words), best first ([]: none mention it).
+
+    `cache` keeps each search by (store, limb, search text): the wording is fixed, so a page shown again needs no
+    new search, and a re-ingested library is a new store. Raises KnowledgeBaseMissing if the library hasn't been
+    ingested.
+    """
+    store = store if store is not None else get_store()
+    exclude = tuple(exclude)
+    todo = {key: (query, topic) for key, (query, topic) in items.items() if (id(store), limb, query) not in cache}
+    if todo:
+        vectors = embed([query for query, _ in todo.values()])
+        for (query, topic), vector in zip(todo.values(), vectors):
+            found = store.search(vector, candidates, domains=searched_domains, languages=RETRIEVAL_LANGUAGES,
+                                 limb=limb, exclude=exclude)
+            cache[(id(store), limb, query)] = topic_passages(found, topic, per_item, per_document)
+    return {key: cache[(id(store), limb, query)] for key, (query, _) in items.items()}
+

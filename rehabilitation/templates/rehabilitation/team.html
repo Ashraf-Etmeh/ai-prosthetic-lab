@@ -1,0 +1,97 @@
+{% extends "ui_base.html" %}
+{% from "ui_forms.html" import sent with context %}
+{% from "rehabilitation/macros.html" import rehab_bar with context %}
+{# Module 4, the team record (docs/design/05-rehabilitation/TeamRecord.html): one timeline of what each professional
+   recorded (their entries, added and never changed; the progress sessions; the device's versions), filtered by
+   therapy, device or medical; the handover, written by a person and signed (the design's AI draft waits for the
+   owner, SYSTEM_DESIGN.md §11.8: nothing here goes to a language model); the next steps. #}
+{% block title %}{{ t('rteam.title') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=4) }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('rteam.intro') }}</p>{% endblock %}
+{% block brief %}تنظيم معلومات المتابعة{% endblock %}
+{% block bar %}{{ rehab_bar(record, module) }}{% endblock %}
+{% block content %}
+{% if saved %}<div class="ui-saved" role="status">{{ t('mod.saved') }}</div>{% endif %}
+{% set action = form.get('action') if form else none %}
+{% set post_url = url_for('rehab.team', case_id=case.case_id) %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card" id="timeline">
+      <div class="ui-titlebar" style="align-items: center"><h2>{{ t('rteam.timeline') }}</h2>
+        <nav class="ui-tags" aria-label="{{ t('rec.filter') }}">
+          <a class="ui-tag{{ ' ui-tag-accent' if not shown }}" href="{{ url_for('rehab.team', case_id=case.case_id) }}"{% if not shown %} aria-current="true"{% endif %}>{{ t('rec.all') }}</a>
+          {% for k in kinds %}<a class="ui-tag{{ ' ui-tag-accent' if shown == k.value }}" href="{{ url_for('rehab.team', case_id=case.case_id, kind=k.value) }}"{% if shown == k.value %} aria-current="true"{% endif %}>{{ t('entry_kind.' ~ k.value) }}</a>{% endfor %}
+        </nav></div>
+      {% if shown_items %}
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for i in shown_items %}
+        <li class="ui-row" style="padding-block: 0.6rem">
+          <div style="min-width: 0"><div class="ui-note" style="margin: 0"><bdi>{{ i.on }}</bdi> · <span class="ui-tag">{{ t('entry_kind.' ~ i.kind) }}</span> {% if i.role %}{{ t('role_rehab.' ~ i.role) }}{% else %}{{ t('rteam.from_record') }}{% endif %}</div>
+            <div style="margin-top: 0.15rem" dir="auto">{% if i.label %}{{ t(i.label, n=i.number) }}{% if i.text %} · {% endif %}{% endif %}{% if i.text %}<bdi>{{ i.text }}</bdi>{% endif %}</div></div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="ui-note">{{ t('rteam.nothing_yet') }}</p>{% endif %}
+
+      {% set f = form if action == 'entry' else none %}
+      <details{% if f %} open{% endif %} style="margin-top: 0.75rem"><summary>{{ t('rteam.add_entry') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="entry">
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+            <label style="flex: 1 1 150px">{{ t('rteam.on') }}<input type="date" name="on" value="{{ sent(f, 'on', '') }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+            <label style="flex: 1 1 150px">{{ t('rplan.role') }}<select name="role"><option value="">{{ t('intake.select') }}</option>{% for r in roles %}<option value="{{ r.value }}"{{ " selected" if f and f.get('role') == r.value }}>{{ t('role_rehab.' ~ r.value) }}</option>{% endfor %}</select></label>
+            <label style="flex: 1 1 130px">{{ t('rteam.kind') }}<select name="kind"><option value="">{{ t('intake.select') }}</option>{% for k in kinds %}<option value="{{ k.value }}"{{ " selected" if f and f.get('kind') == k.value }}>{{ t('entry_kind.' ~ k.value) }}</option>{% endfor %}</select></label>
+          </div>
+          <label style="display: block; margin-top: 0.4rem">{{ t('rteam.entry') }}<input type="text" name="text" dir="auto" value="{{ sent(f, 'text', '') }}"></label>
+          <p class="ui-note">{{ t('rteam.entry_note') }}</p>
+          <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('rteam.save_entry') }}</button></div>
+        </form>
+      </details>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card" id="handover">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('rteam.handover') }}</h2>
+        {% set h = plan.handover %}
+        <span class="ui-tag{{ ' ui-tag-accent' if h and h.signed_at else ' ui-tag-warn' }}">{% if not h %}{{ t('rteam.no_handover') }}{% elif h.signed_at %}{{ t('rteam.signed', role=t('role_rehab.' ~ h.signed_by.value), date=h.signed_at[:10]) }}{% else %}{{ t('rteam.not_signed', n=h.number) }}{% endif %}</span></div>
+      {% if h %}<div class="ui-alert" style="margin-top: 0.6rem; white-space: pre-line" dir="auto"><bdi>{{ h.text }}</bdi></div>
+      <p class="ui-note">{{ t('rteam.written_by', role=t('role_rehab.' ~ h.written_by.value), date=h.saved_at[:10], n=h.number) }}</p>{% endif %}
+      {% if h and not h.signed_at %}
+      <form method="post" action="{{ post_url }}" style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.5rem">
+        <input type="hidden" name="action" value="sign">
+        <label style="flex: 1 1 150px">{{ t('rteam.signed_by') }}<select name="signed_by">{% for r in roles %}<option value="{{ r.value }}"{{ " selected" if r.value == 'physiotherapist' }}>{{ t('role_rehab.' ~ r.value) }}</option>{% endfor %}</select></label>
+        <button class="ui-btn" type="submit">{{ t('rteam.sign') }}</button>
+      </form>
+      {% endif %}
+      {% set f = form if action == 'handover' else none %}
+      <details{% if f or not h %} open{% endif %} style="margin-top: 0.6rem"><summary>{{ t('rteam.write_handover') if not h else t('rteam.new_version') }}</summary>
+        <form method="post" action="{{ post_url }}">
+          <input type="hidden" name="action" value="handover">
+          <label style="display: block">{{ t('rteam.handover_text') }}<textarea name="text" rows="6" dir="auto">{{ sent(f, 'text', h.text if h else '') }}</textarea></label>
+          <label style="display: block; margin-top: 0.4rem">{{ t('rteam.written_by_label') }}<select name="written_by">{% for r in roles %}<option value="{{ r.value }}"{{ " selected" if (f and f.get('written_by') == r.value) or (not f and r.value == 'physiotherapist') }}>{{ t('role_rehab.' ~ r.value) }}</option>{% endfor %}</select></label>
+          <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('rteam.save_handover') }}</button></div>
+        </form>
+      </details>
+      <p class="ui-note">{{ t('rteam.handover_note') }}</p>
+    </section>
+
+    <section class="ui-card" id="next">
+      <h2>{{ t('rteam.next_steps') }}</h2>
+      {% set f = form if action == 'next_steps' else none %}
+      {% set n_rows = (f.get('step_rows') | int) if f else (plan.next_steps | length) + new_rows %}
+      <form method="post" action="{{ post_url }}">
+        <input type="hidden" name="action" value="next_steps"><input type="hidden" name="step_rows" value="{{ n_rows }}">
+        {% for n in range(1, n_rows + 1) %}{% set s = plan.next_steps[n - 1] if (not f and n <= plan.next_steps | length) else none %}{% set p = 'step_' ~ n ~ '_' %}
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; margin-top: 0.4rem">
+          <label style="flex: 2 1 160px">{{ t('rteam.step') }}<input type="text" name="{{ p }}text" dir="auto" value="{{ sent(f, p ~ 'text', s.text if s else '') }}"></label>
+          <label style="flex: 1 1 130px">{{ t('rteam.step_on') }}<input type="date" name="{{ p }}on" value="{{ sent(f, p ~ 'on', s.on if s else '') }}" style="width: 100%; min-height: 44px; box-sizing: border-box"></label>
+          <label class="ui-checks" style="flex: 0 0 auto; margin: 0"><input type="checkbox" name="{{ p }}done" value="1"{{ " checked" if (f and f.get(p ~ 'done')) or (not f and s and s.done) }}><span>{{ t('rteam.done') }}</span></label>
+        </div>
+        {% endfor %}
+        <div class="ui-actions"><button class="ui-btn ui-btn-quiet" type="submit">{{ t('mod.save') }}</button></div>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

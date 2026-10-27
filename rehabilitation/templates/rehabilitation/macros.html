@@ -1,0 +1,47 @@
+{# The rehabilitation pages' own pieces (rehabilitation/routes.py). #}
+
+{# Under the header: the case this rehabilitation works on, in its domain's own one-line summary; fake data; who
+   decides (the therapist; on the team record, the team). #}
+{% macro rehab_bar(record, module) %}
+<div class="ui-casebar">
+  <div class="ui-wrap">
+    <strong>{{ t('mod.case', id=record.case.case_id) }}</strong>
+    <span class="ui-tag">{{ t('domain.' ~ record.case.domain) }}</span>
+    {% with case = record.case, plan = record.plan, module = 'rehab' %}{% include domain_nav(record.case.domain).CASE_BAR %}{% endwith %}
+    <span class="ui-chip">{{ t('mod.fake_data') }}</span>
+    <span class="ui-chip ui-chip-accent">{{ t('rehmod.team_decides' if module == 'team' else 'rehmod.therapist_decides') }}</span>
+  </div>
+</div>
+{% endmacro %}
+
+{# A goal's ICF level and id, as a tag. #}
+{% macro goal_tag(goal) %}<span class="ui-tag">{{ t('icf.' ~ goal.level.value) }}</span> <b>{{ goal.id }}</b>{% endmacro %}
+
+{# A goal attainment score as the therapist gave it (−2 to +2). #}
+{% macro score_text(score) -%}{{ ('+' if score > 0 else ('−' if score < 0 else '')) ~ (score | abs) }}{%- endmacro %}
+
+{# What the sources say about one intervention: the passages the local search found for its kind, quoted as printed
+   (not summarised, not checked to support the case); the therapist's own: no source. #}
+{% macro intervention_sources(item, passages, source_types, library_warning) %}
+  {% if item.kind.value == 'other' %}<p class="ui-note" style="margin: 0">{{ t('rplan.own') }}</p>
+  {% elif library_warning %}<p class="ui-note" style="margin: 0">{{ t('rplan.not_searched') }}</p>
+  {% else %}
+  {% set chunks = passages.get(item.kind.value, []) %}
+  {% if chunks %}
+  <div style="display: flex; flex-direction: column; gap: 0.4rem">
+    {% for chunk in chunks %}{% set kind = source_types.get(chunk.doc_id, 'scientific_reference') %}
+    <details class="ui-ev{{ ' ui-ev-guideline' if kind == 'protocol' }}">
+      <summary style="color: inherit; min-height: 0"><b>{{ t('source_type.' ~ kind) }}</b> · <span dir="auto" lang="{{ chunk.language }}">{{ chunk.citation }}</span></summary>
+      {% set credit = attribution(chunk.doc_id) %}{% if credit %}<div class="ui-note" dir="auto">{{ t('review.attribution', authors=credit[0], licence=credit[1]) }}</div>{% endif %}
+      <blockquote dir="auto" lang="{{ chunk.language }}" style="margin: 0.4rem 0 0; white-space: pre-line">{{ chunk.text }}</blockquote>
+    </details>
+    {% endfor %}
+  </div>
+  {% else %}<p class="ui-note" style="margin: 0">{{ t('rplan.no_source') }}</p>{% endif %}
+  {% endif %}
+{% endmacro %}
+
+{# The next module, as the design's screens end ("See progress →"). #}
+{% macro next_link(endpoint, label) %}
+<div class="ui-actions"><a class="ui-btn ui-btn-quiet" href="{{ url_for(endpoint, case_id=case.case_id) }}">{{ label }} →</a></div>
+{% endmacro %}

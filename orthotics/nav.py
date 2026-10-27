@@ -21,3 +21,5 @@ REVIEW_NEXT = ("orthotic_modules.requirements", "review.to_requirements")
 RECORD_VERSIONS = (("parameter_versions", "rec_ev.parameter_version", "orthotic_modules.design"),)
 RECORD_CHOICE = "orthotic_modules.options"
 RECORD_FOLLOW_UP = "orthotic_modules.follow_up"
+# Who makes and fits the device: what rehabilitation's training notes are sent to (rehabilitation/plan.py TeamRole).
+SPECIALIST = "orthotist"

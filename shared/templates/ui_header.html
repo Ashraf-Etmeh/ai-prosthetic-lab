@@ -36,7 +36,11 @@
     <nav class="ui-nav" aria-label="{{ t('domain.modules', domain=part_name) }}">
       {% if part %}
       {% for key, endpoint, anchor in nav.MODULES %}
+      {% if nav.NEEDS_CASE is defined and not part_args %}{# a part whose pages take a case (rehabilitation) #}
+      <span title="{{ t(nav.NEEDS_CASE) }}">{{ t(nav.LABELS ~ key) }}</span>
+      {% else %}
       <a href="{{ url_for(endpoint, **part_args) }}{{ anchor }}"{% if module == key %} aria-current="page"{% endif %}>{{ t(nav.LABELS ~ key) }}</a>
+      {% endif %}
       {% endfor %}
       {% else %}
       <a href="{{ map_url }}"{% if module == 'map' %} aria-current="page"{% endif %}>{{ t('mod.map') }}</a>

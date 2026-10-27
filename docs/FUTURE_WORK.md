@@ -1978,6 +1978,35 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
 - Tests: 659, all passing; checks 0-2 fail only on 0.3 (uncommitted
   changes); golden cases OK; the Arabic term sheet exported again (1,666 texts).
 
+## Rehabilitation (SYSTEM_DESIGN.md §6.4, plan Part 9, 2026-10-27)
+
+- **Asked (owner, 2026-10-27):** "part 9" (Part 8 committed and pushed
+  first, `e461c01`), with the standing instruction "make the decisions
+  yourself considering how other similar apps are".
+- **Decided by Claude** (following the design and common rehabilitation
+  records), each open to the owner's change:
+  - rehabilitation works on a case of either domain, as the design's screens
+    do (their case is the orthotic one), with no intake of its own; its plan
+    is kept with the case (case file version 5);
+  - interventions from a draft list of kinds, each with fixed search wording,
+    as orthotics does; the therapist's own intervention is never searched;
+  - no AI anywhere in rehabilitation (its content is typed; the AI-drafted
+    handover is the owner's open decision, §11.8): the handover is written
+    and signed by a person, each save a new version, final once signed;
+  - goal attainment scores, team entries and observations are added, never
+    changed, as in clinical records;
+  - observations for the device specialist appear on the case's follow-up
+    page and are answered there;
+  - the vocabulary passage search moved into `knowledge/retrieval.py`
+    (search_items), shared by orthotics and rehabilitation; the orthotic
+    pages are unchanged.
+- **Waiting for the owner (and a therapist):** the intervention list and its
+  wording; the roles and task statuses; the smallest change that matters per
+  measure (from its source, §11.2); clinic-rule alerts (§11.3); the
+  AI-drafted handover (§11.8); how a handover is sent; video clips.
+- Tests: 675, all passing; checks 0-2 fail only on 0.3 (uncommitted
+  changes); golden cases OK; the Arabic term sheet exported again (1,865 texts).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

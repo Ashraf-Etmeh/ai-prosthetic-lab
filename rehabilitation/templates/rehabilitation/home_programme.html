@@ -1,0 +1,17 @@
+{% extends "ui_base.html" %}
+{# The home programme to print (?lang=ar|en): the therapist's own words in the language asked for, flagged on screen
+   until an Arabic-reading therapist has checked the Arabic. The tool writes none of it. #}
+{% block title %}{{ t('rtrain.home') }}{% endblock %}
+{% block kicker %}{{ t('map.module', n=3) }}{% endblock %}
+{% block lead %}<style>@media print { .ui-top, .ui-noprint, .ui-casebar { display: none !important; } }</style>{% endblock %}
+{% block content %}
+{% set text = plan.home_ar if sheet_lang == 'ar' else plan.home_en %}
+<div class="ui-print">
+  <p class="ui-note ui-noprint">{{ t('print.note') }} <a href="{{ url_for('rehab.training', case_id=case.case_id) }}#home">{{ t('print.back') }}</a>
+    · <a href="{{ url_for('rehab.home_programme', case_id=case.case_id, lang='en' if sheet_lang == 'ar' else 'ar') }}" lang="{{ 'en' if sheet_lang == 'ar' else 'ar' }}">{{ t('lang_name.en') if sheet_lang == 'ar' else t('lang_name.ar') }}</a></p>
+  {% if sheet_lang == 'ar' and not plan.home_checked_by %}<div class="ui-draft ui-noprint">{{ t('rtrain.not_checked') }}</div>{% endif %}
+  <section class="ui-card" style="margin-top: 1rem" lang="{{ sheet_lang }}" dir="{{ 'rtl' if sheet_lang == 'ar' else 'ltr' }}">
+    <div style="white-space: pre-line; font-size: 1.05rem; line-height: 1.7rem">{{ text or t('rtrain.home_empty') }}</div>
+  </section>
+</div>
+{% endblock %}

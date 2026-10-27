@@ -1,5 +1,5 @@
 {% extends "ui_base.html" %}
-{% from "ui_macros.html" import latest_visit_card, loop_back_links with context %}
+{% from "ui_macros.html" import latest_visit_card, loop_back_links, rehab_card with context %}
 {% from "ui_forms.html" import alerts_card, follow_up_main, visit_steps with context %}
 {# Module 5, follow-up and evaluation (docs/design/02-prosthetics/FollowUp.html): the visits; the outcome measures
    the clinician enters at each visit, as bars over time, shown as recorded (the prosthetist judges the change: no
@@ -25,6 +25,8 @@
     {{ alerts_card(follow, due, form, post_url, back_to, 'prosthetic_modules.') }}
 
     {{ latest_visit_card(follow) }}
+
+    {{ rehab_card(record) }}
 
     <section class="ui-dark ui-loop">
       <h2 style="margin: 0; font-size: 1.125rem">{{ t('fu.loop_back') }}</h2>

@@ -7,8 +7,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # The code's parts, one package each (README.md, "Folder layout"): the shared core, the shared
 # parts of the system, then the clinical domains. Tools that scan the code (the i18n key check,
 # the Arabic term sheet) read these.
-CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "search", "record", "prosthetics",
-                 "orthotics")
+CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "search", "record", "rehabilitation",
+                 "prosthetics", "orthotics")
 
 # The data, grouped like the code (since 2026-10-24): data/knowledge/ for the
 # knowledge layer, data/quality/ for the yardstick and the trial, data/records/
@@ -215,6 +215,11 @@ ACCESS_LOG_PATH = RECORDS_DIR / "access_log.jsonl"
 GOVERNANCE_DIR = DATA_DIR / "governance"
 ROLES_PATH = GOVERNANCE_DIR / "roles.csv"
 RETENTION_PATH = GOVERNANCE_DIR / "retention.csv"
+
+# ---- Rehabilitation (SYSTEM_DESIGN.md §6.4; plan Part 9, 2026-10-27; rehabilitation/)
+# The catalog domains searched for what the sources say about an intervention (rehabilitation/sources.py; local
+# search only: nothing of a rehabilitation plan is sent to a language model).
+REHAB_RETRIEVAL_DOMAINS = ("rehabilitation",)
 
 # Whether an orthotic case may go to the cloud writer (LLM_PROVIDER). Owner's
 # decision 2026-10-23: not yet. The orthotic library holds the ICRC AFO manual
