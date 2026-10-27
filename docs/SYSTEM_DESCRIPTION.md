@@ -133,7 +133,7 @@ capabilities they cover: 1 تقييم حالات البتر, 2–3 تحليل ا
 the specialist review reached from module 1. The orthotics map (`/orthotics`)
 does the same for its six (§4.9). Three shared parts sit next to the
 domains: the knowledge layer (§4.12), reasoning and review (§4.11), and search
-and education (§4.13).
+and education (§4.13, §4.14).
 
 1. **Intake form** (`GET /intake`). The user enters a test case: amputation
    level (12 levels, 6 lower and 6 upper limb) and side (left, right,
@@ -590,8 +590,9 @@ page's audit trail lists it.
 ### 4.13 Smart search (use case 05, plan Part 6, 2026-10-25)
 
 The shared part "Search and education" (SYSTEM_DESIGN.md §7.3;
-`docs/design/08-search-and-education/Main.html`; `search/`) has one tab so far,
-**1 Smart search** (`/search`):
+`docs/design/08-search-and-education/Main.html`; `search/`) has two tabs:
+**1 Smart search** (`/search`), below, and **2 Case-based learning** (§4.14).
+Smart search:
 
 - **Question and filters:** a question in English or Arabic; filters for
   domain, kind of source, language (both, English, Arabic) and from year. The
@@ -622,7 +623,51 @@ The shared part "Search and education" (SYSTEM_DESIGN.md §7.3;
   useful, a summary is wrong) and each suggestion; never who asked. The
   quality page shows the counts.
 - **Not built yet:** pinning a passage to an open case (owner's answer,
-  2026-10-25: later), case-based learning (use case 06).
+  2026-10-25: later).
+
+### 4.14 Case-based learning (use case 06, plan Part 7, 2026-10-25)
+
+**2 Case-based learning** (`/learn`; `docs/design/08-search-and-education/Learning.html`;
+`search/learning.py`, `search/learning_routes.py`):
+
+- **Teaching cases** (`data/education/teaching_cases/<id>.json`, the
+  educator's, protected by the yardstick hook): an invented case of a domain
+  (read with `case_from_dict`, so any domain's case), and what only the
+  educator sets: status (draft or approved), level (foundation, intermediate,
+  advanced), the CPD minutes it is worth, and the expert panel's answers,
+  each a new numbered version, never an edit (how many members answered, how
+  many marked each item missing, their reasoning in their own words). The
+  file is checked when read (`teaching_case_from_dict`). Three drafts by
+  Claude (2026-10-25: transtibial, transfemoral, transradial), with no level,
+  no CPD time and no panel answers (owner's answer: drafts, no panel answers,
+  until the owner decides who sits on the panel, SYSTEM_DESIGN.md §11.9).
+- **Library** (`/learn`): each case with its status, the level the educator
+  set (or "not set yet") and its panel version (or "not recorded yet"); my
+  learning log (cases worked, CPD hours as the learner recorded them, the
+  last five, the CPD export as CSV) and the "How learning stays honest" card.
+- **The five steps** (`/learn/attempt/<id>?step=`): 1 read the case (only
+  what it records, numbers with their unit from the field's name); 2 what is
+  missing (the domain's gap fields as ticks, plus free text); 3 the options
+  you would weigh and why (free text, required before comparing); 4 compare:
+  item by item, you, the panel ("n of m marked it", or not recorded yet) and
+  the source (the citation the analysis found, "no source found", or
+  "recorded in the case"), "you marked n of the m items the panel marked"
+  (counts, never a score), your reasoning next to the panel's in their own
+  words, and for each gap you did not mark that has a passage, what the
+  sources say (AI sentence over the checked quote, labelled as AI); 5 reflect
+  and the minutes spent, then the attempt goes to the learning log.
+- **The analysis** is the case's own: `analyse_case` (local search, the AI
+  with checked quotes) as for any case of its domain, run once and kept
+  (`data/records/learning/analysis/`); only the case's amputation level, side
+  and K-level are sent (owner's answer, 2026-10-25). An orthotic teaching
+  case would follow `ORTHOTIC_CLOUD_AI`.
+- **Attempts and the learning log** (`data/records/learning/`, not in git):
+  an attempt in progress is one JSON file (`attempts/`); a finished one is a
+  line in `log.jsonl`, only ever added to, protected by the yardstick hook,
+  with the case's status, level and the panel version compared with. One log
+  for this machine until roles and login come (owner's answer, 2026-10-25).
+- **Not built:** grading of any kind (by design); "Ask the educator" (needs
+  roles and login); a learner's identity in the log.
 
 ---
 
@@ -631,7 +676,7 @@ The shared part "Search and education" (SYSTEM_DESIGN.md §7.3;
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 622 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 639 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -712,6 +757,16 @@ quality/
   releases.py              loads the owner's release sign-offs and Arabic checks (releases.csv)
   measures.py              the quality page's counts, release gate and audit trail
   tests/
+search/                    search and education (§4.13, §4.14)
+  engine.py                smart search: filters, find(), the AI part behind SEARCH_CLOUD_AI
+  log.py                   the search log: searches, marks, suggestions (never who asked)
+  routes.py                GET /search, POST /search/mark, /search/suggest
+  learning.py              teaching cases (checked when read), attempts, the learning log, the CPD record
+  learning_routes.py       GET /learn, the five steps of an attempt, GET /learn/log.csv
+  nav.py                   what the header shows for the shared part "Search and education"
+  templates/search/        search.html, _query_fields.html, learning.html, learning_step.html,
+                           learning_macros.html
+  tests/
 prosthetics/               use cases 01-02
   case.py                  Case (amputation level, side, residual limb, activity, prior devices), its enums
   fields.py                the 17 prosthetic gap fields: label, search query, topic terms (en/de/ar); query_for()
@@ -755,8 +810,12 @@ data/
     trial/                 arabic_terms.csv, cases/trial-NN.json (in git); report.csv (local only)
     results/runs.jsonl     the recorded results (in git; only ever added to)
     releases.csv           the owner's release sign-offs and Arabic checks
+  education/
+    teaching_cases/        TC-NN.json: the educator's invented teaching cases (three drafts so far)
   records/
     cases/                 one JSON file per case (local only)
+    search_log.jsonl       searches, marks and suggestions (local only)
+    learning/              attempts/, log.jsonl (the learning log), analysis/ (local only)
     review_log.jsonl       decisions (local only); review_log.test.jsonl: earlier test lines
 ```
 
@@ -887,7 +946,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **622 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **639 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,
@@ -998,6 +1057,11 @@ uses a missing key.
   search-strategy appendix page (seen: the upper-limb VA/DoD guideline, whose
   literature-search syntax extraction did not remove); no "sources differ"
   notice; pinning to a case not built.
+- Case-based learning (§4.14, 2026-10-25): the three teaching cases are
+  Claude's drafts, with no level, CPD time or panel answers until the
+  educator sets them, so the compare step has no panel to compare with yet;
+  one learning log for the machine, with no learner's name; no "Ask the
+  educator".
 
 ---
 

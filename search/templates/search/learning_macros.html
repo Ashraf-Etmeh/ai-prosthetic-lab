@@ -1,0 +1,36 @@
+{# The case-based learning pages' own pieces (search/learning_routes.py). #}
+
+{# A teaching case in one line: its domain's summary values as recorded (an amputation level or a condition, side,
+   cause, months), never typed text. #}
+{% macro case_line(teaching) -%}
+  {%- set c = teaching.case -%}
+  {%- if c.amputation_level is defined %}{{ value_label(c.amputation_level) }}{% elif c.condition is defined %}{{ value_label(c.condition) }}{% endif -%}
+  {%- if c.side %} · {{ value_label(c.side) }}{% endif -%}
+  {%- if c.etiology is defined and c.etiology %} · {{ value_label(c.etiology) }}{% endif -%}
+  {%- if c.months_since_amputation is defined and c.months_since_amputation is not none %} · {{ t('pmod.months', n="%g" | format(c.months_since_amputation)) }}{% endif -%}
+{%- endmacro %}
+
+{# A value of the case as recorded: a choice by its label, a list as listed, a number or text as typed. #}
+{% macro shown_value(value) -%}
+  {%- if value.value is defined %}{{ value_label(value) }}
+  {%- elif value is string %}<bdi>{{ value }}</bdi>
+  {%- elif value is number %}<bdi>{{ "%g" | format(value) }}</bdi>
+  {%- elif value %}<bdi>{% for item in value %}{{ item.device_description if item.device_description is defined else item }}{{ '; ' if not loop.last }}{% endfor %}</bdi>
+  {%- else %}{{ t('learn.none_reported') }}{% endif -%}
+{%- endmacro %}
+
+{# The case's status and the level the educator set (or that it isn't set yet). #}
+{% macro case_tags(teaching) -%}
+  <span class="ui-tag{{ ' ui-tag-warn' if teaching.status == 'draft' else ' ui-tag-accent' }}">{{ t('learn_status.' ~ teaching.status) }}</span>
+  <span class="ui-tag">{% if teaching.level %}{{ t('learn.level', level=t('learn_level.' ~ teaching.level)) }}{% else %}{{ t('learn.level_not_set') }}{% endif %}</span>
+{%- endmacro %}
+
+{# How learning stays honest (the design's card). #}
+{% macro honest() %}
+<section class="ui-card">
+  <h2>{{ t('learn.honest') }}</h2>
+  <ul class="ui-plain" style="margin-top: 0.5rem">
+    {% for key in ['no_grade', 'panel_once', 'invented'] %}<li>{{ t('learn_honest.' ~ key) }}</li>{% endfor %}
+  </ul>
+</section>
+{% endmacro %}

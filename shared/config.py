@@ -190,6 +190,16 @@ SEARCH_CLOUD_AI = False
 # the question as typed, the filters, the passages found; never who asked (owner, 2026-10-25).
 SEARCH_LOG_PATH = RECORDS_DIR / "search_log.jsonl"
 
+# ---- Case-based learning (use case 06; plan Part 7, 2026-10-25; search/learning.py)
+# The teaching cases: invented, never copied from records; the educator's (in git, protected by the
+# yardstick hook): each one's level, CPD time and expert panel answers are the educator's to set.
+EDUCATION_DIR = DATA_DIR / "education"
+TEACHING_CASES_DIR = EDUCATION_DIR / "teaching_cases"
+# What a learner does on this machine (not in git): attempts in progress, each teaching case's analysis
+# (search and AI, done once), and the learning log (one line per case worked, only ever added to).
+# One log for this machine until roles and login come (owner, 2026-10-25).
+LEARNING_DIR = RECORDS_DIR / "learning"
+
 # Whether an orthotic case may go to the cloud writer (LLM_PROVIDER). Owner's
 # decision 2026-10-23: not yet. The orthotic library holds the ICRC AFO manual
 # (no reuse statement), NICE HTG178 and WHO text (CC BY-NC-SA 3.0 IGO), and the

@@ -1,0 +1,53 @@
+{% extends "ui_base.html" %}
+{% from "search/learning_macros.html" import case_line, case_tags, honest with context %}
+{# Case-based learning, the library (use case 06; docs/design/08-search-and-education/Learning.html): the teaching
+   cases with their status and the level the educator set, and this machine's learning log (cases worked, CPD time
+   as the learner recorded it, the CPD export). Teaching cases are invented; their level, CPD time and the expert
+   panel's answers are the educator's. #}
+{% block title %}{{ t('learn.title') }}{% endblock %}
+{% block kicker %}{{ t('learn.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('learn.intro') }}</p>{% endblock %}
+{% block brief %}دعم التدريب والتعليم للحالات التطبيقية{% endblock %}
+{% block content %}
+{% if logged %}<div class="ui-saved" role="status">{{ t('learn.logged') }}</div>{% endif %}
+<div class="ui-cols" style="margin-top: 1.25rem">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <h2>{{ t('learn.library') }}</h2>
+      {% if cases %}
+      <ul class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for teaching in cases %}
+        <li style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--ui-line-soft)">
+          <div>
+            <b>{{ teaching.id }}</b> · {{ case_line(teaching) }}
+            <div class="ui-tags" style="margin-top: 0.3rem">{{ case_tags(teaching) }}
+              <span class="ui-tag">{% if teaching.panel_now %}{{ t('learn.panel_recorded', v=teaching.panel_now.version, n=teaching.panel_now.members) }}{% else %}{{ t('learn.panel_not_recorded') }}{% endif %}</span>
+              {% if teaching.minutes %}<span class="ui-tag">{{ t('learn.cpd_minutes', n=teaching.minutes) }}</span>{% endif %}</div>
+          </div>
+          <form method="post" action="{{ url_for('learning.start', case_id=teaching.id) }}"><button class="ui-btn" type="submit">{{ t('learn.start') }}</button></form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="ui-note">{{ t('learn.no_cases') }}</p>{% endif %}
+      <p class="ui-note">{{ t('learn.library_note') }}</p>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('learn.my_log') }}</h2>
+      <div class="ui-tiles">
+        <div><div class="ui-note" style="margin: 0">{{ t('learn.cases_worked') }}</div><div class="ui-big">{{ summary.cases }}</div></div>
+        <div><div class="ui-note" style="margin: 0">{{ t('learn.cpd_hours') }}</div><div class="ui-big">{{ "%.1f" | format(summary.minutes / 60) }}</div></div>
+      </div>
+      <p class="ui-note">{{ t('learn.hours_note') }}</p>
+      {% if entries %}
+      <ul class="ui-kv">{% for entry in entries %}<li><span><bdi>{{ entry.logged_at[:10] }}</bdi> · {{ entry.case_id }}</span><b>{% if entry.attempt.minutes %}{{ t('learn.cpd_minutes', n=entry.attempt.minutes) }}{% else %}—{% endif %}</b></li>{% endfor %}</ul>
+      <a class="ui-btn ui-btn-quiet" href="{{ url_for('learning.cpd_record') }}" style="margin-top: 0.75rem">{{ t('learn.export') }}</a>
+      {% else %}<p class="ui-note">{{ t('learn.log_empty') }}</p>{% endif %}
+      <p class="ui-note">{{ t('learn.one_log') }}</p>
+    </section>
+    {{ honest() }}
+  </aside>
+</div>
+{% endblock %}

@@ -234,6 +234,21 @@ suggestion goes to `data/records/search_log.jsonl` on this machine, never
 who asked; the quality page counts them. Pinning a passage to a case comes
 later.
 
+**2 Case-based learning** (`/learn`, use case 06). Work an invented teaching
+case (`data/education/teaching_cases/`) in five steps: read what the case
+records, tick what is missing, write the options you would weigh and why,
+compare, then reflect and add it to the learning log. The compare step shows,
+item by item, what you marked, how many of the expert panel marked it, and the
+source the local search found; and, for a gap you did not mark, what the
+sources say (the case's own analysis, run once and kept, as for any
+prosthetic case: only its level, side and K-level go to the AI). Nothing is
+graded. A teaching case's level, CPD time, status and the panel's answers are
+the educator's: the three cases there now are Claude's drafts with none of
+them set, so the page says the panel has not answered yet. The learning log
+(`data/records/learning/log.jsonl`, one for this machine until roles and
+login come) gives the cases worked, the CPD minutes recorded and a CSV
+export.
+
 **Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
 has three pages:
 - **1 Pathway** (`/reasoning`): the six steps every domain shares, each with
@@ -536,7 +551,8 @@ review/             Reasoning and review: the review page and the append-only de
   templates/review/
   tests/
 search/             Search and education: smart search (engine.py: filters, the local search, the AI part
-                    behind SEARCH_CLOUD_AI; log.py: the search log; routes.py, nav.py)
+                    behind SEARCH_CLOUD_AI; log.py: the search log; routes.py, nav.py) and case-based
+                    learning (learning.py: teaching cases, attempts, the learning log; learning_routes.py)
   templates/search/
   tests/
 quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
@@ -570,8 +586,10 @@ data/knowledge/     The owner's evidence rules and clinic rules, the knowledge i
 data/quality/       golden_cases/ and the frozen golden_cases_held_out/ with their manifest, measurement
                     baselines, trial/ (Arabic term sheet, prepared trial cases; the report not in git),
                     results/runs.jsonl (the recorded results) and releases.csv (the owner's sign-offs)
+data/education/     teaching_cases/: the educator's invented teaching cases (in git; three drafts so far)
 data/records/       What the app records on this machine (not in git): cases/ (one JSON file per case),
-                    the review logs and the search log
+                    the review logs, the search log and learning/ (attempts, the learning log, the
+                    teaching cases' analyses)
 ```
 
 A new clinical domain adds a package with the same files as the others (case.py,

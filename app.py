@@ -4,7 +4,7 @@ Run locally with:
     python app.py
 
 Wires together each part's pages (Flask blueprints): each domain's intake
-and modules, the review and quality pages, the knowledge pages and the search page.
+and modules, the review and quality pages, the knowledge pages and the search and learning pages.
 reasoning/ has no routes of its own: an intake calls reasoning/pathway.py as
 part of handling a submitted case. The pages every part shares (header, style, base page) are
 in shared/templates/; each part's own are in <part>/templates/<part>/.
@@ -24,6 +24,7 @@ from orthotics.modules import bp as orthotic_modules_bp
 from prosthetics.intake import bp as prosthetic_intake_bp
 from prosthetics.modules import bp as prosthetic_modules_bp
 from review.routes import bp as review_bp
+from search.learning_routes import bp as learning_bp
 from search.routes import bp as search_bp
 from shared import domains
 from shared.case_schema import DEFAULT_DOMAIN
@@ -56,6 +57,7 @@ def create_app() -> Flask:
     app.register_blueprint(review_bp)  # /review/<id>: what the sources say, and the reviewer's marks
     app.register_blueprint(knowledge_bp)  # /knowledge: sources, evidence, graph and expertise (plan Part 5)
     app.register_blueprint(search_bp)  # /search: smart search in the specialist library (plan Part 6)
+    app.register_blueprint(learning_bp)  # /learn: case-based learning with teaching cases (plan Part 7)
 
     @app.context_processor
     def interface_language():

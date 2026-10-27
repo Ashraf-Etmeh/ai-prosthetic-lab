@@ -1910,6 +1910,31 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
 - Tests: 622, all passing; checks 0-2 fail only on 0.3 (uncommitted changes);
   golden cases OK; the Arabic term sheet exported again (1,375 texts).
 
+## Case-based learning (use case 06, plan Part 7, 2026-10-25)
+
+- **Asked (owner, 2026-10-25):** "do as you recommend and start with part 7"
+  (Part 6 committed and pushed first, `7e17a65`; `SEARCH_CLOUD_AI` stays off).
+  Owner's answers: **draft cases, no panel answers** (Claude drafts invented
+  teaching cases marked draft, with the level, CPD time and panel left empty;
+  the files are the owner's, protected by the yardstick hook); **one log on
+  this machine** until roles and login; the gap AI **like any prosthetic
+  case** (each teaching case analysed once, local search and AI with checked
+  quotes, kept; only level, side and K-level sent).
+- **Built** (SYSTEM_DESIGN.md §7.3; docs/SYSTEM_DESCRIPTION.md §4.14): the
+  tab "2 Case-based learning" (`/learn`; `search/learning.py`,
+  `learning_routes.py`): the library, the five steps (read, what is missing,
+  options and why, compare, reflect), the learning log
+  (`data/records/learning/log.jsonl`, gitignored, protected) and the CPD
+  export. Three draft teaching cases, `data/education/teaching_cases/TC-01..03`
+  (transtibial, transfemoral, transradial; fake data). Never graded: the
+  compare step shows counts and the panel's own words.
+- **Waiting for the owner (or the educator):** who sits on the expert panel
+  (SYSTEM_DESIGN.md §11.9) and its answers for each case; each case's level,
+  CPD minutes and status (approve or replace the drafts); whether a learner's
+  name belongs in the log once roles and login come; "Ask the educator".
+- Tests: 639, all passing; checks 0-2 fail only on 0.3 (uncommitted
+  changes); golden cases OK; the Arabic term sheet exported again (1,465 texts).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

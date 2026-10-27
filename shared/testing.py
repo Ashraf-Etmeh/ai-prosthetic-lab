@@ -23,6 +23,7 @@ from unittest.mock import patch
 
 import numpy as np
 
+from shared import config
 from shared.config import OFFLINE_ENV
 
 os.environ[OFFLINE_ENV] = "1"
@@ -155,3 +156,8 @@ class RouteTestCase(unittest.TestCase):
         cases_dir = patch.object(store, "folder", self.cases_dir)
         cases_dir.start()
         self.addCleanup(cases_dir.stop)
+        # Learning attempts, the learning log and the teaching cases' analyses, never the real
+        # data/records/learning/ (search/learning.py).
+        learning_dir = patch.object(config, "LEARNING_DIR", Path(tmp.name) / "learning")
+        learning_dir.start()
+        self.addCleanup(learning_dir.stop)

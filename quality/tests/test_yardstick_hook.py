@@ -26,7 +26,8 @@ class FileToolTests(unittest.TestCase):
                      "prosthetics/fitting_guide.py", "data/knowledge/evidence_rules.csv",
                      "data/knowledge/clinic_rules.csv", "data/records/review_log.jsonl",
                      "data/records/review_log.test.jsonl", "data/quality/releases.csv",
-                     "data/quality/results/runs.jsonl", "data/records/search_log.jsonl"):
+                     "data/quality/results/runs.jsonl", "data/records/search_log.jsonl",
+                     "data/education/teaching_cases/TC-01.json", "data/records/learning/log.jsonl"):
             with self.subTest(path):
                 self.assertTrue(decide("Edit", file_path=str(PROJECT_ROOT / path)))
                 self.assertTrue(decide("Write", file_path=path))

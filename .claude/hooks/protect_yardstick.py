@@ -34,6 +34,8 @@ PROTECTED = (
     "data/quality/results/",  # recorded results: the measuring runs add lines, nobody edits them
     "data/records/review_log.jsonl",  # append-only: the app adds lines, nobody edits them
     "data/records/search_log.jsonl",  # append-only: the search page adds lines, nobody edits them
+    "data/education/teaching_cases/",  # the educator's teaching cases: level, CPD time, the panel's answers
+    "data/records/learning/log.jsonl",  # append-only: the learning log, one line per case worked
     "data/records/review_log.test.jsonl",
     "data/records/review_log.test-2026-10-23.jsonl",  # the 2 test lines moved out before the trial
 )

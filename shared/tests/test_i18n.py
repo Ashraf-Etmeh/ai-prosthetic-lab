@@ -212,6 +212,14 @@ class CompletenessTests(unittest.TestCase):
         from search import engine as search_engine, log as search_log
         expected |= {f"srch_lang.{language}" for language in search_engine.LANGUAGES}
         expected |= {f"srch_mark.{mark}" for mark in search_log.MARKS} | {"curate.suggested"}
+        # Case-based learning (plan Part 7, 2026-10-25): statuses, levels, steps and the honesty card
+        from search import learning
+        expected |= {f"learn_status.{status}" for status in learning.STATUSES}
+        expected |= {f"learn_level.{level}" for level in learning.LEVELS}
+        expected |= {f"learn_step.{step}" for step in learning.STEPS}
+        expected |= {f"learn_honest.{key}" for key in ("no_grade", "panel_once", "invented")}
+        from search import learning_routes
+        expected |= {f"learn_unit.{unit}" for _, unit in learning_routes.UNITS} | {"learn_unit.months"}
         self.assertEqual(expected - set(TEXT), set())
 
 

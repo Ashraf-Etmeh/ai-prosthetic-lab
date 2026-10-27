@@ -90,8 +90,9 @@ differ it says where the build is heading, and this file still sets the rules).
 - **The yardstick asks first.** Claude Code asks the owner before Claude
   edits the golden cases, the held-out manifest, the two guides, the rule
   table, the clinic rules, the release sign-offs (`data/quality/releases.csv`),
-  the recorded results (`data/quality/results/`), the review logs or the
-  search log (`.claude/hooks/protect_yardstick.py`, in `.claude/settings.json`); such a
+  the recorded results (`data/quality/results/`), the review logs, the
+  search log, the teaching cases (`data/education/teaching_cases/`) or the
+  learning log (`.claude/hooks/protect_yardstick.py`, in `.claude/settings.json`); such a
   prompt is intended, not an error. Results are recorded only by the
   measuring commands (`--record`), never written by hand.
 - **Ask the owner first** before committing, pushing (the owner decides
@@ -102,7 +103,7 @@ differ it says where the build is heading, and this file still sets the rules).
   `knowledge/`, `reasoning/`, `review/`, `quality/`, `search/`, and one per clinical
   domain: `prosthetics/`, `orthotics/`), each with its own `templates/<part>/`
   and `tests/`; the data likewise under `data/knowledge/`, `data/quality/`,
-  `data/records/`. A domain has the same files as the others (`case.py`,
+  `data/education/`, `data/records/`. A domain has the same files as the others (`case.py`,
   `fields.py`, `topics.py`, `rag.py`, `intake.py`, `nav.py`, ...), and shared
   code reaches it through `shared/domains.py`, never by naming it
   (`shared/tests/test_domains.py` checks both). What every domain's screens

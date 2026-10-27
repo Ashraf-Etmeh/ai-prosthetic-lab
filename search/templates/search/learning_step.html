@@ -1,0 +1,130 @@
+{% extends "ui_base.html" %}
+{% from "search/learning_macros.html" import case_line, case_tags, honest, shown_value with context %}
+{# One step of an attempt at a teaching case (use case 06; docs/design/08-search-and-education/Learning.html):
+   1 read the case (what it records), 2 mark what is missing, 3 the options you would weigh and why, 4 compare
+   (you, the expert panel when the educator has recorded its answers, the source; what the sources say about a
+   gap you did not mark, when the search found a passage for it), 5 reflect and log. The tool never grades: it
+   shows where you and the panel differ. #}
+{% block title %}{{ t('learn.title') }} · {{ teaching.id }}{% endblock %}
+{% block kicker %}{{ t('learn.kicker') }}{% endblock %}
+{% block brief %}دعم التدريب والتعليم للحالات التطبيقية{% endblock %}
+{% block content %}
+<ol class="ui-steps" aria-label="{{ t('learn.steps') }}">
+  {% for s in steps %}
+  <li class="{{ 'in_progress' if s == step else ('done' if attempt.step_done(s) else '') }}"{% if s == step %} aria-current="step"{% endif %}>
+    <a href="{{ url_for('learning.attempt', attempt_id=attempt.id, step=s) }}" style="color: inherit; text-decoration: none"><b>{{ loop.index }} {{ t('learn_step.' ~ s) }}</b>{% if attempt.step_done(s) and s != step %}<span aria-label="{{ t('learn.done') }}">✓</span>{% endif %}</a></li>
+  {% endfor %}
+</ol>
+
+<p style="margin-top: 1rem"><b>{{ teaching.id }}</b> · {{ case_line(teaching) }} <span class="ui-tags" style="display: inline-flex">{{ case_tags(teaching) }}</span></p>
+
+<div class="ui-cols" style="margin-top: 0.75rem">
+  <div class="ui-col-main">
+    {% if step == 'read' %}
+    <section class="ui-card">
+      <h2>{{ t('learn.the_case') }}</h2>
+      <table class="ui-table" style="margin-top: 0.75rem">
+        <tbody>{% for path, value, unit in shown %}<tr><td style="color: var(--ui-muted)">{{ field_label(path) }}</td><td style="font-weight: 600">{% if unit and value is number %}{{ t(unit, n="%g" | format(value)) }}{% else %}{{ shown_value(value) }}{% endif %}</td></tr>{% endfor %}</tbody>
+      </table>
+      <p class="ui-note">{{ t('learn.read_note') }}</p>
+      <div class="ui-actions"><a class="ui-btn" href="{{ url_for('learning.attempt', attempt_id=attempt.id, step='missing') }}">{{ t('learn.next') }}</a></div>
+    </section>
+
+    {% elif step == 'missing' %}
+    {% set ticked = form.getlist('missing') if form else attempt.missing %}
+    <section class="ui-card">
+      <h2>{{ t('learn.missing_heading') }}</h2>
+      <p class="ui-note">{{ t('learn.missing_note') }}</p>
+      <form method="post" action="{{ url_for('learning.attempt', attempt_id=attempt.id, step='missing') }}">
+        <input type="hidden" name="action" value="missing">
+        <div class="ui-checks" style="margin-top: 0.5rem">{% for info in fields %}<label><input type="checkbox" name="missing" value="{{ info.path }}"{{ " checked" if info.path in ticked }}><span>{{ field_label(info.path) }}</span></label>{% endfor %}</div>
+        <label style="display: block; margin-top: 0.75rem">{{ t('learn.other_missing') }}<textarea name="other_missing" rows="2" dir="auto">{{ form.get('other_missing', '') if form else (attempt.other_missing or '') }}</textarea></label>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('learn.save_next') }}</button></div>
+      </form>
+    </section>
+
+    {% elif step == 'options' %}
+    <section class="ui-card">
+      <h2>{{ t('learn.options_heading') }}</h2>
+      <p class="ui-note">{{ t('learn.options_note') }}</p>
+      <form method="post" action="{{ url_for('learning.attempt', attempt_id=attempt.id, step='options') }}">
+        <input type="hidden" name="action" value="options">
+        <label style="display: block">{{ t('learn.options') }}<textarea name="options" rows="3" dir="auto">{{ form.get('options', '') if form else (attempt.options or '') }}</textarea></label>
+        <label style="display: block; margin-top: 0.5rem">{{ t('learn.reasons') }}<textarea name="reasons" rows="3" dir="auto">{{ form.get('reasons', '') if form else (attempt.reasons or '') }}</textarea></label>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('learn.save_compare') }}</button></div>
+      </form>
+    </section>
+
+    {% elif step == 'compare' or step == 'reflect' %}
+    {% if step == 'compare' %}
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('learn.compare_missing') }}</h2>
+        {% if panel %}<span class="ui-note" style="margin: 0">{{ t('learn.found_of_panel', n=found_of_panel, m=panel_count) }}</span>{% endif %}</div>
+      {% if knowledge_warning %}<p class="ui-note">{% if lang != "en" %}{{ t('review.not_searched') }} {% endif %}<span lang="en" dir="ltr">{{ knowledge_warning }}</span></p>{% endif %}
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 640px">
+          <thead><tr><th scope="col">{{ t('learn.col_item') }}</th><th scope="col">{{ t('learn.col_you') }}</th><th scope="col">{{ t('learn.col_panel') }}</th><th scope="col">{{ t('learn.col_source') }}</th></tr></thead>
+          <tbody>
+            {% for path, marked, panel_n, gap, recorded in rows %}
+            <tr>
+              <td>{{ field_label(path) }}</td>
+              <td>{% if marked %}{{ t('learn.you_missing') }}{% else %}<b>{{ t('learn.you_not_marked') }}</b>{% endif %}</td>
+              <td>{% if not panel %}<span style="color: var(--ui-muted)">{{ t('learn.panel_none') }}</span>{% elif panel_n %}{{ t('learn.panel_missing', n=panel_n, m=panel.members) }}{% else %}{{ t('learn.panel_not_missing') }}{% endif %}</td>
+              <td>{% if gap and gap.evidence %}<span dir="auto" lang="{{ gap.evidence.language }}">{{ gap.evidence.citation }}</span>{% elif gap %}<span style="color: var(--ui-muted)">{{ t('learn.no_source') }}</span>{% elif recorded %}<span style="color: var(--ui-muted)">{{ t('learn.recorded_in_case') }}</span>{% else %}<span style="color: var(--ui-muted)">{{ t('learn.not_searched_item') }}</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if attempt.other_missing %}<p class="ui-note">{{ t('learn.your_other') }} <bdi>{{ attempt.other_missing }}</bdi></p>{% endif %}
+      <p class="ui-note">{{ t('learn.compare_note') }}</p>
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('learn.compare_options') }}</h2><span class="ui-note" style="margin: 0">{{ t('learn.not_a_score') }}</span></div>
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.75rem">
+        <div style="flex: 1 1 260px; border: 1px solid var(--ui-line); border-radius: 12px; padding: 0.9rem 1rem">
+          <div class="ui-kicker">{{ t('learn.your_reasoning') }}</div>
+          <p style="margin: 0.4rem 0 0" dir="auto"><bdi>{{ attempt.options }}</bdi></p>
+          {% if attempt.reasons %}<p class="ui-note" dir="auto">{{ t('learn.reason_given') }} <bdi>{{ attempt.reasons }}</bdi></p>{% endif %}
+        </div>
+        <div style="flex: 1 1 260px; border: 1px solid var(--ui-line); border-radius: 12px; padding: 0.9rem 1rem">
+          <div class="ui-kicker">{{ t('learn.panel_reasoning') }}</div>
+          {% if panel and panel.reasoning %}{% for words in panel.reasoning %}<p style="margin: 0.4rem 0 0" dir="auto"><bdi>{{ words }}</bdi></p>{% endfor %}
+          <p class="ui-note">{{ t('learn.panel_words', v=panel.version, date=panel.recorded_on) }}</p>
+          {% else %}<p class="ui-note">{{ t('learn.panel_not_recorded_long') }}</p>{% endif %}
+        </div>
+      </div>
+      {% for gap in missed %}
+      <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--ui-line-soft)">
+        <div><b>{{ t('learn.sources_on_missed', item=field_label(gap.field)) }}</b>{% if gap.summary(lang) %} <span class="ui-tag ui-tag-warn">{{ t('analysis.ai_label') }}</span>{% endif %}</div>
+        {% if gap.summary(lang) %}<p style="margin: 0.3rem 0 0" dir="auto">{{ gap.summary(lang) }}</p>{% endif %}
+        {% if gap.excerpt and gap.evidence %}
+        <blockquote dir="auto" lang="{{ gap.evidence.language }}" style="margin: 0.4rem 0 0; padding: 0.4rem 0.8rem; border-inline-start: 3px solid #9bb7d4; background: #F6F9FC">{{ gap.excerpt }}</blockquote>
+        <div class="ui-note" style="margin: 0.2rem 0 0"><span dir="auto" lang="{{ gap.evidence.language }}">{{ gap.evidence.citation }}</span>{% if gap.summary(lang) %} · {{ t('srch.checked') }}{% endif %}</div>
+        {% else %}<p class="ui-note">{{ t('learn.no_source') }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="ui-actions"><a class="ui-btn" href="{{ url_for('learning.attempt', attempt_id=attempt.id, step='reflect') }}">{{ t('learn.to_reflect') }}</a></div>
+    </section>
+    {% else %}
+    <section class="ui-card">
+      <h2>{{ t('learn.reflect_heading') }}</h2>
+      <form method="post" action="{{ url_for('learning.attempt', attempt_id=attempt.id, step='reflect') }}">
+        <input type="hidden" name="action" value="reflect">
+        <label style="display: block">{{ t('learn.reflection') }}<textarea name="reflection" rows="3" dir="auto">{{ form.get('reflection', '') if form else (attempt.reflection or '') }}</textarea></label>
+        <label style="display: block; margin-top: 0.5rem; max-width: 16rem">{{ t('learn.minutes') }}<input type="text" inputmode="numeric" name="minutes" value="{{ form.get('minutes', '') if form else (attempt.minutes or '') }}"></label>
+        <div class="ui-actions"><button class="ui-btn" type="submit">{{ t('learn.save_log') }}</button></div>
+      </form>
+      <p class="ui-note">{{ t('learn.ask_later') }}</p>
+    </section>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  <aside class="ui-col-side">
+    {{ honest() }}
+    <a class="ui-btn ui-btn-quiet" href="{{ url_for('learning.library') }}">{{ t('learn.back_library') }}</a>
+  </aside>
+</div>
+{% endblock %}

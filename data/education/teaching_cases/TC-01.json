@@ -1,0 +1,40 @@
+{
+ "teaching_case_version": 1,
+ "id": "TC-01",
+ "status": "draft",
+ "level": null,
+ "minutes": null,
+ "case": {
+  "case_id": "TC-01",
+  "created_at": "2026-10-25T00:00:00+00:00",
+  "age_years": 58,
+  "body_weight_kg": 81,
+  "comorbidities": [
+   "Diabetes"
+  ],
+  "cognitive_status": null,
+  "intake_notes": null,
+  "amputation_level": "transtibial",
+  "side": "left",
+  "etiology": "vascular",
+  "months_since_amputation": 9,
+  "residual_limb": {
+   "wound_status": "healed",
+   "volume_stability": "fluctuating",
+   "skin_condition": null,
+   "length_description": "mid-length",
+   "pain": "phantom pain at night",
+   "sensation": "reduced at the distal end",
+   "notes": null
+  },
+  "activity": {
+   "k_level": "K3",
+   "description": "walks indoors with two crutches",
+   "functional_goals": "return to teaching, standing for most of the day"
+  },
+  "prior_devices": null,
+  "contralateral_limb_status": null
+ },
+ "panel": [],
+ "note": "Draft by Claude (2026-10-25), invented for the case-based learning pages: fake data, never copied from a record. Awaiting the educator: the level, the CPD time, the status and the expert panel's answers are the educator's to set."
+}

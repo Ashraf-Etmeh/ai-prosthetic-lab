@@ -1,0 +1,38 @@
+{
+ "teaching_case_version": 1,
+ "id": "TC-02",
+ "status": "draft",
+ "level": null,
+ "minutes": null,
+ "case": {
+  "case_id": "TC-02",
+  "created_at": "2026-10-25T00:00:00+00:00",
+  "age_years": 34,
+  "body_weight_kg": null,
+  "comorbidities": [],
+  "cognitive_status": "intact",
+  "intake_notes": null,
+  "amputation_level": "transfemoral",
+  "side": "right",
+  "etiology": "trauma",
+  "months_since_amputation": 4,
+  "residual_limb": {
+   "wound_status": "healing",
+   "volume_stability": "unknown",
+   "skin_condition": "split-skin graft on the lateral thigh",
+   "length_description": null,
+   "pain": null,
+   "sensation": null,
+   "notes": null
+  },
+  "activity": {
+   "k_level": "unknown",
+   "description": null,
+   "functional_goals": "walk in the community and drive"
+  },
+  "prior_devices": [],
+  "contralateral_limb_status": null
+ },
+ "panel": [],
+ "note": "Draft by Claude (2026-10-25), invented for the case-based learning pages: fake data, never copied from a record. Awaiting the educator: the level, the CPD time, the status and the expert panel's answers are the educator's to set."
+}

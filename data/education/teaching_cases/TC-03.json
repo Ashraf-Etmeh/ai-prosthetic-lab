@@ -1,0 +1,45 @@
+{
+ "teaching_case_version": 1,
+ "id": "TC-03",
+ "status": "draft",
+ "level": null,
+ "minutes": null,
+ "case": {
+  "case_id": "TC-03",
+  "created_at": "2026-10-25T00:00:00+00:00",
+  "age_years": 45,
+  "body_weight_kg": 76,
+  "comorbidities": null,
+  "cognitive_status": null,
+  "intake_notes": null,
+  "amputation_level": "transradial",
+  "side": "left",
+  "etiology": "trauma",
+  "months_since_amputation": 6,
+  "residual_limb": {
+   "wound_status": "healed",
+   "volume_stability": "stable",
+   "skin_condition": null,
+   "length_description": "long",
+   "pain": "none reported",
+   "sensation": null,
+   "notes": null
+  },
+  "activity": {
+   "k_level": null,
+   "description": "uses the right hand for all tasks",
+   "functional_goals": "return to carpentry work"
+  },
+  "prior_devices": [
+   {
+    "device_description": "body-powered hook",
+    "years_used": 0.5,
+    "currently_using": false,
+    "issues": "harness discomfort"
+   }
+  ],
+  "contralateral_limb_status": null
+ },
+ "panel": [],
+ "note": "Draft by Claude (2026-10-25), invented for the case-based learning pages: fake data, never copied from a record. Awaiting the educator: the level, the CPD time, the status and the expert panel's answers are the educator's to set."
+}
