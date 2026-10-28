@@ -2041,6 +2041,23 @@ Roadmap item 4, first part: the manual live-run checks as a repeatable suite.
 - Tests: 691, all passing; checks 0-2 fail only on 0.3 (uncommitted
   changes); golden cases OK; the Arabic term sheet exported again (2,061 texts).
 
+## The system map (docs/design/01-system-map/, plan Part 11, 2026-10-27)
+
+- **Asked (owner, 2026-10-27):** "continue to the next part" (Part 10
+  committed and pushed first, `3871147`). All ten parts of the plan were
+  built, so Claude took the design's last two unbuilt screens, the system
+  map and the architecture page.
+- **Built** (docs/SYSTEM_DESCRIPTION.md §4.18): `overview/`, the home page at
+  `/` (before, `/` opened the prosthetic intake; the language switch's
+  fallback still lands on `/`), opened from the header's brand; each part's
+  card built from its own nav.py; "Waiting for the owner" counted from the
+  owner's files; the architecture page reading the settings.
+- **Every screen of the design now has a page.** What remains is the owner's:
+  the values and approvals the system map counts, and the open decisions
+  below and in each part's section.
+- Tests: 697, all passing; checks 0-2 fail only on 0.3 (uncommitted
+  changes); golden cases OK; the Arabic term sheet exported again (2,208 texts).
+
 ## Open decisions
 
 - **Arabic sources are never cited in gap lists** (seen 2026-10-06).

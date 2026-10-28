@@ -829,6 +829,29 @@ legal or clinical advice exists; `gait/session.py`):
   file formats (only the CSV table), reference bands and smallest real
   changes (the owner's), approved thresholds.
 
+### 4.18 The system map (docs/design/01-system-map/, plan Part 11, 2026-10-27)
+
+`overview/` is the app's home (`/`, app.py index; before, `/` opened the
+prosthetic intake). The header's brand opens it; it is not in the switch
+between the parts (`shared/domains.py` HOME; CASE_PARTS names the parts that
+work on a domain's case).
+- **1 System map**: the clinical domains and the case parts (gait analysis,
+  rehabilitation), then the shared parts, each card with its own module tabs
+  as its nav.py names them, its Arabic name under the English one, and a
+  link to its first page; the seven use cases of the brief and where each
+  lives; the roll-out proposal (the owner sets the order); the rules every
+  part keeps; and **Waiting for the owner** (`overview/routes.py`
+  waiting_for_owner), counted from the owner's files as they are now: draft
+  clinic rules, gait thresholds, roles and teaching cases; retention
+  settings, gait reference bands and release sign-offs not set; each part's
+  cloud switch (`record/governance.py` cloud_uses). Each opens the page that
+  shows it.
+- **2 Architecture** (`/architecture`): the six layers of SYSTEM_DESIGN.md
+  §9, each with where it lives in the code; one answer end to end, the one
+  step outside the machine marked, with the language model in use and each
+  part's switch as the settings say now; adding a domain; who owns what; the
+  owner's open questions with where each stands.
+
 ---
 
 ## 5. Structure
@@ -836,7 +859,7 @@ legal or clinical advice exists; `gait/session.py`):
 One package per part of the system (owner's decision, 2026-10-24): the
 shared core, the shared parts (knowledge, reasoning, review, quality), then
 one package per clinical domain with the same files. Each holds its code, its
-pages (`templates/<part>/`) and its tests (`tests/`, 691 tests in all); the
+pages (`templates/<part>/`) and its tests (`tests/`, 697 tests in all); the
 data is grouped the same way. Shared code reaches a domain's part through
 `shared/domains.py` (`part(domain, "rag")` is `<domain>/rag.py`), never by
 naming the domain.
@@ -955,6 +978,11 @@ gait/                      gait analysis on a case of either domain (§4.17)
                            /template.csv
   nav.py                   what the header shows for gait analysis (its tabs need a case)
   templates/gait/          map.html, capture.html, interpret.html, indicators.html, compare.html, macros.html
+  tests/
+overview/                  the system map, the home page (§4.18)
+  routes.py                system_map() (app.py serves it at /), GET /architecture; waiting_for_owner()
+  nav.py                   its two tabs; the brief's use cases and the part each lives in
+  templates/overview/      map.html, architecture.html
   tests/
 prosthetics/               use cases 01-02
   case.py                  Case (amputation level, side, residual limb, activity, prior devices), its enums
@@ -1139,7 +1167,7 @@ uses a missing key.
 
 ## 6. Quality checks
 
-- **691 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
+- **697 unit tests** (standard `unittest`, fake embedder, fake AI writer, no
   model load, never the API): the RAG (topics, prompt rules, schema, every
   reason an item is removed, parts, fallback, the Claude call with its SDK
   client replaced, the Gemini call with its HTTP call replaced: request,

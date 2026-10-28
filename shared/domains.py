@@ -35,6 +35,11 @@ DOMAINS = ("prosthetics", "orthotics")
 # case of its own, so they are listed here, first, next to the domains; then the knowledge layer (§7.1), reasoning and review (§7.2), search and education
 # (§7.3), patient record (§7.4).
 SHARED_PARTS = ("gait", "rehabilitation", "knowledge", "review", "search", "record")
+# The parts that work on a case of either domain (no intake or case of their own): the system map lists them with
+# the clinical domains.
+CASE_PARTS = ("gait", "rehabilitation")
+# The system map (overview/; plan Part 11): the app's home, reached from the header's brand, not a part to switch to.
+HOME = "overview"
 
 
 def part(domain: str, name: str) -> ModuleType:
@@ -51,8 +56,8 @@ def has_part(domain: str, name: str) -> bool:
 
 def nav(name: str) -> ModuleType:
     """What the header shows for a domain or a shared part: its nav.py."""
-    if name not in DOMAINS + SHARED_PARTS:
-        raise ValueError(f"must be one of {sorted(DOMAINS + SHARED_PARTS)}, got {name!r}")
+    if name not in DOMAINS + SHARED_PARTS + (HOME,):
+        raise ValueError(f"must be one of {sorted(DOMAINS + SHARED_PARTS + (HOME,))}, got {name!r}")
     return importlib.import_module(f"{name}.nav")
 
 

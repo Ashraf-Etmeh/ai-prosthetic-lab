@@ -1,0 +1,74 @@
+{% extends "ui_base.html" %}
+{# 1 System map, the app's home (docs/design/01-system-map/Main.html): the clinical domains and the parts that work on
+   a case, then the shared parts, each with its module tabs as its own nav.py names them; the brief's use cases and
+   where each lives; what waits for the owner, counted from the owner's files (overview/routes.py); the roll-out
+   proposal; the rules every part keeps. #}
+{% block title %}{{ t('omap.title') }}{% endblock %}
+{% block kicker %}{{ t('omap.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('omap.intro') }}</p>{% endblock %}
+{% block brief %}خريطة النظام{% endblock %}
+{% macro card(p) %}
+  <section class="ui-card" style="display: flex; flex-direction: column; gap: 0.5rem; min-width: 0">
+    <div>
+      <h2>{{ t(('domain.' if p.is_domain else 'part.') ~ p.name) }}</h2>
+      {% if lang != 'ar' %}<div class="ui-note" style="margin: 0.1rem 0 0" lang="ar" dir="rtl">{{ t_ar(('domain.' if p.is_domain else 'part.') ~ p.name) }}</div>{% endif %}
+    </div>
+    <p class="ui-note" style="margin: 0">{{ t('omap_does.' ~ p.name) }}</p>
+    <ol class="ui-plain" style="margin: 0">{% for label in p.labels %}<li>{{ t(label) }}</li>{% endfor %}</ol>
+    <p class="ui-note" style="margin: 0">{{ t('omap_note.' ~ p.name) }}</p>
+    <div class="ui-actions" style="margin-top: auto"><a class="ui-btn ui-btn-quiet" href="{{ url_for(p.map) }}">{{ t('omap.open') }} →</a></div>
+  </section>
+{% endmacro %}
+{% block content %}
+<h2 class="ui-section-label">{{ t('omap.clinical') }}</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem">
+  {% for p in clinical %}{{ card(p) }}{% endfor %}
+</div>
+
+<h2 class="ui-section-label">{{ t('omap.shared') }}</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem">
+  {% for p in shared %}{{ card(p) }}{% endfor %}
+</div>
+
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <h2>{{ t('omap.use_cases') }}</h2>
+      <div class="ui-scroll" style="margin-top: 0.75rem">
+        <table class="ui-table" style="min-width: 520px">
+          <thead><tr><th scope="col">{{ t('omap.use_case') }}</th><th scope="col">{{ t('omap.what') }}</th><th scope="col">{{ t('omap.part') }}</th></tr></thead>
+          <tbody>{% for number, name in use_cases %}
+            <tr><td><b>{{ number }}</b></td><td>{{ t('use_case.' ~ number) }}</td>
+              <td><a href="{{ url_for(domain_nav(name).MAP) }}">{{ t(('domain.' if name in all_domains else 'part.') ~ name) }}</a></td></tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('omap.rollout') }}</h2><span class="ui-note" style="margin: 0">{{ t('omap.rollout_owner') }}</span></div>
+      <ol class="ui-plain" style="margin-top: 0.5rem">{% for phase in ['p1', 'p2', 'p3', 'p4', 'p5'] %}<li>{{ t('omap_phase.' ~ phase) }}</li>{% endfor %}</ol>
+      <p class="ui-note">{{ t('omap.rollout_now') }}</p>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('omap.waiting') }}</h2>
+      <ul class="ui-kv">
+        {% for w in waiting %}
+        <li><span><a href="{{ url_for(w.endpoint) }}">{{ t('owait.' ~ w.key) }}</a></span>
+          <b>{% if w.key in ('gait_references', 'releases') %}{{ t('owait.none_yet') if w.drafts else t('owait.set') }}{% elif w.key == 'retention' %}{{ t('owait.not_set_of', n=w.drafts, m=w.total) }}{% else %}{{ t('owait.drafts_of', n=w.drafts, m=w.total) }}{% endif %}</b></li>
+        {% endfor %}
+        {% for use in clouds %}<li><span>{{ t('owait.cloud', what=(t('domain.' ~ use.what) if use.what in all_domains else t('gov.search_questions'))) }}</span><b>{{ t('owait.on') if use.on else t('owait.off') }}</b></li>{% endfor %}
+      </ul>
+      <p class="ui-note">{{ t('omap.waiting_note') }}</p>
+    </section>
+    <section class="ui-card">
+      <h2>{{ t('omap.rules') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">{% for key in ['supports', 'quotes', 'values', 'languages'] %}<li>{{ t('omap_rule.' ~ key) }}</li>{% endfor %}</ul>
+      <a class="ui-btn ui-btn-quiet" href="{{ url_for('overview.architecture') }}" style="margin-top: 0.75rem">{{ t('omod.architecture') }} →</a>
+    </section>
+  </aside>
+</div>
+{% endblock %}

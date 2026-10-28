@@ -5,7 +5,8 @@ Run locally with:
 
 Wires together each part's pages (Flask blueprints): each domain's intake
 and modules, the review and quality pages, the knowledge pages, the search and
-learning pages, the patient record, rehabilitation and gait analysis.
+learning pages, the patient record, rehabilitation, gait analysis and the system map
+(the home page, /).
 reasoning/ has no routes of its own: an intake calls reasoning/pathway.py as
 part of handling a submitted case. The pages every part shares (header, style, base page) are
 in shared/templates/; each part's own are in <part>/templates/<part>/.
@@ -23,6 +24,7 @@ from knowledge.catalog import attributions
 from knowledge.routes import bp as knowledge_bp
 from orthotics.intake import bp as orthotic_intake_bp
 from orthotics.modules import bp as orthotic_modules_bp
+from overview.routes import bp as overview_bp, system_map
 from prosthetics.intake import bp as prosthetic_intake_bp
 from prosthetics.modules import bp as prosthetic_modules_bp
 from record.routes import bp as record_bp
@@ -65,6 +67,7 @@ def create_app() -> Flask:
     app.register_blueprint(record_bp)  # /record: the patient record, consent and governance (plan Part 8)
     app.register_blueprint(rehab_bp)  # /rehabilitation: plan, progress, training, team record (plan Part 9)
     app.register_blueprint(gait_bp)  # /gait: capture, interpret, indicators, device and performance (plan Part 10)
+    app.register_blueprint(overview_bp)  # /architecture; / is the system map (plan Part 11)
 
     @app.context_processor
     def interface_language():
@@ -88,7 +91,8 @@ def create_app() -> Flask:
 
     @app.route("/")
     def index():
-        return redirect(url_for("prosthetic_intake.show_form"))
+        """The system map: every part of the system, and what waits for the owner (overview/routes.py)."""
+        return system_map()
 
     @app.route("/language/<code>")
     def set_language(code: str):

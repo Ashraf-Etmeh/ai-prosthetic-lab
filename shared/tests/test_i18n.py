@@ -262,6 +262,31 @@ class CompletenessTests(unittest.TestCase):
                                            "walkway", "device_state", "footwear", "aid", "source", "pace", "version")}
         expected |= {f"gcmp.{k}" for k in ("first", "second")} | {f"rec_ev.{k}" for k in ("gait_session",
                                                                                          "gait_comparison")}
+        # The system map (plan Part 11, 2026-10-27): the home's tabs, each part's card, use cases, owner's to-do,
+        # the architecture's layers, steps and lists
+        from overview import nav as overview_nav
+        from overview.routes import waiting_for_owner
+        home = domains.nav(domains.HOME)
+        expected |= {f"part.{domains.HOME}"} | {home.LABELS + key for key, _, _ in home.MODULES}
+        parts = (*domains.DOMAINS, *domains.SHARED_PARTS)
+        expected |= {f"{prefix}.{name}" for prefix in ("omap_does", "omap_note") for name in parts}
+        expected |= {f"use_case.{number}" for number, _ in overview_nav.USE_CASES}
+        expected |= {f"omap_phase.p{n}" for n in range(1, 6)} | {f"owait.{w.key}" for w in waiting_for_owner()}
+        expected |= {f"omap_rule.{k}" for k in ("supports", "quotes", "values", "languages")}
+        layers = {"people": ("specialists", "therapists", "learners", "owner"),
+                  "interface": ("header", "languages", "tablet", "ai_label"),
+                  "domains": ("prosthetics", "orthotics", "gait", "rehabilitation"),
+                  "services": ("case", "pathway", "review", "search"),
+                  "knowledge": ("library", "index", "items", "glossary"),
+                  "platform": ("server", "consent", "tests", "swap")}
+        for layer, items in layers.items():
+            expected |= {f"olayer.{layer}", f"olayer_code.{layer}"} | {f"olayer_item.{layer}_{i}" for i in items}
+        steps = ("case", "search", "model", "checks", "review", "signed")
+        expected |= {f"{prefix}.{s}" for prefix in ("ostep", "ostep_does") for s in steps}
+        expected |= {f"oadd.{k}" for k in ("section", "topics", "answer_key", "rules", "pages")}
+        expected |= {f"oown.{k}" for k in ("rules", "sources", "decisions", "teaching")}
+        expected |= {f"owho.{k}" for k in ("owner", "curator", "specialist", "educator")}
+        expected |= {f"{prefix}.{k}" for prefix in ("oq", "oq_now") for k in ("model", "measures", "gait", "retention")}
         self.assertEqual(expected - set(TEXT), set())
 
 

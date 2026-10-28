@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # parts of the system, then the clinical domains. Tools that scan the code (the i18n key check,
 # the Arabic term sheet) read these.
 CODE_PACKAGES = ("shared", "knowledge", "reasoning", "review", "quality", "search", "record", "rehabilitation",
-                 "gait", "prosthetics", "orthotics")
+                 "gait", "overview", "prosthetics", "orthotics")
 
 # The data, grouped like the code (since 2026-10-24): data/knowledge/ for the
 # knowledge layer, data/quality/ for the yardstick and the trial, data/records/

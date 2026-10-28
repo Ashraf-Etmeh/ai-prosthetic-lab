@@ -1,0 +1,62 @@
+{% extends "ui_base.html" %}
+{# 2 Architecture and data flow (docs/design/01-system-map/Architecture.html; SYSTEM_DESIGN.md §4 and §9): the six
+   layers with where each lives in the code; one answer end to end, with the one step outside the clinic and which
+   parts may take it as the settings say now; adding a domain; who owns what; the owner's open questions as they
+   stand. #}
+{% block title %}{{ t('oarch.title') }}{% endblock %}
+{% block kicker %}{{ t('oarch.kicker') }}{% endblock %}
+{% block lead %}<p class="ui-lead">{{ t('oarch.intro') }}</p>{% endblock %}
+{% block brief %}البنية وتدفق البيانات{% endblock %}
+{% block content %}
+<div class="ui-cols">
+  <div class="ui-col-main">
+    <section class="ui-card">
+      <h2>{{ t('oarch.layers') }}</h2>
+      <ol class="ui-plain" style="list-style: none; padding: 0; margin-top: 0.5rem">
+        {% for layer, items in [('people', ['specialists', 'therapists', 'learners', 'owner']),
+                                ('interface', ['header', 'languages', 'tablet', 'ai_label']),
+                                ('domains', ['prosthetics', 'orthotics', 'gait', 'rehabilitation']),
+                                ('services', ['case', 'pathway', 'review', 'search']),
+                                ('knowledge', ['library', 'index', 'items', 'glossary']),
+                                ('platform', ['server', 'consent', 'tests', 'swap'])] %}
+        <li class="ui-row" style="align-items: flex-start">
+          <div style="flex: 0 0 9rem"><div class="ui-kicker">{{ t('oarch.layer_n', n=loop.index) }}</div><b>{{ t('olayer.' ~ layer) }}</b></div>
+          <ul class="ui-plain" style="flex: 1 1 260px; min-width: 0">{% for item in items %}<li>{{ t('olayer_item.' ~ layer ~ '_' ~ item) }}</li>{% endfor %}</ul>
+          <div class="ui-note" style="flex: 1 1 160px; margin: 0" dir="ltr">{{ t('olayer_code.' ~ layer) }}</div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section class="ui-card">
+      <div class="ui-titlebar" style="align-items: baseline"><h2>{{ t('oarch.one_answer') }}</h2><span class="ui-note" style="margin: 0">{{ t('oarch.shaded') }}</span></div>
+      <ol class="ui-steps">
+        {% for step in ['case', 'search', 'model', 'checks', 'review', 'signed'] %}
+        <li class="{{ 'in_progress' if step == 'model' }}"{% if step == 'model' %} style="background: var(--ui-warn-bg); border-color: var(--ui-warn-ink)"{% endif %}><b>{{ t('ostep.' ~ step) }}</b>{{ t('ostep_does.' ~ step) }}</li>
+        {% endfor %}
+      </ol>
+      <ul class="ui-kv">
+        <li><span>{{ t('oarch.provider') }}</span><b dir="ltr">{{ provider }}</b></li>
+        {% for use in clouds %}<li><span>{{ t('owait.cloud', what=(t('domain.' ~ use.what) if use.what in all_domains else t('gov.search_questions'))) }}</span><b>{{ t('owait.on') if use.on else t('owait.off') }}</b></li>{% endfor %}
+      </ul>
+      <p class="ui-note">{{ t('oarch.without_model') }}</p>
+    </section>
+  </div>
+
+  <aside class="ui-col-side">
+    <section class="ui-card">
+      <h2>{{ t('oarch.adding') }}</h2>
+      <ol class="ui-plain" style="margin-top: 0.5rem">{% for key in ['section', 'topics', 'answer_key', 'rules', 'pages'] %}<li>{{ t('oadd.' ~ key) }}</li>{% endfor %}</ol>
+      <p class="ui-note" dir="auto">{{ t('oarch.adding_code') }}</p>
+    </section>
+    <section class="ui-card">
+      <h2>{{ t('oarch.owners') }}</h2>
+      <ul class="ui-kv">{% for what, who in [('rules', 'owner'), ('sources', 'curator'), ('decisions', 'specialist'), ('teaching', 'educator')] %}<li><span>{{ t('oown.' ~ what) }}</span><b>{{ t('owho.' ~ who) }}</b></li>{% endfor %}</ul>
+    </section>
+    <section class="ui-card">
+      <h2>{{ t('oarch.questions') }}</h2>
+      <ul class="ui-plain" style="margin-top: 0.5rem">{% for key in ['model', 'measures', 'gait', 'retention'] %}<li><b>{{ t('oq.' ~ key) }}</b><div class="ui-note" style="margin: 0.1rem 0 0">{{ t('oq_now.' ~ key, provider=provider) }}</div></li>{% endfor %}</ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

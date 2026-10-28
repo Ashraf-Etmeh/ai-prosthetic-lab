@@ -60,7 +60,8 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Then open http://127.0.0.1:5000. The first case you submit takes about
+Then open http://127.0.0.1:5000: the system map, every part of the system
+with its pages and what waits for the owner. The first case you submit takes about
 10 seconds while the search model loads. Build the search index first
 (below), or the review page will warn that no sources were searched.
 
@@ -335,6 +336,19 @@ filming.
 
 Measuring movement is a medical-device function: before any clinical use,
 the capture system and this module need validation and regulatory advice.
+
+**System map** (2026-10-27, `docs/design/01-system-map/`): the home page
+(`/`, opened from the header's "AI Prosthetic Lab"). **1 System map**: the
+four clinical parts and the four shared parts, each with its own module tabs
+and a link; the brief's seven use cases and where each lives; the roll-out
+proposal; the rules every part keeps; and "Waiting for the owner", counted
+from the owner's files as they are now (draft clinic rules, gait thresholds,
+roles and teaching cases; retention, gait reference bands and release
+sign-offs not set; each part's cloud switch). **2 Architecture**
+(`/architecture`): the six layers with where each lives in the code, one
+answer end to end with the one step that leaves the machine and which parts
+may take it, adding a domain, who owns what, and the owner's open questions
+as they stand.
 
 **Reasoning and review** (2026-10-25, `docs/design/07-reasoning-and-review/`)
 has three pages:
@@ -655,6 +669,10 @@ rehabilitation/     Rehabilitation on a case of either domain: the plan and its 
 gait/               Gait analysis on a case of either domain: sessions and the table import (session.py), the
                     owner's thresholds and references, indicators and comparisons (rules.py), routes.py, nav.py
   templates/gait/
+  tests/
+overview/           The system map, the home page (routes.py: the parts, the use cases, what waits for the owner;
+                    the architecture), nav.py
+  templates/overview/
   tests/
 quality/            Quality and audit: the golden cases, retrieval misses, the trial report and the
                     trial-case loader, the recorded results (results.py), the owner's release sign-offs

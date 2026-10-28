@@ -107,7 +107,7 @@ differ it says where the build is heading, and this file still sets the rules).
 - **Everything lives in its part's folder** (owner's decision, 2026-10-24;
   README.md, "Folder layout"): one package per part of the system (`shared/`,
   `knowledge/`, `reasoning/`, `review/`, `quality/`, `search/`, `record/`, `rehabilitation/` and
-  `gait/` (each on a domain's case), and one per clinical
+  `gait/` (each on a domain's case), `overview/` (the system map, the home page), and one per clinical
   domain: `prosthetics/`, `orthotics/`), each with its own `templates/<part>/`
   and `tests/`; the data likewise under `data/knowledge/`, `data/quality/`,
   `data/education/`, `data/governance/`, `data/records/`. A domain has the same files as the others (`case.py`,

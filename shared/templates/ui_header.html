@@ -1,5 +1,5 @@
 {# Every page's header (since 2026-10-23; SYSTEM_DESIGN.md §5 and §9): the brand and the part's name, the
-   switch between the parts, the part's modules as numbered tabs, an EN | العربية switch and, on a case's pages,
+   switch between the parts, the part's modules as numbered tabs (the brand opens the system map, the app's home), an EN | العربية switch and, on a case's pages,
    the case bar.
    Uses: domain (a case's own domain wins; none: the default domain), or part (a shared part with pages of its
    own, e.g. 'review': shared/domains.py SHARED_PARTS); case (or none), module (the current one's key), here (this
@@ -21,7 +21,7 @@
 {% set map_url = url_for(nav.MAP) %}
 <header class="ui-top">
   <div class="ui-wrap ui-top-row">
-    <a class="ui-brand" href="{{ map_url }}">
+    <a class="ui-brand" href="{{ url_for('index') }}">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7FC4BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v8l-3 7h9"></path><path d="M9 11h4"></path><circle cx="17" cy="18" r="2"></circle></svg>
       <span lang="en" dir="ltr">AI Prosthetic Lab</span><span class="ui-part">/ {{ part_name }}</span>
     </a>
